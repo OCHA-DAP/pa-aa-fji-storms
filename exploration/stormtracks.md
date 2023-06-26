@@ -34,6 +34,8 @@ from pyproj import pyproj
 from shapely.geometry import Point
 from shapely.validation import make_valid, explain_validity
 from shapely.ops import transform
+import fiona
+import matplotlib.pyplot as plt
 
 pyo.init_notebook_mode()
 ```
@@ -45,9 +47,9 @@ CYCLONETRACKS_PATH = (
     EXP_DIR / "rsmc/RSMC TC Tracks Historical 1969_70 to 2022_23 Seasons.csv"
 )
 RAW_DIR = Path(os.environ["AA_DATA_DIR"]) / "public/raw/fji"
-CODAB_PATH = (
-    RAW_DIR / "cod_ab/fji_polbnda_adm0_country/fji_polbnda_adm0_country.shp"
-)
+CODAB_PATH = RAW_DIR / "cod_ab/fji_polbnda_adm0_country"
+# CODAB_PATH = RAW_DIR / "cod_ab/fji_polbnda_adm1_district"
+# CODAB_PATH = RAW_DIR / "cod_ab/fji_polbnda_adm.gdb"
 ```
 
 ```python
@@ -58,11 +60,8 @@ df["Date"] = df["Date"].apply(lambda x: x.strip())
 df["datetime"] = df["Date"] + " " + df["Time"]
 df["datetime"] = pd.to_datetime(df["datetime"], format="%d/%m/%Y %HZ")
 df = df.drop(["Date", "Time"], axis=1)
-print(df["Longitude"].max())
-print(df)
 cyclone_names = df["Cyclone Name"].unique()
 seasons = df["Season"].unique()
-print(len(seasons))
 df["Category numeric"] = pd.to_numeric(df["Category"], errors="coerce")
 
 gdf_tracks = gpd.GeoDataFrame(
@@ -70,41 +69,121 @@ gdf_tracks = gpd.GeoDataFrame(
 )
 gdf_tracks.crs = "EPSG:4326"
 
-numeric_columns = ["Category numeric", "Pressure", "Wind (Knots)"]
-df_max = (
-    df.groupby(["Cyclone Name", "Season"])[numeric_columns].max().reset_index()
+# Read CODAB
+
+gdf_adm0 = gpd.read_file(CODAB_PATH, layer="fji_polbnda_adm0_country").set_crs(
+    "EPSG:3832"
 )
-print(df_max)
-print(df_max.groupby("Category numeric").size())
-```
 
-```python
-# Load and process CODAB
-
-gdf_admin0 = gpd.read_file(CODAB_PATH)
-gdf_admin0 = gdf_admin0.to_crs(epsg=4326)
-```
-
-```python
-# Calculate distance from each point to Admin0 (slow)
-
-gdf_admin0_3857 = gdf_admin0.to_crs(3857)
-gdf_tracks["distance"] = gdf_tracks.to_crs(epsg=3857).apply(
-    lambda point: point.geometry.distance(gdf_admin0_3857.geometry),
-    axis=1,
+# calculate distance from Fiji
+gdf_tracks["Distance (km)"] = (
+    gdf_tracks.to_crs(epsg=3832).apply(
+        lambda point: point.geometry.distance(gdf_adm0.geometry),
+        axis=1,
+    )
+    / 1000
 )
-gdf_admin0_3857.plot()
+
+df_agg = (
+    gdf_tracks.groupby(["Cyclone Name", "Season"])
+    .agg(
+        {
+            "Category numeric": "max",
+            "Pressure": "min",
+            "Wind (Knots)": "max",
+            "Distance (km)": "min",
+        }
+    )
+    .reset_index()
+)
+
+print(df_agg)
 ```
 
 ```python
-# Plot CODAB
+# Plot tracks and CODAB
 
+gdf_adm0_4326 = gdf_adm0.to_crs("EPSG:4326")
 fig = px.choropleth(
-    gdf_plot,
-    geojson=gdf_plot.geometry,
-    locations=gdf_plot.index,
+    gdf_adm0_4326,
+    geojson=gdf_adm0_4326.geometry,
+    locations=gdf_adm0_4326.index,
 )
-fig.update_geos(fitbounds="locations", visible=False)
+fig.update_layout(
+    template="simple_white",
+    geo=dict(
+        lataxis=dict(range=[-25, -9]),
+        lonaxis=dict(range=[164, -166]),
+        visible=False,
+    ),
+)
+
+PLOT_NAMES = ["WINSTON", "HAROLD 2020"]
+
+dff = gdf_tracks[gdf_tracks["Cyclone Name"].isin(PLOT_NAMES)]
+
+for name in gdff["Cyclone Name"].unique():
+    dfff = dff[dff["Cyclone Name"] == name]
+    fig.add_trace(
+        go.Scattergeo(
+            lat=dfff["Latitude"],
+            lon=dfff["Longitude"],
+            name=name,
+            customdata=gdff[
+                ["Category", "Wind (Knots)", "datetime", "Distance (km)"]
+            ],
+            marker_size=dfff["Wind (Knots)"].fillna(0) / 5,
+            mode="lines+markers",
+            line_width=0.5,
+            hovertemplate=(
+                "Category: %{customdata[0]}<br>"
+                "Wind speed: %{customdata[1]} knots<br>"
+                "Datetime: %{customdata[2]}<br>"
+                "Distance: %{customdata[3]:,.0f} km"
+            ),
+        )
+    )
+
+pyo.iplot(fig)
+```
+
+```python
+# Calculate recurrences
+
+distances = [100, 200, 300, 400, 500]
+
+df_recur = pd.DataFrame()
+
+for distance in distances:
+    dff_agg = df_agg[df_agg["Distance (km)"] <= distance]
+    df_count = (
+        dff_agg.groupby("Category numeric")
+        .size()
+        .reset_index()
+        .rename(columns={0: "Total count"})
+    )
+    df_count["Distance cutoff (km)"] = distance
+    df_recur = pd.concat([df_recur, df_count], ignore_index=True)
+
+df_recur["Recurrence"] = len(seasons) / df_recur["Total count"]
+df_recur = df_recur.rename(columns={"Category numeric": "Category"})
+df_recur["Category"] = df_recur["Category"].astype(int)
+
+df_recur = df_recur.pivot(
+    index="Category",
+    columns="Distance cutoff (km)",
+    values="Recurrence",
+)
+df_recur = df_recur.sort_values("Category", ascending=False)
+df_recur.columns = df_recur.columns.astype(str)
+df_recur.index = df_recur.index.astype(str)
+df_recur = df_recur.round(1)
+
+print(df_recur)
+
+fig = px.imshow(df_recur, text_auto=True, range_color=[1, 5])
+fig.update_layout(title_text="ji")
+
 pyo.iplot(fig)
 ```
 
@@ -191,49 +270,6 @@ fig.add_trace(
         x=df_max["Pressure"], xbins=dict(start=start, size=step, end=stop)
     )
 )
-pyo.iplot(fig)
-```
-
-```python
-# Plot all cyclone tracks
-
-fig = px.choropleth(
-    gdf_admin0, geojson=gdf_admin0.geometry, locations=gdf_admin0.index
-)
-fig.update_layout(
-    template="simple_white",
-    geo=dict(
-        lataxis=dict(range=[-25, -9]),
-        lonaxis=dict(range=[164, -166]),
-        visible=False,
-    ),
-)
-
-
-for name in df_max.loc[df_max["Category numeric"] > 3.0]["Cyclone Name"]:
-    gdff = gdf_tracks.loc[gdf_tracks["Cyclone Name"] == name]
-    fig.add_trace(
-        go.Scattergeo(
-            lat=gdff["Latitude"],
-            lon=gdff["Longitude"],
-            name=name,
-            customdata=gdff[
-                ["Category", "Wind (Knots)", "datetime", "distance"]
-            ],
-            marker_size=gdff["distance"].fillna(0) / 10e4,
-            mode="lines+markers",
-            line_width=0.5,
-            hovertemplate=(
-                "Category: %{customdata[0]}<br>"
-                "Wind (Knots): %{customdata[1]}<br>"
-                "Datetime: %{customdata[2]}<br>"
-                "Distance: %{customdata[3]}"
-            ),
-        )
-    )
-
-# fig.add_trace(go.Choroplethmapbox(geojson=shp.geometry, locations=shp.index))
-
 pyo.iplot(fig)
 ```
 
