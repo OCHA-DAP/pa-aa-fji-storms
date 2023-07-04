@@ -122,14 +122,14 @@ PLOT_NAMES = ["WINSTON", "HAROLD 2020"]
 
 dff = gdf_tracks[gdf_tracks["Cyclone Name"].isin(PLOT_NAMES)]
 
-for name in gdff["Cyclone Name"].unique():
+for name in dff["Cyclone Name"].unique():
     dfff = dff[dff["Cyclone Name"] == name]
     fig.add_trace(
         go.Scattergeo(
             lat=dfff["Latitude"],
             lon=dfff["Longitude"],
             name=name,
-            customdata=gdff[
+            customdata=dfff[
                 ["Category", "Wind (Knots)", "datetime", "Distance (km)"]
             ],
             marker_size=dfff["Wind (Knots)"].fillna(0) / 5,
@@ -150,7 +150,7 @@ pyo.iplot(fig)
 ```python
 # Calculate recurrences
 
-distances = [100, 200, 300, 400, 500]
+distances = [0, 50, 100, 200, 300, 400, 500]
 
 df_recur = pd.DataFrame()
 
@@ -182,7 +182,8 @@ df_recur = df_recur.round(1)
 print(df_recur)
 
 fig = px.imshow(df_recur, text_auto=True, range_color=[1, 5])
-fig.update_layout(title_text="ji")
+fig.update_layout(coloraxis_colorbar_title="Recurrence (years)")
+fig.update_xaxes(side="top", title_text="Minimum distance to Fiji (km)")
 
 pyo.iplot(fig)
 ```
