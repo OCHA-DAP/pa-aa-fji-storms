@@ -60,9 +60,18 @@ df["Date"] = df["Date"].apply(lambda x: x.strip())
 df["datetime"] = df["Date"] + " " + df["Time"]
 df["datetime"] = pd.to_datetime(df["datetime"], format="%d/%m/%Y %HZ")
 df = df.drop(["Date", "Time"], axis=1)
-cyclone_names = df["Cyclone Name"].unique()
+df["Cyclone Name"] = df["Cyclone Name"].apply(
+    lambda name: "".join([x for x in name if not x.isdigit()]).strip()
+)
+df["Name Season"] = df["Cyclone Name"] + " " + df["Season"]
+cyclone_names = df["Name Season"].unique()
 seasons = df["Season"].unique()
-df["Category numeric"] = pd.to_numeric(df["Category"], errors="coerce")
+df["Category numeric"] = pd.to_numeric(df["Category"], errors="coerce").fillna(
+    0
+)
+
+
+cyclone_names = df["Name Season"].unique()
 
 gdf_tracks = gpd.GeoDataFrame(
     df, geometry=gpd.points_from_xy(df["Longitude"], df["Latitude"])
@@ -83,9 +92,13 @@ gdf_tracks["Distance (km)"] = (
     )
     / 1000
 )
+```
+
+```python
+df_agg = pd.DataFrame()
 
 df_agg = (
-    gdf_tracks.groupby(["Cyclone Name", "Season"])
+    gdf_tracks.groupby("Name Season")
     .agg(
         {
             "Category numeric": "max",
@@ -97,7 +110,102 @@ df_agg = (
     .reset_index()
 )
 
+for name_season in df["Name Season"].unique():
+    dff = gdf_tracks[gdf_tracks["Name Season"] == name_season]
+    min_distance = dff["Distance (km)"].min()
+    closest_datetime = dff[dff["Distance (km)"] == min_distance][
+        "datetime"
+    ].iloc[0]
+    first_datetime = dff["datetime"].iloc[0]
+    distance_leadtime = closest_datetime - first_datetime
+
+    max_category = dff["Category numeric"].max()
+    strongest_datetime = dff[dff["Category numeric"] == max_category][
+        "datetime"
+    ].iloc[0]
+    strength_leadtime = strongest_datetime - first_datetime
+
+    df_agg.loc[
+        df_agg["Name Season"] == name_season,
+        ["Leadtime (distance)", "Leadtime (strength)"],
+    ] = [distance_leadtime, strength_leadtime]
+
+for l in ["strength", "distance"]:
+    df_agg[f"Leadtime ({l})"] = df_agg[f"Leadtime ({l})"].apply(
+        lambda x: x.days + x.seconds / 3600 / 24
+    )
+
 print(df_agg)
+```
+
+```python
+# drop ridiculously long cyclone
+df_agg = df_agg[~(df_agg["Name Season"] == "UNNAMED-SP 1971/1972")]
+df_agg = df_agg[
+    (df_agg["Leadtime (distance)"] > 0) & (df_agg["Leadtime (distance)"] > 0)
+]
+
+bins = range(10)
+for cat in df_agg["Category numeric"].unique():
+    fig, ax = plt.subplots()
+    df_agg[df_agg["Category numeric"] == cat]["Leadtime (distance)"].hist(
+        ax=ax, bins=bins
+    )
+    ax.set_title(f"Category: {cat}")
+    ax.set_xlabel("Days to closest pass")
+
+distances = range(100, 601, 100)
+
+for dist in distances:
+    fig, ax = plt.subplots()
+    df_agg[df_agg["Distance (km)"] < dist]["Leadtime (distance)"].hist(
+        ax=ax, bins=bins
+    )
+    ax.set_title(f"Minimum distance: {dist}")
+    ax.set_xlabel("Days to closest pass")
+
+fig, ax = plt.subplots()
+df_agg[(df_agg["Distance (km)"] < 200) & (df_agg["Category numeric"] == 5)][
+    "Leadtime (distance)"
+].hist(ax=ax, bins=bins)
+ax.set_title("Distance < 200 and Category 5")
+ax.set_xlabel("Days to closest pass")
+
+fig, ax = plt.subplots()
+df_agg[(df_agg["Distance (km)"] < 300) & (df_agg["Category numeric"] >= 4)][
+    "Leadtime (distance)"
+].hist(ax=ax, bins=bins)
+ax.set_title("Distance < 300 and Category 4")
+ax.set_xlabel("Days to closest pass")
+
+fig, ax = plt.subplots()
+df_agg[(df_agg["Distance (km)"] < 300) & (df_agg["Category numeric"] >= 4)][
+    "Leadtime (strength)"
+].hist(ax=ax, bins=bins)
+ax.set_title("Distance < 300 and Category 4")
+ax.set_xlabel("Days to highest strength")
+```
+
+```python
+df_agg = df_agg.sort_values(by=["Category numeric"], ascending=False)
+
+fig = px.histogram(
+    df_agg,
+    x="Leadtime (distance)",
+    color="Category numeric",
+    color_discrete_sequence=px.colors.sequential.thermal_r,
+)
+
+pyo.iplot(fig)
+
+fig = px.histogram(
+    df_agg,
+    x="Leadtime (strength)",
+    color="Category numeric",
+    color_discrete_sequence=px.colors.sequential.thermal_r,
+)
+
+pyo.iplot(fig)
 ```
 
 ```python
@@ -118,12 +226,12 @@ fig.update_layout(
     ),
 )
 
-PLOT_NAMES = ["WINSTON", "HAROLD 2020"]
+PLOT_NAMES = ["WINSTON 2015/2016", "HAROLD 2019/2020", "YASA 2020/2021"]
 
-dff = gdf_tracks[gdf_tracks["Cyclone Name"].isin(PLOT_NAMES)]
+dff = gdf_tracks[gdf_tracks["Name Season"].isin(PLOT_NAMES)]
 
-for name in dff["Cyclone Name"].unique():
-    dfff = dff[dff["Cyclone Name"] == name]
+for name in dff["Name Season"].unique():
+    dfff = dff[dff["Name Season"] == name]
     fig.add_trace(
         go.Scattergeo(
             lat=dfff["Latitude"],
@@ -150,9 +258,11 @@ pyo.iplot(fig)
 ```python
 # Calculate recurrences
 
-distances = [0, 50, 100, 200, 300, 400, 500]
+distances = np.round(np.arange(100, 500 + 0.01, 100), 0)
 
 df_recur = pd.DataFrame()
+
+range_color = [1, 5]
 
 for distance in distances:
     dff_agg = df_agg[df_agg["Distance (km)"] <= distance]
@@ -181,8 +291,11 @@ df_recur = df_recur.round(1)
 
 print(df_recur)
 
-fig = px.imshow(df_recur, text_auto=True, range_color=[1, 5])
-fig.update_layout(coloraxis_colorbar_title="Recurrence (years)")
+fig = px.imshow(df_recur, text_auto=True, range_color=range_color)
+fig.update_layout(
+    coloraxis_colorbar_title="Recurrence (years)",
+    coloraxis_colorbar_tickvals=range_color,
+)
 fig.update_xaxes(side="top", title_text="Minimum distance to Fiji (km)")
 
 pyo.iplot(fig)
