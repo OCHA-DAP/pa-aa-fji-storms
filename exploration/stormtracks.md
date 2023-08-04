@@ -6,17 +6,19 @@ jupyter:
       extension: .md
       format_name: markdown
       format_version: '1.3'
-      jupytext_version: 1.11.1
+      jupytext_version: 1.15.0
   kernelspec:
-    display_name: venv
+    display_name: pa-aa-fji-storms
     language: python
-    name: venv
+    name: pa-aa-fji-storms
 ---
 
 # Storm Tracks
 
 ```python
 %load_ext jupyter_black
+%load_ext autoreload
+%autoreload 2
 ```
 
 ```python
@@ -42,6 +44,8 @@ import plotly.figure_factory as ff
 import chart_studio
 import chart_studio.plotly as py
 
+import utils
+
 pyo.init_notebook_mode()
 load_dotenv()
 ```
@@ -52,6 +56,7 @@ chart_studio.tools.set_credentials_file(
     username="tristandowning", api_key=CS_KEY
 )
 MB_TOKEN = os.environ["MAPBOX_TOKEN"]
+FJI_CRS = "+proj=longlat +ellps=WGS84 +lon_wrap=180 +datum=WGS84 +no_defs"
 ```
 
 ```python
@@ -68,106 +73,7 @@ SAVE_DIR = Path("/Users/tdowning/OCHA/data/fji")
 ```
 
 ```python
-# Load and process impact data
-
-df = pd.read_excel(IMPACT_PATH, skiprows=[0], index_col=None)
-df = df.dropna(how="all")
-df = df.reset_index(drop=True)
-df_clean = df.copy()
-
-# re-assemble file
-# iterate over rows
-last_valid_index = None
-valid_indices = []
-for index, row in df.loc[2:].iterrows():
-    # check if row starts with serial number
-    if isinstance(row.iloc[0], int):
-        last_valid_index = index
-        valid_indices.append(index)
-        last_valid_col_i = np.argwhere(~row.isnull()).max()
-        last_valid_col = df.columns[last_valid_col_i]
-        if last_valid_col_i + 1 < len(df.columns):
-            first_empty_col = df.columns[last_valid_col_i + 1]
-    else:
-        # if row after col A is empty, append to last valid cell of last valid row
-        df_clean.loc[last_valid_index, last_valid_col] = df_clean.loc[
-            last_valid_index, last_valid_col
-        ] + str(row[0])
-        # if row has other content, fill in rest of last valid row
-        if not row[1:].dropna().empty:
-            cells_available = len(
-                df_clean.loc[last_valid_index, first_empty_col:]
-            )
-            df_clean.loc[last_valid_index, first_empty_col:] = row.values[
-                1 : cells_available + 1
-            ]
-
-df_clean = df_clean.loc[valid_indices]
-df_clean = df_clean[df_clean["Event"] == "TC - Tropical Cyclone"]
-metrics = [
-    "Deaths",
-    "Injured",
-    "Missing",
-    "Houses Destroyed",
-    "Houses Damaged",
-    "Directly affected",
-    "Indirectly Affected",
-    "Relocated",
-    "Evacuated",
-    "Losses $USD",
-    "Losses $Local",
-    "Education centers",
-    "Hospitals",
-]
-df_clean = df_clean.dropna(subset=metrics)
-df_clean[metrics] = df_clean[metrics].astype(int)
-
-
-def clean_date(raw_date):
-    if isinstance(raw_date, str):
-        date_list = [int(x) for x in raw_date.split("/")]
-        if date_list[1] == 0:
-            date_list[1] = 1
-        if date_list[2] == 0:
-            date_list[2] = 1
-        return datetime(date_list[0], date_list[1], date_list[2])
-    return raw_date
-
-
-df_clean["datetime"] = df_clean["Date (YMD)"].apply(clean_date)
-
-
-def datetime_to_season(date):
-    eff_date = date - pd.Timedelta(days=200)
-    return f"{eff_date.year}/{eff_date.year + 1}"
-
-
-df_clean["Season"] = df_clean["datetime"].apply(datetime_to_season)
-
-
-def clean_name(raw_name):
-    return (
-        raw_name.removesuffix("")
-        .removeprefix("Tropical Cyclone")
-        .removeprefix(" - ")
-        .removesuffix("(possibly)")
-        .strip()
-    )
-
-
-df_clean["Cyclone Name"] = df_clean["Description of Cause"].apply(clean_name)
-df_clean["Name Season"] = df_clean["Cyclone Name"] + " " + df_clean["Season"]
-
-# clean up errors
-df_clean.loc[df_clean["Name Season"] == "Daman 2007/2008", "Deaths"] = 0
-
-# keep only relevant columns
-df_clean = df_clean[["Name Season"] + metrics]
-
-# drop duplicates - Odette
-df_clean = df_clean.drop_duplicates(subset="Name Season", keep="first")
-
-df_clean.to_csv(EXP_DIR / "impact_data.csv", index=False)
+df_clean = utils.load_impactdata()
 ```
 
 ```python
@@ -180,35 +86,7 @@ for metric in metrics:
 ```
 
 ```python
-# Load and process cyclone tracks
-
-df = pd.read_csv(CYCLONETRACKS_PATH)
-df["Date"] = df["Date"].apply(lambda x: x.strip())
-df["datetime"] = df["Date"] + " " + df["Time"]
-df["datetime"] = pd.to_datetime(df["datetime"], format="%d/%m/%Y %HZ")
-df = df.drop(["Date", "Time"], axis=1)
-df["Cyclone Name"] = df["Cyclone Name"].apply(
-    lambda name: "".join([x for x in name if not x.isdigit()])
-    .strip()
-    .capitalize()
-)
-df["Name Season"] = df["Cyclone Name"] + " " + df["Season"]
-cyclone_names = df["Name Season"].unique()
-seasons = df["Season"].unique()
-df["Category numeric"] = pd.to_numeric(df["Category"], errors="coerce").fillna(
-    0
-)
-df["Birth"] = df.groupby("Name Season")["datetime"].transform(min)
-df["Age (days)"] = df["datetime"] - df["Birth"]
-df["Age (days)"] = df["Age (days)"].apply(
-    lambda x: x.days + x.seconds / 24 / 3600
-)
-
-
-gdf_tracks = gpd.GeoDataFrame(
-    df, geometry=gpd.points_from_xy(df["Longitude"], df["Latitude"])
-)
-gdf_tracks.crs = "EPSG:4326"
+gdf_tracks = utils.load_cyclonetracks()
 
 # Read CODAB
 
@@ -439,6 +317,7 @@ f.close()
 
 # plot adm3 leadtime
 # terrible terrible bodge to deal with shp spanning -180 deg
+# note - found a way around this, implemented in GlobalCyclone
 gdf_t = gdf_adm3.to_crs("EPSG:3832")
 gdf_t.geometry = gdf_t.geometry.translate(-1000000, 0)
 gdf_t = gdf_t.to_crs("EPSG:4326")
@@ -495,6 +374,12 @@ f.close()
 
 ```python
 # aggregate cyclone tracks and attach impact data
+
+# overwrite with interpolated tracks
+gdf_tracks = gdf_interp.copy()
+gdf_tracks["Season"] = gdf_tracks["Name Season"].apply(
+    lambda x: x.split(" ")[-1]
+)
 
 df_agg = pd.DataFrame()
 
@@ -569,9 +454,9 @@ for name_season in df_agg["Name Season"].unique():
     landfall_row = dff[dff["datetime"] == closest_datetime].iloc[0]
 
     # props within distance
-    distances = [100, 200, 300, 400, 500]
+    distances = [0, 100, 200, 250, 300, 370, 400, 500]
     for distance in distances:
-        dfff = dff[dff["Distance (km)"] < distance]
+        dfff = dff[dff["Distance (km)"] <= distance]
         if dfff.empty:
             continue
         time_spent = dfff["datetime"].iloc[-1] - dfff["datetime"].iloc[0]
@@ -965,21 +850,22 @@ pyo.iplot(fig)
 # should combine this with cell above...
 
 speeds = range(100, 501, 100)
-distances = range(100, 501, 100)
+distances = [0, 100, 250, 370, 500]
 categories = range(70, 140, 10)
+categories = range(2, 6, 1)
 
 df_recur = pd.DataFrame()
 
-range_color = [0.5, 8]
+range_color = [1, 6]
 
 for distance in distances:
     for category in categories:
         dff_agg = df_agg[
-            (df_agg["Distance (km)"] <= distance)
-            & (df_agg["Wind (Knots)"] >= category)
+            # (df_agg["Distance (km)"] <= distance)
+            (df_agg[f"Max cat. < {distance} km"] >= category)
         ].sort_values("Season numeric", ascending=False)
         count = len(dff_agg)
-        if count < 16:
+        if count < 25:
             names = "<br>".join([x for x in dff_agg["Name Season"]])
         else:
             names = str(count)
@@ -1032,12 +918,17 @@ fig.update(
 )
 fig.update_traces(name="")
 fig.update_layout(
-    coloraxis_colorbar_title="Recurrence (years)",
+    coloraxis_colorbar_title="Return period (years)",
 )
-fig.update_xaxes(side="top", title_text="Minimum distance to Fiji (km)")
-fig.update_yaxes(title_text="Max. wind speed (knots)")
+fig.update_xaxes(side="top", title_text="Distance to Fiji (km)")
+fig.update_yaxes(title_text="Max. cat. while within distance")
 
 pyo.iplot(fig)
+```
+
+```python
+# composite trigger
+#
 ```
 
 ```python
@@ -1163,7 +1054,7 @@ for metric in plot_metrics:
         pyo.iplot(fig)
 ```
 
-```python
+```python jupyter={"outputs_hidden": true}
 # Plot tracks and CODAB
 
 gdf_adm0_4326 = gdf_adm0.to_crs("EPSG:4326")
@@ -1226,7 +1117,7 @@ if True:
     f.close()
 ```
 
-```python
+```python jupyter={"outputs_hidden": true}
 
 
 
@@ -1385,6 +1276,69 @@ py.plot(
     auto_open=False,
     config={"displayModeBar": False},
 )
+```
+
+```python
+# plot Fiji with buffer
+
+gdf_plot = gdf_adm0.to_crs(FJI_CRS)
+gdf_for_buffer = gdf_adm0.to_crs(3832).simplify(10000)
+gdf_plot = gdf_plot.to_crs(3832)
+
+buffer_distances = [250]
+
+buffer_gdfs = []
+
+for d in buffer_distances:
+    print(d)
+    buffer_gdfs.append(gdf_for_buffer.buffer(d * 1000))
+
+buffer_gdfs[0].plot()
+```
+
+```python
+gdf_plot = gdf_plot.to_crs(3832)
+buffer_gdfs.append(gdf_adm0.to_crs(3832).simplify(10000).buffer(250 * 1000))
+```
+
+```python
+buffer_gdfs[0]
+```
+
+```python
+n = 0
+gdf_plot = buffer_gdfs[n].to_crs(FJI_CRS)
+
+fig = px.choropleth_mapbox(
+    gdf_plot,
+    geojson=gdf_plot.geometry,
+    locations=gdf_plot.index,
+    mapbox_style="open-street-map",
+)
+
+fig.update_traces(marker_opacity=0.3)
+
+# for d, gdff in zip(buffer_distances, buffer_gdfs):
+#     gdff = gdff.to_crs(FJI_CRS)
+#     fig.add_trace(
+#         go.Choroplethmapbox(
+#             geojson=gdff.geometry.to_json(), locations=gdff.index, z=[1]
+#         )
+#     )
+
+d = buffer_distances[n]
+fig.update_layout(
+    height=1000,
+    width=800,
+    mapbox_zoom=5.2,
+    mapbox_center_lat=-17,
+    mapbox_center_lon=179,
+    margin={"r": 0, "t": 50, "l": 0, "b": 0},
+    title=f"Area within {d} km of Fiji",
+    showlegend=False,
+)
+
+fig.show()
 ```
 
 ```python
