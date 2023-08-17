@@ -22,7 +22,9 @@ PROC_PATH = Path(os.environ["AA_DATA_DIR"]) / "public/processed/fji"
 FJI_CRS = "+proj=longlat +ellps=WGS84 +lon_wrap=180 +datum=WGS84 +no_defs"
 CODAB_PATH = RAW_DIR / "cod_ab"
 NDMO_DIR = AA_DATA_DIR / "private/raw/fji/ndmo"
-ADM_ID = "ADM3_PCODE"
+ADM3 = "ADM3_PCODE"
+ADM2 = "ADM2_PCODE"
+ADM1 = "ADM1_PCODE"
 
 
 def load_hindcasts() -> gpd.GeoDataFrame:
@@ -161,6 +163,9 @@ def load_codab(level: int = 3) -> gpd.GeoDataFrame:
         adm_name = "tikina"
     filename = f"fji_polbnda_adm{level}_{adm_name}"
     gdf = gpd.read_file(CODAB_PATH / filename, layer=filename).set_crs(3832)
+    gdf["ADM1_NAME"] = gdf["ADM1_NAME"].replace(
+        "Northern  Division", "Northern Division"
+    )
     return gdf
 
 
@@ -189,7 +194,7 @@ def process_geo_impact():
     Saves in private/processed.
     """
     cod = load_codab()
-    cod = cod.set_index(ADM_ID)
+    cod = cod.set_index(ADM3)
     cod = cod.to_crs(FJI_CRS)
 
     # read shp
@@ -233,11 +238,11 @@ def process_geo_impact():
     missing_events = missing_events.to_crs(3832)
     for adm_id, adm in cod.iterrows():
         missing_events[f"{adm_id}"] = missing_events.distance(adm.geometry)
-    missing_events[ADM_ID] = missing_events[cod.index].idxmin(axis=1)
+    missing_events[ADM3] = missing_events[cod.index].idxmin(axis=1)
     missing_events = missing_events.drop(columns=cod.index)
     missing_events = missing_events.to_crs(FJI_CRS)
 
-    impact = impact.melt(id_vars=id_cols, var_name=ADM_ID)
+    impact = impact.melt(id_vars=id_cols, var_name=ADM3)
     impact = impact[impact["value"]].drop(columns=["value"])
     impact = pd.concat([impact, missing_events], ignore_index=True)
 
@@ -269,12 +274,78 @@ def process_geo_impact():
     )
 
 
+def load_housing_impact() -> pd.DataFrame:
+    """
+    Load processed housing impact from NDMO
+    """
+    return pd.read_csv(
+        AA_DATA_DIR / "private/processed/fji/ndmo/processed_house_impact.csv"
+    )
+
+
+def process_housing_impact():
+    """
+    Process housing impact (by adm 1 or 2) from NDMO
+    """
+    cod = load_codab(level=2)
+
+    cyclones = ["Winston", "Sarai", "Tino", "Harold", "Yasa", "Ana"]
+
+    dfs = []
+    name2season = {
+        "Winston": "2015/2016",
+        "Sarai": "2019/2020",
+        "Tino": "2019/2020",
+        "Harold": "2019/2020",
+        "Yasa": "2020/2021",
+        "Ana": "2020/2021",
+    }
+    for cyclone in cyclones:
+        df_in = pd.read_excel(
+            NDMO_DIR / "Disaster Damaged Housing.xlsx",
+            sheet_name=f"TC_{cyclone}",
+        )
+        df_in = df_in.rename(
+            columns={
+                "Completely Damaged": "Destroyed",
+                "Partially Damaged": "Major Damage",
+            }
+        )
+        df_in = df_in.dropna()
+        df_in["nameseason"] = f"{cyclone} {name2season.get(cyclone)}"
+        dfs.append(df_in)
+    df = pd.concat(dfs, ignore_index=True)
+    df["ADM1_NAME"] = df["Division"] + " Division"
+    df = df.merge(
+        cod[["ADM1_PCODE", "ADM1_NAME"]].drop_duplicates(),
+        on="ADM1_NAME",
+        how="left",
+    )
+    df = df.merge(
+        cod[["ADM2_PCODE", "ADM2_NAME"]],
+        right_on="ADM2_NAME",
+        left_on="Province",
+        how="left",
+    )
+    df.to_csv(
+        AA_DATA_DIR / "private/processed/fji/ndmo/processed_house_impact.csv",
+        index=False,
+    )
+
+
 def load_desinventar() -> pd.DataFrame:
     """
-    Load Desinventar exported dataset
+    Load processed Desinventar data
     Returns
     -------
+    df: pd.DataFrame
+    """
+    return pd.read_csv(EXP_DIR / "processed_desinventar.csv")
 
+
+def process_desinventar():
+    """
+    Process Desinventar exported dataset
     """
     df = pd.read_excel(IMPACT_PATH, skiprows=[0], index_col=None)
     df = df.dropna(how="all")
@@ -368,9 +439,7 @@ def load_desinventar() -> pd.DataFrame:
     # drop duplicates - Odette
     df_clean = df_clean.drop_duplicates(subset="Name Season", keep="first")
 
-    df_clean.to_csv(EXP_DIR / "impact_data.csv", index=False)
-
-    return df_clean
+    df_clean.to_csv(EXP_DIR / "processed_desinventar.csv", index=False)
 
 
 def process_buffer(distance: int = 250):

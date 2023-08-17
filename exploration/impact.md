@@ -43,11 +43,7 @@ impact = utils.load_geo_impact()
 ```
 
 ```python
-impact
-```
-
-```python
-impact["Infrastruc"].value_counts()
+impact["Event"].value_counts()
 ```
 
 ```python
@@ -57,5 +53,5 @@ cod.join(impact.groupby(ADM_ID).size().to_frame("events")).plot(
 ```
 
 ```python
-
+utils.load_housing_impact()
 ```
