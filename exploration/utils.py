@@ -20,6 +20,9 @@ RAW_DIR = Path(os.environ["AA_DATA_DIR"]) / "public/raw/fji"
 ADM0_PATH = RAW_DIR / "cod_ab/fji_polbnda_adm0_country"
 PROC_PATH = Path(os.environ["AA_DATA_DIR"]) / "public/processed/fji"
 FJI_CRS = "+proj=longlat +ellps=WGS84 +lon_wrap=180 +datum=WGS84 +no_defs"
+CODAB_PATH = RAW_DIR / "cod_ab"
+NDMO_DIR = AA_DATA_DIR / "private/raw/fji/ndmo"
+ADM_ID = "ADM3_PCODE"
 
 
 def load_hindcasts() -> gpd.GeoDataFrame:
@@ -134,7 +137,145 @@ def interpolate_cyclonetracks(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     return gdf_interp
 
 
-def load_impactdata() -> pd.DataFrame:
+def load_codab(level: int = 3) -> gpd.GeoDataFrame:
+    """
+    Load Fiji codab
+    Parameters
+    ----------
+    level: int = 3
+        admin level
+
+    Returns
+    -------
+    gdf: gpd.GeoDataFrame
+        includes setting CRS EPSG:3832
+    """
+    adm_name = ""
+    if level == 0:
+        adm_name = "country"
+    elif level == 1:
+        adm_name = "district"
+    elif level == 2:
+        adm_name = "province"
+    elif level == 3:
+        adm_name = "tikina"
+    filename = f"fji_polbnda_adm{level}_{adm_name}"
+    gdf = gpd.read_file(CODAB_PATH / filename, layer=filename).set_crs(3832)
+    return gdf
+
+
+def load_geo_impact() -> gpd.GeoDataFrame:
+    """
+    Load processed geo impact (from NDMO)
+    Returns
+    -------
+    gdf: gpd.GeoDataFrame
+    """
+    df = pd.read_csv(
+        AA_DATA_DIR / "private/processed/fji/ndmo/processed_geo_impact.csv"
+    )
+    gdf = gpd.GeoDataFrame(
+        data=df, geometry=gpd.points_from_xy(df["lon"], df["lat"]), crs=FJI_CRS
+    )
+    return gdf
+
+
+def process_geo_impact():
+    """
+    Process geo-located impact (mostly infrastructure) from NDMO.
+    Combines both files we received from them (xls and shp),
+    removes duplicates.
+    Finds adm3 (tikina) for each event.
+    Saves in private/processed.
+    """
+    cod = load_codab()
+    cod = cod.set_index(ADM_ID)
+    cod = cod.to_crs(FJI_CRS)
+
+    # read shp
+    gdf = gpd.read_file(NDMO_DIR / "TC_Merged_cleaned/TC_Merged_Cleaned.shp")
+    impact_crs = gdf.crs
+    gdf = gdf.drop(columns=["FID_", "OID_", "geometry"])
+
+    # read xls
+    df = pd.read_excel(NDMO_DIR / "Flood Events.xls")
+
+    concat = pd.concat([df, gdf])
+    str_cols = ["Name", "Hazard", "Infrastruc", "Event", "Location"]
+    concat[str_cols] = concat[str_cols].astype(str)
+    num_cols = ["Year", "X_COORD", "Y_COORD"]
+    concat[num_cols] = concat[num_cols].replace([0, ""], np.nan)
+    concat = concat.dropna(subset=num_cols)
+    concat[num_cols] = concat[num_cols].astype(int)
+    concat["Name"] = concat["Name"].apply(lambda x: x.title())
+    unique_cols = ["Name", "Event", "X_COORD", "Y_COORD"]
+    concat = concat.drop_duplicates(subset=unique_cols)
+
+    impact = gpd.GeoDataFrame(
+        data=concat,
+        geometry=gpd.points_from_xy(
+            concat["X_COORD"], concat["Y_COORD"], crs=impact_crs
+        ),
+    )
+    impact = impact.to_crs(FJI_CRS)
+
+    id_cols = impact.columns
+    # find the adm3 for each event
+    for adm_id, adm in cod.iterrows():
+        impact[adm_id] = impact.within(adm.geometry)
+
+    # find events which don't have an adm3
+    missing_events = impact[impact[cod.index].sum(axis=1) == 0]
+    impact = impact[impact[cod.index].sum(axis=1) > 0]
+
+    # calculate distance to adm3s instead
+    cod = cod.to_crs(3832)
+    missing_events = missing_events.to_crs(3832)
+    for adm_id, adm in cod.iterrows():
+        missing_events[f"{adm_id}"] = missing_events.distance(adm.geometry)
+    missing_events[ADM_ID] = missing_events[cod.index].idxmin(axis=1)
+    missing_events = missing_events.drop(columns=cod.index)
+    missing_events = missing_events.to_crs(FJI_CRS)
+
+    impact = impact.melt(id_vars=id_cols, var_name=ADM_ID)
+    impact = impact[impact["value"]].drop(columns=["value"])
+    impact = pd.concat([impact, missing_events], ignore_index=True)
+
+    replace = {
+        "TC Winston": "Winston 2015/2016",
+        "March Flood (TD17F)": "TD17F 2011/2012",
+        # note: Ana is "Ana 2020/2021"
+        "TC_YASA_ANA": "Yasa 2020/2021",
+        "TC Cody": "Cody 2021/2022",
+        "January Flood (TD07F)": "TD07F 2011/2012",
+        "TC ZENA": "Zena 2015/2016",
+        "TC Sarai": "Sarai 2019/2020",
+        # note: includes TD04F, TD05F, and TC Hettie
+        "TD_Jan_Feb": "TD 2008/2009",
+        "TC Tino": "Tino 2019/2020",
+        "TC Josie": "Josie 2017/2018",
+        "TD-17F": "TD17F 2015/2016",
+        "TC Tomas": "Tomas 2009/2010",
+        "TC_BINA": "Bina 2020/2021",
+    }
+    impact["Event"] = impact["Event"].replace(replace)
+
+    impact["lon"] = impact.geometry.x
+    impact["lat"] = impact.geometry.y
+    impact = impact.drop(columns=["X_COORD", "Y_COORD", "geometry"])
+    impact.to_csv(
+        AA_DATA_DIR / "private/processed/fji/ndmo/processed_geo_impact.csv",
+        index=False,
+    )
+
+
+def load_desinventar() -> pd.DataFrame:
+    """
+    Load Desinventar exported dataset
+    Returns
+    -------
+
+    """
     df = pd.read_excel(IMPACT_PATH, skiprows=[0], index_col=None)
     df = df.dropna(how="all")
     df = df.reset_index(drop=True)

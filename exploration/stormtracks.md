@@ -73,7 +73,7 @@ SAVE_DIR = Path("/Users/tdowning/OCHA/data/fji")
 ```
 
 ```python
-df_clean = utils.load_impactdata()
+df_clean = utils.load_desinventar()
 ```
 
 ```python

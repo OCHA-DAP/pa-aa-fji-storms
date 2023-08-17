@@ -333,3 +333,7 @@ for name_season in df["Name Season"].unique():
 
     fig.show()
 ```
+
+```python
+
+```
