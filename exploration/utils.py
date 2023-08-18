@@ -1,11 +1,17 @@
+import getpass
 import os
+import re
+import xml.etree.ElementTree as ET
 from datetime import datetime
 from pathlib import Path
 
 import geopandas as gpd
 import numpy as np
 import pandas as pd
+import requests
+from dateutil import rrule
 from dotenv import load_dotenv
+from tqdm.auto import tqdm
 
 load_dotenv()
 
@@ -25,9 +31,19 @@ NDMO_DIR = AA_DATA_DIR / "private/raw/fji/ndmo"
 ADM3 = "ADM3_PCODE"
 ADM2 = "ADM2_PCODE"
 ADM1 = "ADM1_PCODE"
+ECMWF_RAW = AA_DATA_DIR / "public/exploration/glb/ecmwf/cyclone_hindcasts"
+ECMWF_PROCESSED = (
+    AA_DATA_DIR / "public/exploration/fji/ecmwf/cyclone_hindcasts"
+)
 
 
 def load_hindcasts() -> gpd.GeoDataFrame:
+    """
+    Loads RSMC / FMS hindcasts
+    Returns
+    -------
+    gdf of hindcasts
+    """
     filenames = os.listdir(FCAST_DIR)
 
     df = pd.DataFrame()
@@ -85,6 +101,13 @@ def load_cyclonetracks() -> gpd.GeoDataFrame:
     df["Age (days)"] = df["datetime"] - df["Birth"]
     df["Age (days)"] = df["Age (days)"].apply(
         lambda x: x.days + x.seconds / 24 / 3600
+    )
+    df["yearname"] = df["Cyclone Name"].apply(
+        lambda x: x.lower()
+    ) + df.groupby("Name Season")["Birth"].transform(
+        lambda x: x.dt.year
+    ).astype(
+        str
     )
 
     gdf_tracks = gpd.GeoDataFrame(
@@ -272,6 +295,166 @@ def process_geo_impact():
         AA_DATA_DIR / "private/processed/fji/ndmo/processed_geo_impact.csv",
         index=False,
     )
+
+
+def process_ecmwf_hindcasts():
+    gdf = load_cyclonetracks()
+    df_typhoons = pd.DataFrame()
+    df_typhoons["international"] = (
+        gdf["Cyclone Name"].apply(lambda x: x.lower()).unique()
+    )
+
+    def xml2csv(filename):
+        try:
+            tree = ET.parse(filename)
+        except ET.ParseError:
+            print("Error with file, skipping")
+            return
+        root = tree.getroot()
+
+        prod_center = root.find("header/productionCenter").text
+        baseTime = root.find("header/baseTime").text
+
+        # Create one dictonary for each time point, and append it to a list
+        for members in root.findall("data"):
+            mtype = members.get("type")
+            if mtype not in ["forecast", "ensembleForecast"]:
+                continue
+            for members2 in members.findall("disturbance"):
+                cyclone_name = [
+                    name.text.lower().strip()
+                    for name in members2.findall("cycloneName")
+                ]
+                if not cyclone_name:
+                    continue
+                cyclone_name = cyclone_name[0].lower()
+                if cyclone_name not in list(df_typhoons["international"]):
+                    continue
+                print(f"Found typhoon {cyclone_name}")
+                for members3 in members2.findall("fix"):
+                    tem_dic = {}
+                    tem_dic["mtype"] = [mtype]
+                    tem_dic["product"] = [
+                        re.sub("\\s+", " ", prod_center).strip().lower()
+                    ]
+                    tem_dic["cyc_number"] = [
+                        name.text for name in members2.findall("cycloneNumber")
+                    ]
+                    tem_dic["ensemble"] = [members.get("member")]
+                    tem_dic["speed"] = [
+                        name.text
+                        for name in members3.findall(
+                            "cycloneData/maximumWind/speed"
+                        )
+                    ]
+                    tem_dic["pressure"] = [
+                        name.text
+                        for name in members3.findall(
+                            "cycloneData/minimumPressure/pressure"
+                        )
+                    ]
+                    time = [
+                        name.text for name in members3.findall("validTime")
+                    ]
+                    tem_dic["time"] = [
+                        "/".join(time[0].split("T")[0].split("-"))
+                        + ", "
+                        + time[0].split("T")[1][:-1]
+                    ]
+                    tem_dic["lat"] = [
+                        name.text for name in members3.findall("latitude")
+                    ]
+                    tem_dic["lon"] = [
+                        name.text for name in members3.findall("longitude")
+                    ]
+                    tem_dic["lead_time"] = [members3.get("hour")]
+                    tem_dic["forecast_time"] = [
+                        "/".join(baseTime.split("T")[0].split("-"))
+                        + ", "
+                        + baseTime.split("T")[1][:-1]
+                    ]
+                    tem_dic1 = dict(
+                        [
+                            (k, "".join(str(e).lower().strip() for e in v))
+                            for k, v in tem_dic.items()
+                        ]
+                    )
+                    # Save to CSV
+                    outfile = ECMWF_PROCESSED / f"csv/{cyclone_name}_all.csv"
+                    pd.DataFrame(tem_dic1, index=[0]).to_csv(
+                        outfile,
+                        mode="a",
+                        header=not os.path.exists(outfile),
+                        index=False,
+                    )
+
+    filename_list = sorted(list(Path(ECMWF_RAW / "xml").glob("*.xml")))
+
+    completed_xmls = pd.read_csv(ECMWF_PROCESSED / "completed_xmls.csv")[
+        "0"
+    ].to_list()
+    for filename in tqdm(filename_list):
+        if str(filename) not in completed_xmls:
+            xml2csv(filename)
+            completed_xmls.append(filename)
+    pd.DataFrame(completed_xmls).to_csv(
+        ECMWF_PROCESSED / "completed_xmls.csv", index=False
+    )
+
+
+def download_ecmwf_hindcasts(
+    start_date: datetime = datetime(2022, 8, 22, 0, 0, 0)
+):
+    """
+    Downloads ECMWF cyclone hindcasts to
+        public/exploration/glb/ecmwf/cyclone_hindcasts
+    """
+    save_dir = AA_DATA_DIR / "public/exploration/glb/ecmwf/cyclone_hindcasts"
+    email = input("email: ")
+    pswd = getpass.getpass("password: ")
+
+    values = {"email": email, "passwd": pswd, "action": "login"}
+    login_url = "https://rda.ucar.edu/cgi-bin/login"
+
+    ret = requests.post(login_url, data=values)
+    if ret.status_code != 200:
+        print("Bad Authentication")
+        print(ret.text)
+        exit(1)
+
+    # note this url changed recently, this is the correct one as of Aug 2023
+    dspath = "https://data.rda.ucar.edu/ds330.3/"
+    date_list = rrule.rrule(
+        rrule.HOURLY,
+        dtstart=start_date,
+        until=datetime.utcnow().date(),
+        interval=12,
+    )
+    verbose = True
+
+    for date in date_list:
+        ymd = date.strftime("%Y%m%d")
+        ymdhms = date.strftime("%Y%m%d%H%M%S")
+        server = "test" if date < datetime(2008, 8, 1) else "prod"
+        file = (
+            f"ecmf/{date.year}/{ymd}/z_tigge_c_ecmf_{ymdhms}_"
+            f"ifs_glob_{server}_all_glo.xml"
+        )
+        filename = dspath + file
+        outfile = save_dir / "xml" / os.path.basename(filename)
+        # Don't download if exists already
+        if outfile.exists():
+            if verbose:
+                print(f"{file} already exists")
+            continue
+        req = requests.get(filename, cookies=ret.cookies, allow_redirects=True)
+        if req.status_code != 200:
+            if verbose:
+                print(f"{file} invalid URL")
+            continue
+        if verbose:
+            print(f"{file} downloading")
+        open(outfile, "wb").write(req.content)
 
 
 def load_housing_impact() -> pd.DataFrame:
