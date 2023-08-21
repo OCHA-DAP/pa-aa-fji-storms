@@ -297,7 +297,72 @@ def process_geo_impact():
     )
 
 
+def process_ecmwf_besttrack_hindcasts():
+    """
+    Take best track forecasts from ECMWF CSVs.
+    Also set correct starting year for each cyclone, including ones with
+    duplicated years across years, and ones spanning one calendar year to the
+    next.
+    """
+    ecmwf_filelist = os.listdir(ECMWF_PROCESSED / "csv")
+    ecmwf_filelist = [x for x in ecmwf_filelist if not x.startswith(".")]
+
+    # take only best-track forecasts
+    forecast = pd.DataFrame()
+    for filename in ecmwf_filelist:
+        df = pd.read_csv(ECMWF_PROCESSED / "csv" / filename)
+        df = df[df["mtype"] == "forecast"]
+        drop_cols = ["mtype", "product", "ensemble"]
+        df = df.drop(columns=drop_cols)
+        df["name"] = filename.split("_")[0]
+        forecast = pd.concat([forecast, df], ignore_index=True)
+
+    forecast["time"] = pd.to_datetime(forecast["time"])
+    forecast["forecast_time"] = pd.to_datetime(forecast["forecast_time"])
+
+    # set correct start years for each cylone
+    # including duplicate cyclone names
+    forecast["year"] = forecast["forecast_time"].dt.year
+    forecast = forecast.sort_values("forecast_time")
+    forecast["nameyear"] = ""
+    for name in forecast["name"].unique():
+        dff = forecast[forecast["name"] == name].groupby("year").first()
+        if len(dff) == 1:
+            forecast.loc[forecast["name"] == name, "nameyear"] = name + str(
+                dff.index[0]
+            )
+            continue
+        dff = dff.reset_index()
+        j = 0
+        while j < len(dff):
+            year0 = dff.iloc[j]["year"]
+            if j == len(dff) - 1:
+                year1 = 0
+                forecast.loc[
+                    (forecast["name"] == name) & (forecast["year"] == year0),
+                    "nameyear",
+                ] = name + str(dff.index[0])
+            else:
+                year1 = dff.iloc[j + 1]["year"]
+            if year1 == year0 + 1:
+                j += 1
+            else:
+                year1 = 0
+            forecast.loc[
+                (forecast["name"] == name)
+                & ((forecast["year"] == year0) | (forecast["year"] == year1)),
+                "nameyear",
+            ] = name + str(year0)
+            j += 1
+
+    forecast = forecast.drop(columns="year")
+    forecast.to_csv(ECMWF_PROCESSED / "besttrack_forecasts.csv", index=False)
+
+
 def process_ecmwf_hindcasts():
+    """
+    Produce CSVs from ECMWF hindcast XMLs
+    """
     gdf = load_cyclonetracks()
     df_typhoons = pd.DataFrame()
     df_typhoons["international"] = (

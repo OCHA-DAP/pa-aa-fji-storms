@@ -53,46 +53,12 @@ import utils
 ```
 
 ```python
-fms = utils.load_cyclonetracks()
-ecmwf_filelist = os.listdir(utils.ECMWF_PROCESSED / "csv")
+# if needed, process best tracks
+# utils.process_ecmwf_besttrack_hindcasts()
 ```
 
 ```python
-fms_names = [x.lower() for x in fms["Cyclone Name"].unique()]
-```
-
-```python
-ecmwf_names = [x.split("_")[0] for x in ecmwf_filelist]
-```
-
-```python
-# check if duplicate names are a problem
-for name in fms["Cyclone Name"].unique():
-    dff = fms[fms["Cyclone Name"] == name]
-    if len(dff["Name Season"].unique()) > 1:
-        if name.lower() in ecmwf_names:
-            print(name)
-```
-
-```python
-# de-duplicate ecmwf hindcasts with same name
-for name in tqdm(ecmwf_names):
-    df = pd.read_csv(ECMWF_PROCESSED / f"csv/{name}_all.csv")
-    df["forecast_time"] = pd.to_datetime(df["forecast_time"])
-    years = df["forecast_time"].dt.year.unique()
-    if len(years) == 1:
-        df.to_csv(
-            ECMWF_PROCESSED / f"csv/{name}{years[0]}_all.csv", index=False
-        )
-    if len(years) == 2:
-        if years.max() == years.min() + 1:
-            df.to_csv(
-                ECMWF_PROCESSED / f"csv/{name}{years.min()}_all.csv",
-                index=False,
-            )
-        else:
-            df1 = df[df["forecast_time"].dt.year == years.min()]
-
+utils.process_ecmwf_besttrack_hindcasts()
 ```
 
 ```python
