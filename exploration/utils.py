@@ -35,6 +35,7 @@ ECMWF_RAW = AA_DATA_DIR / "public/exploration/glb/ecmwf/cyclone_hindcasts"
 ECMWF_PROCESSED = (
     AA_DATA_DIR / "public/exploration/fji/ecmwf/cyclone_hindcasts"
 )
+KNOTS_PER_MS = 1.94384
 
 
 def load_hindcasts() -> gpd.GeoDataFrame:
@@ -48,6 +49,8 @@ def load_hindcasts() -> gpd.GeoDataFrame:
 
     df = pd.DataFrame()
     for filename in filenames:
+        if filename.startswith("."):
+            continue
         df_date = pd.read_csv(FCAST_DIR / filename, header=None, nrows=3)
         date_str = df_date.iloc[0, 1].removeprefix("baseTime=")
         base_time = datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%SZ")
@@ -68,7 +71,7 @@ def load_hindcasts() -> gpd.GeoDataFrame:
         df_data["cyclone_name"] = cyclone_name
         df_data["base_time"] = base_time
         df_data["season"] = datetime_to_season(base_time)
-        df_data["name_season"] = (
+        df_data["Name Season"] = (
             df_data["cyclone_name"] + " " + df_data["season"]
         )
 
@@ -102,7 +105,7 @@ def load_cyclonetracks() -> gpd.GeoDataFrame:
     df["Age (days)"] = df["Age (days)"].apply(
         lambda x: x.days + x.seconds / 24 / 3600
     )
-    df["yearname"] = df["Cyclone Name"].apply(
+    df["nameyear"] = df["Cyclone Name"].apply(
         lambda x: x.lower()
     ) + df.groupby("Name Season")["Birth"].transform(
         lambda x: x.dt.year
@@ -142,11 +145,14 @@ def interpolate_cyclonetracks(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
                 "Pressure",
                 "datetime",
                 "Age (days)",
+                "nameyear",
             ]
         ]
         dff = dff.groupby("datetime").first()
+        nameyear = dff.iloc[0]["nameyear"]
         dff = dff.resample("H").interpolate().reset_index()
         dff["Name Season"] = name
+        dff["nameyear"] = nameyear
         dfs.append(dff)
 
     df_interp = pd.concat(dfs)
@@ -186,9 +192,10 @@ def load_codab(level: int = 3) -> gpd.GeoDataFrame:
         adm_name = "tikina"
     filename = f"fji_polbnda_adm{level}_{adm_name}"
     gdf = gpd.read_file(CODAB_PATH / filename, layer=filename).set_crs(3832)
-    gdf["ADM1_NAME"] = gdf["ADM1_NAME"].replace(
-        "Northern  Division", "Northern Division"
-    )
+    if level > 0:
+        gdf["ADM1_NAME"] = gdf["ADM1_NAME"].replace(
+            "Northern  Division", "Northern Division"
+        )
     return gdf
 
 
@@ -297,6 +304,31 @@ def process_geo_impact():
     )
 
 
+def knots2cat(knots):
+    category = 0
+    if knots > 107:
+        category = 5
+    elif knots > 85:
+        category = 4
+    elif knots > 63:
+        category = 3
+    elif knots > 47:
+        category = 2
+    elif knots > 33:
+        category = 1
+    return category
+
+
+def load_ecmwf_besttrack_hindcasts():
+    df = pd.read_csv(ECMWF_PROCESSED / "besttrack_forecasts.csv")
+    gdf = gpd.GeoDataFrame(
+        data=df,
+        geometry=gpd.points_from_xy(df["lon"], df["lat"], crs="EPSG:4326"),
+    )
+    gdf = gdf.to_crs(FJI_CRS)
+    return gdf
+
+
 def process_ecmwf_besttrack_hindcasts():
     """
     Take best track forecasts from ECMWF CSVs.
@@ -319,6 +351,15 @@ def process_ecmwf_besttrack_hindcasts():
 
     forecast["time"] = pd.to_datetime(forecast["time"])
     forecast["forecast_time"] = pd.to_datetime(forecast["forecast_time"])
+    # deal with "double negatives" (i.e. negative degrees West)
+    forecast[["lat", "lon"]] = forecast[["lat", "lon"]].applymap(
+        lambda x: str(x).replace("--", "")
+    )
+    forecast["lon"] = pd.to_numeric(forecast["lon"])
+    forecast["lon"] = forecast["lon"].apply(lambda x: x + 360 if x < 0 else x)
+
+    forecast["speed_knots"] = forecast["speed"] * KNOTS_PER_MS
+    forecast["category_numeric"] = forecast["speed_knots"].apply(knots2cat)
 
     # set correct start years for each cylone
     # including duplicate cyclone names
@@ -359,7 +400,7 @@ def process_ecmwf_besttrack_hindcasts():
     forecast.to_csv(ECMWF_PROCESSED / "besttrack_forecasts.csv", index=False)
 
 
-def process_ecmwf_hindcasts():
+def process_ecmwf_hindcasts(dry_run: bool = False):
     """
     Produce CSVs from ECMWF hindcast XMLs
     """
@@ -395,7 +436,7 @@ def process_ecmwf_hindcasts():
                 cyclone_name = cyclone_name[0].lower()
                 if cyclone_name not in list(df_typhoons["international"]):
                     continue
-                print(f"Found typhoon {cyclone_name}")
+                # print(f"Found typhoon {cyclone_name}")
                 for members3 in members2.findall("fix"):
                     tem_dic = {}
                     tem_dic["mtype"] = [mtype]
@@ -426,11 +467,18 @@ def process_ecmwf_hindcasts():
                         + ", "
                         + time[0].split("T")[1][:-1]
                     ]
+                    # set sign of lat/lon based on N/S/E/W
                     tem_dic["lat"] = [
-                        name.text for name in members3.findall("latitude")
+                        "-" + name.text
+                        if name.attrib.get("units") == "deg S"
+                        else name.text
+                        for name in members3.findall("latitude")
                     ]
                     tem_dic["lon"] = [
-                        name.text for name in members3.findall("longitude")
+                        "-" + name.text
+                        if name.attrib.get("units") == "deg W"
+                        else name.text
+                        for name in members3.findall("longitude")
                     ]
                     tem_dic["lead_time"] = [members3.get("hour")]
                     tem_dic["forecast_time"] = [
@@ -445,13 +493,16 @@ def process_ecmwf_hindcasts():
                         ]
                     )
                     # Save to CSV
-                    outfile = ECMWF_PROCESSED / f"csv/{cyclone_name}_all.csv"
-                    pd.DataFrame(tem_dic1, index=[0]).to_csv(
-                        outfile,
-                        mode="a",
-                        header=not os.path.exists(outfile),
-                        index=False,
-                    )
+                    if not dry_run:
+                        outfile = (
+                            ECMWF_PROCESSED / f"csv/{cyclone_name}_all.csv"
+                        )
+                        pd.DataFrame(tem_dic1, index=[0]).to_csv(
+                            outfile,
+                            mode="a",
+                            header=not os.path.exists(outfile),
+                            index=False,
+                        )
 
     filename_list = sorted(list(Path(ECMWF_RAW / "xml").glob("*.xml")))
 
@@ -459,9 +510,10 @@ def process_ecmwf_hindcasts():
         "0"
     ].to_list()
     for filename in tqdm(filename_list):
-        if str(filename) not in completed_xmls:
+        if str(filename) not in completed_xmls or dry_run:
             xml2csv(filename)
-            completed_xmls.append(filename)
+            if not dry_run:
+                completed_xmls.append(filename)
     pd.DataFrame(completed_xmls).to_csv(
         ECMWF_PROCESSED / "completed_xmls.csv", index=False
     )
@@ -537,7 +589,7 @@ def process_housing_impact():
     """
     cod = load_codab(level=2)
 
-    cyclones = ["Winston", "Sarai", "Tino", "Harold", "Yasa", "Ana"]
+    cyclones = ["Winston", "Sarai", "Tino", "Harold", "Yasa", "Ana", "Evan"]
 
     dfs = []
     name2season = {
@@ -547,10 +599,12 @@ def process_housing_impact():
         "Harold": "2019/2020",
         "Yasa": "2020/2021",
         "Ana": "2020/2021",
+        "Evan": "2012/2013",
     }
     for cyclone in cyclones:
+        evan = "_Evan" if cyclone == "Evan" else ""
         df_in = pd.read_excel(
-            NDMO_DIR / "Disaster Damaged Housing.xlsx",
+            NDMO_DIR / f"Disaster Damaged Housing{evan}.xlsx",
             sheet_name=f"TC_{cyclone}",
         )
         df_in = df_in.rename(
@@ -562,8 +616,10 @@ def process_housing_impact():
         df_in = df_in.dropna()
         df_in["nameseason"] = f"{cyclone} {name2season.get(cyclone)}"
         dfs.append(df_in)
+
     df = pd.concat(dfs, ignore_index=True)
     df["ADM1_NAME"] = df["Division"] + " Division"
+    df["Province"] = df["Province"].replace("Nadroga/Navosa", "Nadroga_Navosa")
     df = df.merge(
         cod[["ADM1_PCODE", "ADM1_NAME"]].drop_duplicates(),
         on="ADM1_NAME",
@@ -707,7 +763,7 @@ def process_buffer(distance: int = 250):
     save_dir = PROC_PATH / filename
     if save_dir.exists():
         print(f"already exists at {save_dir}")
-        return
+        # return
 
     gdf_adm0 = gpd.read_file(
         ADM0_PATH, layer="fji_polbnda_adm0_country"

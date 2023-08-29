@@ -35,9 +35,15 @@ from dateutil import rrule
 from dotenv import load_dotenv
 import getpass
 import pandas as pd
+import numpy as np
 from tqdm.auto import tqdm
 import plotly.express as px
 from sklearn.linear_model import LogisticRegression
+import geopandas as gpd
+import plotly.io as pio
+import plotly.graph_objects as go
+
+pio.renderers.default = "notebook"
 
 import utils
 ```
@@ -54,45 +60,66 @@ import utils
 
 ```python
 # if needed, process best tracks
-# utils.process_ecmwf_besttrack_hindcasts()
+utils.process_ecmwf_besttrack_hindcasts()
 ```
 
 ```python
-utils.process_ecmwf_besttrack_hindcasts()
+fms = utils.load_cyclonetracks()
+nameyears = fms["nameyear"].unique()
+forecast = utils.load_ecmwf_besttrack_hindcasts()
+forecast.plot()
+forecast = forecast[forecast["nameyear"].isin(nameyears)]
+forecast.plot()
+```
+
+```python
+forecast.plot()
+```
+
+```python
+forecast
+```
+
+```python
+trigger_zone = utils.load_buffer()
+trigger_zone = trigger_zone.to_crs(utils.FJI_CRS)
+```
+
+```python
+forecast.plot()
 ```
 
 ```python
 # plot by name
 name = "winston"
-df = pd.read_csv(ECMWF_PROCESSED / f"csv/{name}_all.csv")
-
-# plot forecast
-px.line(
-    df[df["mtype"] == "forecast"],
+df = forecast[forecast["name"] == name]
+df = df.sort_values(["forecast_time", "time"])
+display(df)
+# plot all forecasts
+fig = px.line(
+    df,
     x="lon",
     y="lat",
     color="forecast_time",
     hover_data="lead_time",
-).show()
+)
+fig.show()
 
-# plot ensembles
-forecast_time = df["forecast_time"].unique()[0]
-px.line(
-    df[
-        (df["mtype"] == "ensembleforecast")
-        & (df["forecast_time"] == forecast_time)
-    ],
+# plot only actual track
+
+fig = px.line(
+    df[df["lead_time"] == 0],
     x="lon",
     y="lat",
-    color="ensemble",
     hover_data="lead_time",
 )
+fms_f = fms[fms["nameyear"] == "winston2016"]
+fig.add_trace(go.Scatter(x=fms_f["Longitude"], y=fms_f["Latitude"]))
+fig.show()
 ```
 
 ```python
-# check historical triggers
-buffer = utils.load_buffer()
-buffer.plot()
+forecast["speed"].max()
 ```
 
 ```python

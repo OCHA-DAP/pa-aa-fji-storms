@@ -161,7 +161,7 @@ fig.show()
 ```python
 # load buffer (default 250 km)
 buffer_distance = 250
-utils.process_buffer(buffer_distance)
+# utils.process_buffer(buffer_distance)
 trigger_zone = utils.load_buffer(buffer_distance)
 trigger_zone = trigger_zone.to_crs(utils.FJI_CRS)
 ```
@@ -256,30 +256,20 @@ df_triggers["leadtime"] = (
 df_triggers
 ```
 
-## Plot timeline
-
 ```python
-for name_season in df["Name Season"].unique():
-    df_plot = df[df["Name Season"] == name_season]
-
-    fig = go.Figure()
-    for base_time in df_plot["base_time"].unique():
-        dff = df_plot[df_plot["base_time"] == base_time]
-        fig.add_trace(
-            go.Scatter(
-                x=dff["forecast_time"],
-                y=dff["forecast_to_adm0"],
-                name=str(base_time),
-            )
-        )
-
-    fig.update_layout(template="simple_white")
-    fig.show()
+mean_fms_leadtime = df_triggers["leadtime"].mean()
+print(mean_fms_leadtime.days + mean_fms_leadtime.seconds / 3600 / 24)
 ```
 
 ## Plot tracks
 
 ```python
+pio.renderers.default = "notebook"
+pio.renderers.default = "browser"
+# utils.process_buffer(200)
+trigger_zone = utils.load_buffer(250)
+trigger_zone = trigger_zone.to_crs(utils.FJI_CRS)
+
 for name_season in df["Name Season"].unique():
     df_plot = df[df["Name Season"] == name_season].sort_values("base_time")
     actual_f = actual[actual["Name Season"] == name_season]
@@ -315,7 +305,9 @@ for name_season in df["Name Season"].unique():
                 lon=dff["Longitude_forecast"],
                 lat=dff["Latitude_forecast"],
                 mode="lines+markers",
-                name=str(base_time),
+                line=dict(width=1),
+                marker=dict(size=3),
+                name=base_time.strftime("%b %d, %H:%M"),
                 customdata=dff[["Category", "forecast_time"]],
                 hovertemplate="Category: %{customdata[0]}<br>Datetime: %{customdata[1]}",
             )
@@ -328,9 +320,30 @@ for name_season in df["Name Season"].unique():
         mapbox_center_lat=-17,
         mapbox_center_lon=179,
         margin={"r": 0, "t": 50, "l": 0, "b": 0},
-        title=f"{name_season}",
+        title=f"{name_season}<br><sup>FMS 72hr forecasts</sup>",
     )
 
+    fig.show()
+```
+
+## Plot timeline
+
+```python
+for name_season in df["Name Season"].unique():
+    df_plot = df[df["Name Season"] == name_season]
+
+    fig = go.Figure()
+    for base_time in df_plot["base_time"].unique():
+        dff = df_plot[df_plot["base_time"] == base_time]
+        fig.add_trace(
+            go.Scatter(
+                x=dff["forecast_time"],
+                y=dff["forecast_to_adm0"],
+                name=str(base_time),
+            )
+        )
+
+    fig.update_layout(template="simple_white")
     fig.show()
 ```
 
