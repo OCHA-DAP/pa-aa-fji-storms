@@ -38,6 +38,10 @@ ECMWF_PROCESSED = (
 KNOTS_PER_MS = 1.94384
 
 
+def check_fms_forecast(filename):
+    return
+
+
 def load_hindcasts() -> gpd.GeoDataFrame:
     """
     Loads RSMC / FMS hindcasts

@@ -24,6 +24,10 @@ From Fiji Met Services
 ```
 
 ```python
+print("hello")
+```
+
+```python
 from dotenv import load_dotenv
 from pathlib import Path
 from datetime import datetime

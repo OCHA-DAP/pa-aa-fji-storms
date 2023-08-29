@@ -15,7 +15,7 @@ jupyter:
 
 # Impact data
 
-Process sub-national impact data from NDMO
+Process sub-national impact data from NDMO, and plots it with cyclone tracks.
 
 ```python
 %load_ext jupyter_black
