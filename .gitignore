@@ -134,3 +134,6 @@ dmypy.json
 
 # PyCharm
 .idea/
+
+# ignore .ipynb as per coding guidelines
+*.ipynb
