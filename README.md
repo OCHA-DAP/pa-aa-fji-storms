@@ -4,20 +4,48 @@
 
 ## Background information
 
-Provide a basic overview of the context of anticipatory action in this country.
-Link to the GDrive Trigger Card document for greater context and details.
+Work began on the Fiji Tropical Cyclone AA Pilot in June 2023.
+
+The tropical cyclone (TC) trigger has been developed with Fiji Meteorological
+Services (FMS, operators of RSMC Nadi) in
+consultation with the National Disaster Management Office (NDMO).
+
+Over August 28-29 2023,
+a [workshop](https://www.linkedin.com/feed/update/urn:li:activity:7103241608472514560/)
+was held
+by OCHA in Suva to build understanding of the framework and finalize the trigger
+mechanism.
+
+The proposed trigger has two stages, based on FMS's forecasts:
+
+- Readiness: unofficial internal 120-hr forecast
+- Activation: official 72-hr forecast
+
+The proposed trigger threshold is a TC that forecast to either:
+
+- Be at Category 4 or greater while within 250 km of any point in Fiji, _or_
+- Be at Category 3 or greater while making landfall in Fiji
 
 ## Overview of analysis
 
-What is the basic process of the analysis contained within this repository?
+The repo currently only contains the analysis of the historical data,
+in `exploration`.
 
 ## Data description
 
-- Where does the data come from? Are there any licensing or usage restrictions?
-- How can the data be accessed?
-- Why were these datasets selected?
-- Are there any limitations with these datasets that one should be aware
-    of when running the analysis and interpreting results?
+Datasets:
+
+- FMS historical best tracks (private)
+  - analysis in this repo is based on file received from FMS, but the
+    historical tracks are also publicly available
+    on [IBTrACS](https://www.ncei.noaa.gov/products/international-best-track-archive)
+- FMS historical official 72-hr forecasts (private)
+  - for Yasa, Harold, and Evan
+- NDMO impact data (private)
+  - housing destroyed / damaged
+  - geolocated infrastructure damage
+- Desinventar impact data (public)
+- ECMWF track hindcasts (public)
 
 ## Directory structure
 
@@ -92,5 +120,7 @@ pre-commit run --all-files
 It is also **strongly** recommended to use `jupytext`
 to convert all Jupyter notebooks (`.ipynb`) to Markdown files (`.md`)
 before committing them into version control. This will make for
-cleaner diffs (and thus easier code reviews) and will ensure that cell outputs aren't
-committed to the repo (which might be problematic if working with sensitive data).
+cleaner diffs (and thus easier code reviews) and will ensure that cell outputs
+aren't
+committed to the repo (which might be problematic if working with sensitive
+data).
