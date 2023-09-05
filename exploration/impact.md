@@ -38,7 +38,7 @@ import plotly.graph_objects as go
 from shapely import LineString
 import shapely
 
-import utils
+from src import utils
 ```
 
 ```python

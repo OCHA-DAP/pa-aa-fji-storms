@@ -44,7 +44,7 @@ import plotly.figure_factory as ff
 import chart_studio
 import chart_studio.plotly as py
 
-import utils
+from src import utils
 
 pyo.init_notebook_mode()
 load_dotenv()
@@ -73,16 +73,11 @@ SAVE_DIR = Path("/Users/tdowning/OCHA/data/fji")
 ```
 
 ```python
-df_clean = utils.process_desinventar()
+utils.process_fms_cyclonetracks()
 ```
 
 ```python
-# metrics histograms
-
-for metric in metrics:
-    fig, ax = plt.subplots()
-    df_clean[metric][df_clean[metric] > 0].hist(ax=ax, bins=20)
-    ax.set_title(metric)
+df_clean = utils.process_desinventar()
 ```
 
 ```python
@@ -93,6 +88,10 @@ gdf_tracks = utils.load_cyclonetracks()
 gdf_adm0 = gpd.read_file(CODAB_PATH, layer="fji_polbnda_adm0_country").set_crs(
     "EPSG:3832"
 )
+```
+
+```python
+gdf_tracks
 ```
 
 ```python

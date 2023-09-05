@@ -1,1 +1,1 @@
-ISO3 = fji  # noqa: F821
+ISO3 = "fji"  # noqa: F821
