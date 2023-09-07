@@ -24,10 +24,6 @@ From Fiji Met Services
 ```
 
 ```python
-print("hello")
-```
-
-```python
 from dotenv import load_dotenv
 from pathlib import Path
 from datetime import datetime
@@ -51,9 +47,7 @@ import chart_studio
 import chart_studio.plotly as py
 import plotly.io as pio
 
-import utils
-
-pio.renderers.default = "notebook"
+from src import utils
 ```
 
 ```python
@@ -81,7 +75,7 @@ gdf_adm0 = gpd.read_file(
 ```python
 forecasts = utils.load_hindcasts()
 actual = utils.load_cyclonetracks()
-forecast_nameseasons = forecasts["name_season"].unique()
+forecast_nameseasons = forecasts["Name Season"].unique()
 actual = actual[actual["Name Season"].isin(forecast_nameseasons)]
 ```
 
@@ -92,7 +86,7 @@ actual_interp = utils.interpolate_cyclonetracks(actual)
 ```python
 df = forecasts.merge(
     actual_interp,
-    left_on=["name_season", "forecast_time"],
+    left_on=["Name Season", "forecast_time"],
     right_on=["Name Season", "datetime"],
     suffixes=["_forecast", "_actual"],
 )

@@ -180,7 +180,10 @@ fig.update_xaxes(side="top", title_text=f"Distance (km)")
 fig.update_yaxes(title_text=f"Category")
 
 # note: can change renderer to show in browser instead
-fig.show()
+
+# if plot doesn't initially show up, switch to renderer="svg"
+# then back to "notebook"
+fig.show(renderer="notebook")
 ```
 
 ## Calculate composite trigger return periods
@@ -289,6 +292,66 @@ fig.update_yaxes(title_text=f"Distance for Cat {close_category}+")
 
 # note: can change renderer to show in browser instead
 fig.show()
+```
+
+```python
+# save specific trigger
+
+close_distance = 0
+far_distance = 250
+
+threshold_name = f"d{close_distance}c3_d{far_distance}c4"
+thresholds = [
+    {"name": "close", "distance": close_distance, "category": 3},
+    {"name": "far", "distance": far_distance, "category": 4},
+]
+
+fms_f = pd.DataFrame()
+
+for threshold in thresholds:
+    df_add = fms[
+        (fms["Distance (km)"] <= threshold.get("distance"))
+        & (fms["Category numeric"] >= threshold.get("category"))
+    ]
+    fms_f = pd.concat([fms_f, df_add])
+fms_f = fms_f.drop_duplicates()
+
+triggers = pd.DataFrame()
+
+for nameyear in fms_f["nameyear"].unique():
+    dff = fms[fms["nameyear"] == nameyear]
+
+    # find actual landfall
+    df_actual_landfall = dff[dff["Distance (km)"] == 0]
+    if df_actual_landfall.empty:
+        landfall_date = None
+        # find closest pass instead
+        min_distance = dff["Distance (km)"].min()
+        min_distance_date = dff[dff["Distance (km)"] == min_distance][
+            "datetime"
+        ].min()
+
+    else:
+        landfall_date = df_actual_landfall["datetime"].min()
+        min_distance_date = landfall_date
+
+    df_add = pd.DataFrame(
+        {
+            "nameyear": nameyear,
+            "landfall_date": landfall_date,
+            "min_distance_date": min_distance_date,
+        },
+        index=[0],
+    )
+
+    triggers = pd.concat([triggers, df_add], ignore_index=True)
+
+# NaT in landfall_date implies storm didn't actually make landfall
+# (based on 1-hr interpolations of storm track)
+display(triggers)
+triggers.to_csv(
+    utils.EXP_DIR / f"fms_triggers_{threshold_name}.csv", index=False
+)
 ```
 
 ```python
