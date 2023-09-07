@@ -248,6 +248,7 @@ def process_fms_cyclonetracks():
 
 def load_cyclonetracks() -> gpd.GeoDataFrame:
     df = pd.read_csv(PROC_PATH / "fms_tracks_processed.csv")
+    df["datetime"] = pd.to_datetime(df["datetime"])
     gdf_tracks = gpd.GeoDataFrame(
         df, geometry=gpd.points_from_xy(df["Longitude"], df["Latitude"])
     )
