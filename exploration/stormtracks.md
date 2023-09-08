@@ -69,7 +69,7 @@ CODAB_PATH = RAW_DIR / "cod_ab/fji_polbnda_adm0_country"
 CODAB3_PATH = RAW_DIR / "cod_ab/fji_polbnda_adm3_tikina"
 IMPACT_PATH = EXP_DIR / "rsmc/FIJI_ DesInventar data 20230626.xlsx"
 PROC_PATH = Path(os.environ["AA_DATA_DIR"]) / "public/processed/fji"
-SAVE_DIR = Path("/Users/tdowning/OCHA/data/fji")
+SAVE_DIR = utils.SAVE_DIR
 ```
 
 ```python

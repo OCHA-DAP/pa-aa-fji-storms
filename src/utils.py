@@ -44,6 +44,9 @@ KNOTS_PER_MS = 1.94384
 CODAB_DATASET = "cod-ab-fji"
 CURRENT_FCAST_DIR = AA_DATA_DIR / "private/raw/fji/fms/forecast"
 PROC_FCAST_DIR = AA_DATA_DIR / "private/processed/fji/fms/forecast"
+MB_TOKEN = os.environ.get("MAPBOX_TOKEN")
+CS_KEY = os.environ.get("CHARTSTUDIO_APIKEY")
+MAPS_DIR = PROC_PATH / "historical_forecast_maps"
 
 
 def load_fms_forecast(path: Path) -> pd.DataFrame:
@@ -307,6 +310,8 @@ def interpolate_cyclonetracks(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
 def load_codab(level: int = 3) -> gpd.GeoDataFrame:
     """
     Load Fiji codab
+    Note: there seems to be a problem with level=2 (province)
+
     Parameters
     ----------
     level: int = 3
