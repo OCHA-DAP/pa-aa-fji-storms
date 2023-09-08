@@ -266,6 +266,10 @@ conf = conf.rename(columns={"min_distance_date": "fms_actual_date"})
 conf["fms_actual_trig"] = conf["fms_actual_date"].apply(
     lambda x: not pd.isnull(x)
 )
+
+conf.reset_index().to_csv(
+    utils.PROC_PATH / "historical_triggers.csv", index=False
+)
 ```
 
 ### ECMWF metrics

@@ -46,12 +46,8 @@ load_dotenv()
 ```
 
 ```python
-utils.download_codab(clobber=True)
-```
-
-```python
 # if needed, process impact data
-utils.process_housing_impact()
+# utils.process_housing_impact()
 ```
 
 ```python
@@ -118,7 +114,7 @@ utils.process_fms_cyclonetracks()
 # nameseason = "Tino 2019/2020"
 nameseason = "Winston 2015/2016"
 nameseason = "Yasa 2020/2021"
-# nameseason = "Evan 2012/2013"
+nameseason = "Evan 2012/2013"
 dff = housing[housing["nameseason"] == nameseason]
 if dff["ADM2_PCODE"].isnull().values.any():
     codn = cod1.copy()

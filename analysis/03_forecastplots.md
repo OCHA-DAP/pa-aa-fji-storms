@@ -62,6 +62,8 @@ ecmwf["fms_speed"] = ecmwf["speed_knots"] * 0.940729 + 14.9982
 ecmwf["fms_cat"] = ecmwf["fms_speed"].apply(utils.knots2cat)
 ```
 
+## Plot forecasts
+
 ```python
 nameyear = "evan2012"
 

@@ -484,6 +484,9 @@ def knots2cat(knots: float) -> int:
 
 def load_ecmwf_besttrack_hindcasts():
     df = pd.read_csv(ECMWF_PROCESSED / "besttrack_forecasts.csv")
+    cols = ["time", "forecast_time"]
+    for col in cols:
+        df[col] = pd.to_datetime(df[col])
     gdf = gpd.GeoDataFrame(
         data=df,
         geometry=gpd.points_from_xy(df["lon"], df["lat"], crs="EPSG:4326"),
@@ -561,6 +564,19 @@ def process_ecmwf_besttrack_hindcasts():
 
     forecast = forecast.drop(columns="year")
     forecast.to_csv(ECMWF_PROCESSED / "besttrack_forecasts.csv", index=False)
+
+
+def load_historical_triggers() -> pd.DataFrame:
+    df = pd.read_csv(PROC_PATH / "historical_triggers.csv")
+    cols = [
+        "ec_3day_date",
+        "ec_5day_date",
+        "fms_fcast_date",
+        "fms_actual_date",
+    ]
+    for col in cols:
+        df[col] = pd.to_datetime(df[col])
+    return df
 
 
 def process_ecmwf_hindcasts(dry_run: bool = False):
