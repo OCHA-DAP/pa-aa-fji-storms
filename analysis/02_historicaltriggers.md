@@ -304,9 +304,6 @@ dff = conf[conf["in_fms_fcast"]]
 conf_ec5 = pd.crosstab(dff["fms_fcast_trig"], dff["fms_actual_trig"])
 display(conf_ec5)
 # since only contains true positives, detection rate is 1 and false alarm 0
-TP = conf_ec5.loc[True, True]
-print(f"Detection rate = {TP / (TP)}")
-print(f"False alarm rate = 0")
 dfff = dff[dff["fms_fcast_trig"] & dff["fms_actual_trig"]].copy()
 dfff["leadtime"] = dfff["fms_actual_date"] - dfff["fms_fcast_date"]
 mean_lt = dfff["leadtime"].mean()
@@ -316,4 +313,8 @@ print(
 )
 print("Triggered cyclones:")
 display(dff[dff["fms_fcast_trig"]])
+```
+
+```python
+
 ```

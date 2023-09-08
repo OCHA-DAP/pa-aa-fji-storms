@@ -47,6 +47,7 @@ PROC_FCAST_DIR = AA_DATA_DIR / "private/processed/fji/fms/forecast"
 MB_TOKEN = os.environ.get("MAPBOX_TOKEN")
 CS_KEY = os.environ.get("CHARTSTUDIO_APIKEY")
 MAPS_DIR = PROC_PATH / "historical_forecast_maps"
+STORM_DATA_DIR = Path(os.getenv("STORM_DATA_DIR"))
 
 
 def load_fms_forecast(path: Path) -> pd.DataFrame:
@@ -246,7 +247,17 @@ def process_fms_cyclonetracks():
     ).astype(
         str
     )
+    # save full tracks
     df.to_csv(PROC_PATH / "fms_tracks_processed.csv", index=False)
+    # also save just names
+    cols = ["nameyear", "Name Season", "Cyclone Name"]
+    df[cols].drop_duplicates().to_csv(
+        PROC_PATH / "fms_cyclone_names.csv", index=False
+    )
+
+
+def load_cyclonenames() -> pd.DataFrame:
+    return pd.read_csv(PROC_PATH / "fms_cyclone_names.csv")
 
 
 def load_cyclonetracks() -> gpd.GeoDataFrame:
@@ -445,7 +456,18 @@ def process_geo_impact():
     )
 
 
-def knots2cat(knots):
+def knots2cat(knots: float) -> int:
+    """
+    Convert from knots to Category (Australian scale)
+    Parameters
+    ----------
+    knots: float
+        Wind speed in knots
+
+    Returns
+    -------
+    Category
+    """
     category = 0
     if knots > 107:
         category = 5
@@ -726,28 +748,48 @@ def load_housing_impact() -> pd.DataFrame:
 
 def process_housing_impact():
     """
-    Process housing impact (by adm 1 or 2) from NDMO
+    Process housing impact (by adm 1 or 2) from NDMO or from ReliefWeb
     """
     cod = load_codab(level=2)
+    cyclone_names = load_cyclonenames()
 
-    cyclones = ["Winston", "Sarai", "Tino", "Harold", "Yasa", "Ana", "Evan"]
-
-    dfs = []
-    name2season = {
+    # list of TCs in file received from NDMO
+    ndmo_tcs = {
         "Winston": "2015/2016",
         "Sarai": "2019/2020",
         "Tino": "2019/2020",
         "Harold": "2019/2020",
         "Yasa": "2020/2021",
         "Ana": "2020/2021",
-        "Evan": "2012/2013",
     }
-    for cyclone in cyclones:
-        evan = "_Evan" if cyclone == "Evan" else ""
+    # list of TCs for which we could find sub-national housing impact data
+    # on ReliefWeb
+    rw_tcs = {
+        "Evan": "2012/2013",
+        "Gita": "2017/2018",
+        "Tomas": "2009/2010",
+    }
+
+    dfs_in = []
+    # read from NDMO file
+    for cyclone in ndmo_tcs.keys():
         df_in = pd.read_excel(
-            NDMO_DIR / f"Disaster Damaged Housing{evan}.xlsx",
+            NDMO_DIR / "Disaster Damaged Housing.xlsx",
             sheet_name=f"TC_{cyclone}",
         )
+        df_in["nameseason"] = f"{cyclone} {ndmo_tcs.get(cyclone)}"
+        dfs_in.append(df_in)
+    # read from ReliefWeb file
+    for cyclone in rw_tcs.keys():
+        df_in = pd.read_excel(
+            NDMO_DIR / "Disaster Damaged Housing_ReliefWeb.xlsx",
+            sheet_name=f"TC_{cyclone}",
+        )
+        df_in["nameseason"] = f"{cyclone} {rw_tcs.get(cyclone)}"
+        dfs_in.append(df_in)
+
+    dfs = []
+    for df_in in dfs_in:
         df_in = df_in.rename(
             columns={
                 "Completely Damaged": "Destroyed",
@@ -755,7 +797,6 @@ def process_housing_impact():
             }
         )
         df_in = df_in.dropna()
-        df_in["nameseason"] = f"{cyclone} {name2season.get(cyclone)}"
         dfs.append(df_in)
 
     df = pd.concat(dfs, ignore_index=True)
@@ -772,8 +813,24 @@ def process_housing_impact():
         left_on="Province",
         how="left",
     )
+
+    df = df.merge(
+        cyclone_names, left_on="nameseason", right_on="Name Season", how="left"
+    )
+
+    # write to AA_DATA_DIR
     df.to_csv(
-        AA_DATA_DIR / "private/processed/fji/ndmo/processed_house_impact.csv",
+        AA_DATA_DIR
+        / "private/processed/fji/ndmo/"
+        / "processed_house_impact.csv",
+        index=False,
+    )
+    # also write to ISI collab dir for GlobalTropicalCycloneModel
+    df.to_csv(
+        STORM_DATA_DIR
+        / "analysis_fji/02_new_model_input/02_housing_damage"
+        / "input/fji_impact_data"
+        / "processed_house_impact.csv",
         index=False,
     )
 

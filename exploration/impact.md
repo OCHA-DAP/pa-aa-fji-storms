@@ -46,6 +46,10 @@ load_dotenv()
 ```
 
 ```python
+utils.download_codab(clobber=True)
+```
+
+```python
 # if needed, process impact data
 utils.process_housing_impact()
 ```
@@ -58,6 +62,10 @@ cod3 = utils.load_codab(level=3)
 impact = utils.load_geo_impact()
 des = utils.load_desinventar()
 housing = utils.load_housing_impact()
+```
+
+```python
+housing
 ```
 
 ```python
@@ -87,7 +95,7 @@ dff = dff.rename(columns={0: "count"})
 
 # plot geo impact by event
 event = "Winston 2015/2016"
-gdf = cod.merge(dff[dff["Event"] == event], on=utils.ADM3, how="left")
+gdf = cod3.merge(dff[dff["Event"] == event], on=utils.ADM3, how="left")
 gdf["count"] = gdf["count"].fillna(0)
 gdf.plot(column="count")
 ```
@@ -101,7 +109,7 @@ housing["nameseason"].value_counts()
 ```
 
 ```python
-utils.process_housing_impact()
+utils.process_fms_cyclonetracks()
 ```
 
 ```python
@@ -110,7 +118,7 @@ utils.process_housing_impact()
 # nameseason = "Tino 2019/2020"
 nameseason = "Winston 2015/2016"
 nameseason = "Yasa 2020/2021"
-nameseason = "Evan 2012/2013"
+# nameseason = "Evan 2012/2013"
 dff = housing[housing["nameseason"] == nameseason]
 if dff["ADM2_PCODE"].isnull().values.any():
     codn = cod1.copy()
