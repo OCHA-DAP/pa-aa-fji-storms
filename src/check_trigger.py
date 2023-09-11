@@ -5,6 +5,7 @@ from datetime import datetime
 from io import StringIO
 from pathlib import Path
 
+import geopandas as gpd
 import pandas as pd
 from ochanticipy.utils.hdx_api import load_resource_from_hdx
 
@@ -66,13 +67,16 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def download_adm0():
+def load_adm0():
     resource_name = "fji_polbnda_adm0_country.zip"
     zip_path = Path(resource_name)
+    filename = zip_path.stem
     load_resource_from_hdx("cod-ab-fji", resource_name, zip_path)
     extract_path = resource_name.removesuffix(".zip")
     with zipfile.ZipFile(zip_path, "r") as zip_ref:
         zip_ref.extractall(extract_path)
+    gdf = gpd.read_file(Path(extract_path), layer=filename).set_crs(3832)
+    return gdf
 
 
 def check_trigger(csv: str):
@@ -97,7 +101,8 @@ def check_trigger(csv: str):
     csv_str = converted_bytes.decode("ascii")
     filepath = StringIO(csv_str)
     df = load_fms_forecast(filepath)
-    download_adm0()
+    gdf = load_adm0()
+    print(gdf)
     print(df)
 
 
