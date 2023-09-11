@@ -15,6 +15,7 @@ jobs:
         with:
           python-version: '3.11'
           cache: 'pip'
+          cache-dependency-path: monitoring-requirements.txt
       - name: Install Dependencies
         run: pip install -r monitoring-requirements.txt
       - name: Run Check Trigger Script
