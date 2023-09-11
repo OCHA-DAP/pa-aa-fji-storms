@@ -137,3 +137,8 @@ dmypy.json
 
 # ignore .ipynb as per coding guidelines
 *.ipynb
+
+# GDrive credentials
+credentials.json
+token.json
+src/test_gdrive.py
