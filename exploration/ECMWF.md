@@ -81,8 +81,10 @@ forecast
 ```
 
 ```python
+import src.check_trigger
+
 trigger_zone = utils.load_buffer()
-trigger_zone = trigger_zone.to_crs(utils.FJI_CRS)
+trigger_zone = trigger_zone.to_crs(src.check_trigger.FJI_CRS)
 ```
 
 ```python

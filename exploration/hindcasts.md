@@ -158,10 +158,12 @@ fig.show()
 
 ```python
 # load buffer (default 250 km)
+import src.check_trigger
+
 buffer_distance = 250
 # utils.process_buffer(buffer_distance)
 trigger_zone = utils.load_buffer(buffer_distance)
-trigger_zone = trigger_zone.to_crs(utils.FJI_CRS)
+trigger_zone = trigger_zone.to_crs(src.check_trigger.FJI_CRS)
 ```
 
 ```python
@@ -262,11 +264,13 @@ print(mean_fms_leadtime.days + mean_fms_leadtime.seconds / 3600 / 24)
 ## Plot tracks
 
 ```python
+import src.check_trigger
+
 pio.renderers.default = "notebook"
 pio.renderers.default = "browser"
 # utils.process_buffer(200)
 trigger_zone = utils.load_buffer(250)
-trigger_zone = trigger_zone.to_crs(utils.FJI_CRS)
+trigger_zone = trigger_zone.to_crs(src.check_trigger.FJI_CRS)
 
 for name_season in df["Name Season"].unique():
     df_plot = df[df["Name Season"] == name_season].sort_values("base_time")

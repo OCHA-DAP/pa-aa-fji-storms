@@ -18,7 +18,7 @@ from ochanticipy.utils.hdx_api import load_resource_from_hdx
 from shapely.geometry import LineString
 from tqdm.auto import tqdm
 
-from src.check_trigger import datetime_to_season, load_fms_forecast
+from src.check_trigger import FJI_CRS, datetime_to_season, load_fms_forecast
 
 load_dotenv()
 
@@ -32,7 +32,6 @@ IMPACT_PATH = EXP_DIR / "rsmc/FIJI_ DesInventar data 20230626.xlsx"
 RAW_DIR = Path(os.environ["AA_DATA_DIR"]) / "public/raw/fji"
 ADM0_PATH = RAW_DIR / "cod_ab/fji_polbnda_adm0_country"
 PROC_PATH = Path(os.environ["AA_DATA_DIR"]) / "public/processed/fji"
-FJI_CRS = "+proj=longlat +ellps=WGS84 +lon_wrap=180 +datum=WGS84 +no_defs"
 CODAB_PATH = RAW_DIR / "cod_ab"
 NDMO_DIR = AA_DATA_DIR / "private/raw/fji/ndmo"
 ADM3 = "ADM3_PCODE"
