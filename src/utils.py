@@ -18,7 +18,8 @@ from ochanticipy.utils.hdx_api import load_resource_from_hdx
 from shapely.geometry import LineString
 from tqdm.auto import tqdm
 
-from src.check_trigger import FJI_CRS, datetime_to_season, load_fms_forecast
+from src.check_trigger import datetime_to_season, load_fms_forecast
+from src.constants import FJI_CRS
 
 load_dotenv()
 

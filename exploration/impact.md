@@ -110,6 +110,7 @@ utils.process_fms_cyclonetracks()
 
 ```python
 # housing plot with forecasts and bands
+import src.constants
 import src.check_trigger
 
 # nameseason = "Tino 2019/2020"
@@ -127,7 +128,7 @@ dff = codn.merge(dff, on=f"ADM{admn}_PCODE", how="left")
 cols = ["Destroyed", "Major Damage"]
 dff[cols] = dff[cols].fillna(0)
 dff.geometry = dff.geometry.simplify(100)
-dff = dff.to_crs(src.check_trigger.FJI_CRS)
+dff = dff.to_crs(src.constants.FJI_CRS)
 dff = dff.set_index(f"ADM{admn}_PCODE")
 fig = px.choropleth(
     dff,
@@ -145,7 +146,7 @@ fig.update_geos(fitbounds="locations", visible=False)
 fig.show()
 
 trigger_zone = utils.load_buffer(250)
-trigger_zone = trigger_zone.to_crs(src.check_trigger.FJI_CRS)
+trigger_zone = trigger_zone.to_crs(src.constants.FJI_CRS)
 distances = [50, 100, 200]
 colors = ["Reds", "Oranges", ""]
 
@@ -163,7 +164,7 @@ def gdf_buffers(gdf, distances):
 
     buffers = gpd.GeoDataFrame(
         data=distances, geometry=polys, crs=3832
-    ).to_crs(src.check_trigger.FJI_CRS)
+    ).to_crs(src.constants.FJI_CRS)
     buffers = buffers.rename(columns={0: "distance"})
     return buffers
 

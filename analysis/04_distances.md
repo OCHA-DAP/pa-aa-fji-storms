@@ -85,7 +85,7 @@ display(distances)
 ```
 
 ```python
-# calculate "hits" i.e. districts within 50km
+# calculate "hits" i.e. districts within 50 or 100 km
 cutoffs = [50, 100]
 
 for cutoff in cutoffs:
