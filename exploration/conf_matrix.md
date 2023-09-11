@@ -244,13 +244,14 @@ fms
 
 ```python
 # create plots for pptx and demo
+import src.constants
 import src.check_trigger
 
 pio.renderers.default = "browser"
 # pio.renderers.default = "notebook"
 # utils.process_buffer(200)
 trigger_zone = utils.load_buffer(250)
-trigger_zone = trigger_zone.to_crs(src.check_trigger.FJI_CRS)
+trigger_zone = trigger_zone.to_crs(src.constants.FJI_CRS)
 
 nameyear_sel = [
     #     "yasa2020",
@@ -348,13 +349,14 @@ for nameyear in nameyear_sel:
 
 ```python
 # create plots for simulation (with buffer)
+import src.constants
 import src.check_trigger
 
 pio.renderers.default = "browser"
 # pio.renderers.default = "notebook"
 # utils.process_buffer(200)
 trigger_zone = utils.load_buffer(250)
-trigger_zone = trigger_zone.to_crs(src.check_trigger.FJI_CRS)
+trigger_zone = trigger_zone.to_crs(src.constants.FJI_CRS)
 distances = [50, 100, 200]
 colors = ["Reds", "Oranges", ""]
 
@@ -372,7 +374,7 @@ def gdf_buffers(gdf, distances):
 
     buffers = gpd.GeoDataFrame(
         data=distances, geometry=polys, crs=3832
-    ).to_crs(src.check_trigger.FJI_CRS)
+    ).to_crs(src.constants.FJI_CRS)
     buffers = buffers.rename(columns={0: "distance"})
     return buffers
 
