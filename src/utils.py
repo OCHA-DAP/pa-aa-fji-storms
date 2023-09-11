@@ -5,6 +5,7 @@ import re
 import xml.etree.ElementTree as ET
 import zipfile
 from datetime import datetime
+from io import StringIO
 from pathlib import Path
 from typing import Dict, List
 
@@ -50,13 +51,28 @@ MAPS_DIR = PROC_PATH / "historical_forecast_maps"
 STORM_DATA_DIR = Path(os.getenv("STORM_DATA_DIR"))
 
 
-def load_fms_forecast(path: Path) -> pd.DataFrame:
+def load_fms_forecast(path: Path | StringIO) -> pd.DataFrame:
+    """
+    Loads FMS raw forecast
+    Parameters
+    ----------
+    path: Path | StringIO
+        Path to raw forecast CSV. Path can be a StringIO
+        (so CSV can be passed as an encoded string from Power Automate)
+
+
+    Returns
+    -------
+    DataFrame of processed forecast
+    """
     df_date = pd.read_csv(path, header=None, nrows=3)
     date_str = df_date.iloc[0, 1].removeprefix("baseTime=")
     base_time = datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%SZ")
     cyclone_name = (
         df_date.iloc[2, 0].removeprefix("# CycloneName=").capitalize()
     )
+    if isinstance(path, StringIO):
+        path.seek(0)
     df_data = pd.read_csv(
         path,
         skiprows=range(6),
