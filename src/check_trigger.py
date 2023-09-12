@@ -8,9 +8,6 @@ from pathlib import Path
 import geopandas as gpd
 import pandas as pd
 from ochanticipy.utils.hdx_api import load_resource_from_hdx
-from shapely.geometry import LineString
-
-from src.constants import FJI_CRS
 
 
 def load_fms_forecast(path: Path | StringIO) -> pd.DataFrame:
@@ -82,7 +79,7 @@ def load_adm0():
     return gdf
 
 
-def check_trigger(csv: str) -> dict:
+def check_trigger(csv: str):
     """
     Checks trigger, from GitHub Action
 
@@ -96,7 +93,6 @@ def check_trigger(csv: str) -> dict:
     -------
 
     """
-    print("Loading forecast...")
     bytes = csv.encode("ascii") + b"=="
     converted_bytes = base64.b64decode(bytes)
     # print(converted_bytes)
@@ -104,57 +100,12 @@ def check_trigger(csv: str) -> dict:
     # print(csv_json)
     csv_str = converted_bytes.decode("ascii")
     filepath = StringIO(csv_str)
-    fcast = load_fms_forecast(filepath)
-    print("Loading adm0...")
-    adm0 = load_adm0()
-    print(adm0)
-    print(adm0.crs)
-    print("Processing buffer...")
-    # buffer = adm0.copy()
-    buffer = adm0.simplify(10 * 1000).buffer(250 * 1000)
-    print(buffer)
-    print("Checking trigger...")
-    thresholds = [
-        {"distance": 250, "category": 4},
-        {"distance": 0, "category": 3},
-    ]
-    readiness, activation = False, False
-    cyclone = fcast.iloc[0]["Name Season"]
-    base_time = str(fcast.iloc[0]["base_time"])
-    fcast = fcast.set_index("leadtime")
-    fcast[["prev_category", "prev_lat", "prev_lon"]] = fcast.shift()[
-        ["Category", "Latitude", "Longitude"]
-    ]
-    for threshold in thresholds:
-        cat = threshold.get("category")
-        dist = threshold.get("distance")
-        if dist == 0:
-            zone = adm0.to_crs(FJI_CRS)
-        else:
-            zone = buffer.to_crs(FJI_CRS)
-        for leadtime in fcast.index[:-1]:
-            row = fcast.loc[leadtime]
-            if row["Category"] >= cat and row["prev_category"] >= cat:
-                ls = LineString(
-                    [
-                        row[["Longitude", "Latitude"]],
-                        row[["prev_lon", "prev_lat"]],
-                    ]
-                )
-                if ls.intersects(zone.geometry)[0]:
-                    readiness = True
-                    if leadtime <= 72:
-                        activation = True
-    report = {
-        "cyclone": cyclone,
-        "publication_time": base_time,
-        "readiness": readiness,
-        "activation": activation,
-    }
-    return report
+    df = load_fms_forecast(filepath)
+    gdf = load_adm0()
+    print(gdf)
+    print(df)
 
 
 if __name__ == "__main__":
     args = parse_args()
-    report = check_trigger(csv=args.csv)
-    print(report)
+    check_trigger(csv=args.csv)

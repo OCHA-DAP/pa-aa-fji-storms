@@ -244,6 +244,7 @@ fms
 
 ```python
 # create plots for pptx and demo
+
 import src.constants
 import src.check_trigger
 
@@ -349,6 +350,7 @@ for nameyear in nameyear_sel:
 
 ```python
 # create plots for simulation (with buffer)
+
 import src.constants
 import src.check_trigger
 
@@ -357,6 +359,7 @@ pio.renderers.default = "browser"
 # utils.process_buffer(200)
 trigger_zone = utils.load_buffer(250)
 trigger_zone = trigger_zone.to_crs(src.constants.FJI_CRS)
+
 distances = [50, 100, 200]
 colors = ["Reds", "Oranges", ""]
 
@@ -389,6 +392,7 @@ nameyear_sel = [
 # just produce one at a time
 
 nameyear = nameyear_sel[0]
+
 
 ec_f = ecmwf[ecmwf["nameyear"] == nameyear].sort_values("forecast_time").copy()
 fm_f = (

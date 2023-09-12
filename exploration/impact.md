@@ -129,6 +129,7 @@ cols = ["Destroyed", "Major Damage"]
 dff[cols] = dff[cols].fillna(0)
 dff.geometry = dff.geometry.simplify(100)
 dff = dff.to_crs(src.constants.FJI_CRS)
+
 dff = dff.set_index(f"ADM{admn}_PCODE")
 fig = px.choropleth(
     dff,
