@@ -2,9 +2,6 @@ name: Check Trigger
 
 on:
   workflow_dispatch:
-    inputs:
-      csv:
-        default: ""
 
 jobs:
   build:
