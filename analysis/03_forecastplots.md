@@ -36,36 +36,19 @@ import numpy as np
 from shapely.geometry import LineString
 import shapely
 
-from src import utils
+from src import utils, constants
 ```
 
 ## Load data
 
 ```python
-<<<<<<< HEAD
-import src.constants
-import src.check_trigger
-
-=======
->>>>>>> parent of 27a215e (simplify buffer)
 ecmwf = utils.load_ecmwf_besttrack_hindcasts()
 hindcasts = utils.load_hindcasts()
 fms = utils.load_cyclonetracks()
 hindcasts = hindcasts.merge(fms[["nameyear", "Name Season"]], on="Name Season")
 trigger_zone = utils.load_buffer(250)
-<<<<<<< HEAD
-trigger_zone = trigger_zone.to_crs(src.constants.FJI_CRS)
-adm3 = utils.load_codab(level=3).to_crs(src.constants.FJI_CRS)
-=======
-trigger_zone = trigger_zone.to_crs(utils.FJI_CRS)
-adm3 = utils.load_codab(level=3).to_crs(utils.FJI_CRS)
->>>>>>> parent of 27a215e (simplify buffer)
-# manually calculate adm2 since there is a problem with the SHP
-adm2 = adm3.dissolve(by="ADM2_PCODE")
-adm2 = adm2.drop(columns=["ADM3_PCODE", "ADM3_PCODE"])
-```
 
-```python
+trigger_zone = trigger_zone.to_crs(constants.FJI_CRS)
 cod1 = utils.load_codab(level=1)
 cod2 = utils.load_codab(level=2)
 cod3 = utils.load_codab(level=3)
@@ -95,17 +78,7 @@ ecmwf["fms_cat"] = ecmwf["fms_speed"].apply(utils.knots2cat)
 ## Plot forecasts
 
 ```python
-<<<<<<< HEAD
-import src.constants
-import src.check_trigger
-
-nameyear = "yasa2020"
-nameyear = "winston2016"
-=======
-nameyear = "evan2012"
-
 distances = [50, 100, 200]
->>>>>>> parent of 27a215e (simplify buffer)
 
 
 def gdf_buffers(gdf, distances):
@@ -121,16 +94,10 @@ def gdf_buffers(gdf, distances):
 
     buffers = gpd.GeoDataFrame(
         data=distances, geometry=polys, crs=3832
-<<<<<<< HEAD
-    ).to_crs(src.constants.FJI_CRS)
-=======
-    ).to_crs(utils.FJI_CRS)
->>>>>>> parent of 27a215e (simplify buffer)
+    ).to_crs(constants.FJI_CRS)
     buffers = buffers.rename(columns={0: "distance"})
     return buffers
 
-
-distances = [50, 100, 200]
 
 for nameyear in housing["nameyear"].unique():
     trigger = triggers.loc[nameyear]
@@ -167,7 +134,7 @@ for nameyear in housing["nameyear"].unique():
     cols = ["Destroyed", "Major Damage"]
     dff[cols] = dff[cols].fillna(0)
     dff.geometry = dff.geometry.simplify(100)
-    dff = dff.to_crs(src.constants.FJI_CRS)
+    dff = dff.to_crs(constants.FJI_CRS)
     dff = dff.set_index(f"ADM{admn}_PCODE")
 
     # plot housing impact
@@ -380,24 +347,7 @@ for nameyear in housing["nameyear"].unique():
                 full_html=True, include_plotlyjs="cdn", auto_play=False
             )
         )
-<<<<<<< HEAD
     f.close()
-=======
-    )
-
-fig.update_layout(
-    mapbox_style="open-street-map",
-    mapbox_zoom=4.5,
-    mapbox_center_lat=-17,
-    mapbox_center_lon=179,
-    margin={"r": 0, "t": 50, "l": 0, "b": 0},
-    title=f"{name_season}<br>"
-    "<sup>Fiji Met Services official 72hr forecasts in colour, "
-    "ECMWF 120hr forecasts in grey</sup>",
-)
-
-fig.show()
->>>>>>> parent of 27a215e (simplify buffer)
 ```
 
 ```python
