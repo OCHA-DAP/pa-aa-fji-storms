@@ -89,7 +89,7 @@ def check_trigger(csv: str) -> dict:
     Parameters
     ----------
     csv: str
-        Encoded string outputted from Power Automate of
+        Encoded Base64 string outputted from Power Automate of
         raw CSV file of forecast
 
     Returns
@@ -99,20 +99,13 @@ def check_trigger(csv: str) -> dict:
     print("Loading forecast...")
     bytes = csv.encode("ascii") + b"=="
     converted_bytes = base64.b64decode(bytes)
-    # print(converted_bytes)
-    # csv_json = converted_bytes.decode("utf8")
-    # print(csv_json)
     csv_str = converted_bytes.decode("ascii")
     filepath = StringIO(csv_str)
     fcast = load_fms_forecast(filepath)
     print("Loading adm0...")
     adm0 = load_adm0()
-    print(adm0)
-    print(adm0.crs)
     print("Processing buffer...")
-    # buffer = adm0.copy()
     buffer = adm0.simplify(10 * 1000).buffer(250 * 1000)
-    print(buffer)
     print("Checking trigger...")
     thresholds = [
         {"distance": 250, "category": 4},

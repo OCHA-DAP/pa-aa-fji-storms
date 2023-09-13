@@ -11,7 +11,8 @@ GH_ACTIONS_TOKEN = os.getenv("GH_ACTIONS_TOKEN")
 
 def testrun_workflow():
     """
-    Sends POST to GitHub Actions REST API to manually trigger workflow
+    Sends POST to GitHub Actions REST API to manually trigger workflow.
+    This simulates what is done in Power Automate.
     Returns
     -------
 
