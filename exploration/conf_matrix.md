@@ -245,7 +245,7 @@ fms
 ```python
 # create plots for pptx and demo
 import src.constants
-import src.check_trigger
+import src.update_trigger
 
 pio.renderers.default = "browser"
 # pio.renderers.default = "notebook"
@@ -350,7 +350,7 @@ for nameyear in nameyear_sel:
 ```python
 # create plots for simulation (with buffer)
 import src.constants
-import src.check_trigger
+import src.update_trigger
 
 pio.renderers.default = "browser"
 # pio.renderers.default = "notebook"

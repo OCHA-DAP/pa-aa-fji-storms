@@ -159,7 +159,7 @@ fig.show()
 ```python
 # load buffer (default 250 km)
 import src.constants
-import src.check_trigger
+import src.update_trigger
 
 buffer_distance = 250
 # utils.process_buffer(buffer_distance)
@@ -266,7 +266,7 @@ print(mean_fms_leadtime.days + mean_fms_leadtime.seconds / 3600 / 24)
 
 ```python
 import src.constants
-import src.check_trigger
+import src.update_trigger
 
 pio.renderers.default = "notebook"
 pio.renderers.default = "browser"

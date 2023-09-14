@@ -99,8 +99,8 @@ criteria, _e.g._:
 - Category 4 or 5 while within 250 km of Fiji
 
 ```python
-distances = [0, 100, 250, 370, 500]
-categories = [2, 3, 4, 5]
+distances = [0, 1, 5, 10, 100, 250, 370, 500]
+categories = [1, 2, 3, 4, 5]
 
 triggers = pd.DataFrame()
 
@@ -144,7 +144,7 @@ df_freq = triggers.pivot(
 df_freq = df_freq.sort_values("category", ascending=False)
 df_freq.columns = df_freq.columns.astype(str)
 df_freq.index = df_freq.index.astype(str)
-df_freq = df_freq.astype(float).round(2)
+df_freq = df_freq.astype(float).round(3)
 
 # reshape lists of cyclones triggered
 df_records = triggers.pivot(

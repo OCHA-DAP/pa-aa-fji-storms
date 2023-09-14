@@ -111,7 +111,7 @@ utils.process_fms_cyclonetracks()
 ```python
 # housing plot with forecasts and bands
 import src.constants
-import src.check_trigger
+import src.update_trigger
 
 # nameseason = "Tino 2019/2020"
 nameseason = "Winston 2015/2016"

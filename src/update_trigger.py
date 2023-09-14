@@ -147,6 +147,10 @@ def check_trigger(csv: str) -> dict:
     return report
 
 
+def send_email(report: dict):
+    pass
+
+
 if __name__ == "__main__":
     args = parse_args()
     report = check_trigger(csv=args.csv)

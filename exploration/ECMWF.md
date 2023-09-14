@@ -82,7 +82,7 @@ forecast
 
 ```python
 import src.constants
-import src.check_trigger
+import src.update_trigger
 
 trigger_zone = utils.load_buffer()
 trigger_zone = trigger_zone.to_crs(src.constants.FJI_CRS)

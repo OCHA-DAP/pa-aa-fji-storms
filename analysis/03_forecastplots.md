@@ -43,7 +43,7 @@ from src import utils
 
 ```python
 import src.constants
-import src.check_trigger
+import src.update_trigger
 
 ecmwf = utils.load_ecmwf_besttrack_hindcasts()
 hindcasts = utils.load_hindcasts()
@@ -69,7 +69,7 @@ ecmwf["fms_cat"] = ecmwf["fms_speed"].apply(utils.knots2cat)
 
 ```python
 import src.constants
-import src.check_trigger
+import src.update_trigger
 
 nameyear = "evan2012"
 
