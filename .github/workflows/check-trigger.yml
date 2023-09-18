@@ -23,4 +23,4 @@ jobs:
         env:
           G_P_ACCOUNT: ${{ secrets.G_P_ACCOUNT }}
           G_P_APP_PWD: ${{ secrets.G_P_APP_PWD }}
-          G_P_SERVER: ${{ env.G_P_SERVER }}
+          G_P_SERVER: ${{ secrets.G_P_SERVER }}

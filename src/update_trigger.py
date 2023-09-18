@@ -188,7 +188,10 @@ def send_email(report: dict):
 
     context = ssl.create_default_context()
 
+    print(f"{SERVER=}")
+
     with smtplib.SMTP_SSL(SERVER, PORT, context=context) as server:
+        server.connect(SERVER, PORT)
         server.login(USERNAME, PASSWORD)
         server.sendmail(USERNAME, mailing_list, message.as_string())
 
