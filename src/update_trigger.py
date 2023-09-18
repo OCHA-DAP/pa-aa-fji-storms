@@ -17,7 +17,7 @@ from jinja2 import Environment, FileSystemLoader
 from ochanticipy.utils.hdx_api import load_resource_from_hdx
 from shapely.geometry import LineString
 
-from src.constants import FJI_CRS
+FJI_CRS = "+proj=longlat +ellps=WGS84 +lon_wrap=180 +datum=WGS84 +no_defs"
 
 
 def load_fms_forecast(path: Path | StringIO) -> pd.DataFrame:
