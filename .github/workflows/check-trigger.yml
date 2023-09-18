@@ -20,3 +20,7 @@ jobs:
         run: pip install -r monitoring-requirements.txt
       - name: Run Check Trigger Script
         run: python src/update_trigger.py ${{ github.event.inputs.csv }}
+        env:
+          G_P_ACCOUNT: ${{ secrets.G_P_ACCOUNT }}
+          G_P_APP_PWD: ${{ secrets.G_P_APP_PWD }}
+          G_P_SERVER: ${{ env.G_P_SERVER }}
