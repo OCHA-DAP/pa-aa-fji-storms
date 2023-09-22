@@ -32,7 +32,7 @@ def testrun_workflow():
     }
     body = {"ref": "add-trigger", "inputs": {"csv": YASA}}
     response = requests.post(url=url, headers=headers, data=json.dumps(body))
-    print(response.content)
+    print(response.status_code)
 
 
 if __name__ == "__main__":

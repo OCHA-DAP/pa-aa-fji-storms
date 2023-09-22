@@ -154,12 +154,12 @@ def check_trigger(csv: str) -> dict:
     return report
 
 
-def send_email(report: dict):
-    trigger_type = ""
+def send_trigger_email(report: dict):
+    triggers = []
     if report.get("readiness"):
-        trigger_type = "readiness"
+        triggers.append("readiness")
     if report.get("activation"):
-        trigger_type = "action"
+        triggers.append("action")
 
     PORT = 465  # For SSL
     PASSWORD = os.getenv("G_P_APP_PWD")
@@ -169,35 +169,30 @@ def send_email(report: dict):
     mailing_list = ["tristan.downing@un.org"]
 
     environment = Environment(loader=FileSystemLoader("src/email/"))
-    if trigger_type == "action":
-        template = environment.get_template("action.html")
-    else:
-        template = environment.get_template("readiness.html")
 
-    message = MIMEMultipart("alternative")
-    message["Subject"] = (
-        "Anticipatory action Fiji – "
-        f"{trigger_type.capitalize()} trigger reached"
-    )
-    message["From"] = sender_email
-    message["To"] = ", ".join(mailing_list)
+    for trigger_type in triggers:
+        template = environment.get_template(f"{trigger_type}.html")
 
-    html = template.render(name=report.get("cyclone"))
-    html_part = MIMEText(html, "html")
-    message.attach(html_part)
+        message = MIMEMultipart("alternative")
+        message["Subject"] = (
+            "Anticipatory action Fiji – "
+            f"{trigger_type.capitalize()} trigger reached"
+        )
+        message["From"] = sender_email
+        message["To"] = ", ".join(mailing_list)
 
-    context = ssl.create_default_context()
+        html = template.render(name=report.get("cyclone"))
+        html_part = MIMEText(html, "html")
+        message.attach(html_part)
 
-    print(f"{SERVER=}")
-
-    with smtplib.SMTP_SSL(SERVER, PORT, context=context) as server:
-        server.connect(SERVER, PORT)
-        server.login(USERNAME, PASSWORD)
-        server.sendmail(USERNAME, mailing_list, message.as_string())
+        context = ssl.create_default_context()
+        with smtplib.SMTP_SSL(SERVER, PORT, context=context) as server:
+            server.login(USERNAME, PASSWORD)
+            server.sendmail(USERNAME, mailing_list, message.as_string())
 
 
 if __name__ == "__main__":
     args = parse_args()
     report = check_trigger(csv=args.csv)
     print(report)
-    send_email(report)
+    send_trigger_email(report)
