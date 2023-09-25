@@ -13,11 +13,18 @@ from pathlib import Path
 
 import geopandas as gpd
 import pandas as pd
+from dotenv import load_dotenv
 from jinja2 import Environment, FileSystemLoader
 from ochanticipy.utils.hdx_api import load_resource_from_hdx
 from shapely.geometry import LineString
 
+load_dotenv()
+
 FJI_CRS = "+proj=longlat +ellps=WGS84 +lon_wrap=180 +datum=WGS84 +no_defs"
+EMAIL_HOST = os.getenv("CHD_DS_HOST")
+EMAIL_PORT = int(os.getenv("CHD_DS_PORT"))
+EMAIL_PASSWORD = os.getenv("CHD_DS_EMAIL_PASSWORD")
+EMAIL_USERNAME = os.getenv("CHD_DS_EMAIL_USERNAME")
 
 
 def load_fms_forecast(path: Path | StringIO) -> pd.DataFrame:
@@ -73,20 +80,41 @@ def datetime_to_season(date):
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("csv", type=str)
+    yasa = os.getenv("YASA")
+    parser.add_argument("csv", nargs="?", type=str, default=yasa)
     return parser.parse_args()
 
 
 def load_adm0():
     resource_name = "fji_polbnda_adm0_country.zip"
-    zip_path = Path(resource_name)
-    filename = zip_path.stem
-    load_resource_from_hdx("cod-ab-fji", resource_name, zip_path)
-    extract_path = resource_name.removesuffix(".zip")
-    with zipfile.ZipFile(zip_path, "r") as zip_ref:
-        zip_ref.extractall(extract_path)
-    gdf = gpd.read_file(Path(extract_path), layer=filename).set_crs(3832)
+    zip_path = "data" / Path(resource_name)
+    extract_path = "data" / Path(resource_name.removesuffix(".zip"))
+    if extract_path.exists():
+        print("adm0 already exists")
+    else:
+        print("downloading and extracting")
+        load_resource_from_hdx("cod-ab-fji", resource_name, zip_path)
+        with zipfile.ZipFile(zip_path, "r") as zip_ref:
+            zip_ref.extractall(extract_path)
+    gdf = gpd.read_file(Path(extract_path), layer=zip_path.stem).set_crs(3832)
     return gdf
+
+
+def load_buffer():
+    buffer_name = "fji_250km_buffer"
+    buffer_dir = "data" / Path(buffer_name)
+    buffer_path = buffer_dir / f"{buffer_name}.shp"
+    if buffer_path.exists():
+        print("buffer already exists")
+        buffer = gpd.read_file(buffer_path)
+    else:
+        print("processing buffer")
+        adm0 = load_adm0()
+        buffer = adm0.simplify(10 * 1000).buffer(250 * 1000)
+        if not buffer_dir.exists():
+            os.mkdir(buffer_dir)
+        buffer.to_file(buffer_path)
+    return buffer
 
 
 def check_trigger(csv: str) -> dict:
@@ -112,7 +140,7 @@ def check_trigger(csv: str) -> dict:
     print("Loading adm0...")
     adm0 = load_adm0()
     print("Processing buffer...")
-    buffer = adm0.simplify(10 * 1000).buffer(250 * 1000)
+    buffer = load_buffer()
     print("Checking trigger...")
     thresholds = [
         {"distance": 250, "category": 4},
@@ -161,11 +189,11 @@ def send_trigger_email(report: dict):
     if report.get("activation"):
         triggers.append("action")
 
-    PORT = 465  # For SSL
-    PASSWORD = os.getenv("G_P_APP_PWD")
-    USERNAME = os.getenv("G_P_ACCOUNT")
-    sender_email = formataddr(("OCHA Centre for Humanitarian Data", USERNAME))
-    SERVER = os.getenv("G_P_SERVER")
+    from_email = "data.science@humdata.org"
+    sender_email = formataddr(
+        ("OCHA Centre for Humanitarian Data", from_email)
+    )
+
     mailing_list = ["tristan.downing@un.org"]
 
     environment = Environment(loader=FileSystemLoader("src/email/"))
@@ -186,9 +214,11 @@ def send_trigger_email(report: dict):
         message.attach(html_part)
 
         context = ssl.create_default_context()
-        with smtplib.SMTP_SSL(SERVER, PORT, context=context) as server:
-            server.login(USERNAME, PASSWORD)
-            server.sendmail(USERNAME, mailing_list, message.as_string())
+        with smtplib.SMTP_SSL(
+            EMAIL_HOST, EMAIL_PORT, context=context
+        ) as server:
+            server.login(EMAIL_USERNAME, EMAIL_PASSWORD)
+            server.sendmail(from_email, mailing_list, message.as_string())
 
 
 if __name__ == "__main__":
