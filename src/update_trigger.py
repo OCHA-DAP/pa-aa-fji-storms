@@ -3,7 +3,6 @@ import base64
 import os
 import smtplib
 import ssl
-import zipfile
 from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -96,15 +95,14 @@ def load_adm0() -> gpd.GeoDataFrame:
     """
     resource_name = "fji_polbnda_adm0_country.zip"
     zip_path = "data" / Path(resource_name)
-    extract_path = "data" / Path(resource_name.removesuffix(".zip"))
-    if extract_path.exists():
+    if zip_path.exists():
         print("adm0 already exists")
     else:
-        print("downloading and extracting")
+        print("adm0 does not exist, downloading now")
         load_resource_from_hdx("cod-ab-fji", resource_name, zip_path)
-        with zipfile.ZipFile(zip_path, "r") as zip_ref:
-            zip_ref.extractall(extract_path)
-    gdf = gpd.read_file(Path(extract_path), layer=zip_path.stem).set_crs(3832)
+    gdf = gpd.read_file(
+        f"zip://{zip_path.as_posix()}", layer=zip_path.stem
+    ).set_crs(3832)
     return gdf
 
 

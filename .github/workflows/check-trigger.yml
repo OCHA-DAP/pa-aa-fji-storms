@@ -18,6 +18,13 @@ jobs:
           cache-dependency-path: monitoring-requirements.txt
       - name: Install Dependencies
         run: pip install -r monitoring-requirements.txt
+      - name: Download artifact
+        id: download-artifact
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          name: shps
+          path: data/
+          if_no_artifact_found: warn
       - name: Run Check Trigger Script
         run: python src/update_trigger.py ${{ github.event.inputs.csv }}
         env:
