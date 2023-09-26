@@ -83,6 +83,7 @@ def parse_args() -> argparse.Namespace:
     # if no CSV supplied, set to Yasa (readiness and action activation)
     yasa = os.getenv("YASA")
     parser.add_argument("csv", nargs="?", type=str, default=yasa)
+    parser.add_argument("--suppress-send", action="store_true")
     return parser.parse_args()
 
 
@@ -150,6 +151,8 @@ def check_trigger(csv: str) -> dict:
     csv_str = converted_bytes.decode("ascii")
     filepath = StringIO(csv_str)
     fcast = load_fms_forecast(filepath)
+    if not Path("data").exists():
+        os.mkdir("data")
     print("Loading adm0...")
     adm0 = load_adm0()
     print("Processing buffer...")
@@ -195,7 +198,7 @@ def check_trigger(csv: str) -> dict:
     return report
 
 
-def send_trigger_email(report: dict):
+def send_trigger_email(report: dict, suppress_send: bool = False):
     triggers = []
     if report.get("readiness"):
         triggers.append("readiness")
@@ -231,11 +234,12 @@ def send_trigger_email(report: dict):
             EMAIL_HOST, EMAIL_PORT, context=context
         ) as server:
             server.login(EMAIL_USERNAME, EMAIL_PASSWORD)
-            server.sendmail(from_email, mailing_list, message.as_string())
+            if not suppress_send:
+                server.sendmail(from_email, mailing_list, message.as_string())
 
 
 if __name__ == "__main__":
     args = parse_args()
     report = check_trigger(csv=args.csv)
     print(report)
-    send_trigger_email(report)
+    send_trigger_email(report, suppress_send=args.suppress_send)
