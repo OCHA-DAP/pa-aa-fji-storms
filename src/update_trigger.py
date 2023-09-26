@@ -80,12 +80,19 @@ def datetime_to_season(date):
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
+    # if no CSV supplied, set to Yasa (readiness and action activation)
     yasa = os.getenv("YASA")
     parser.add_argument("csv", nargs="?", type=str, default=yasa)
     return parser.parse_args()
 
 
-def load_adm0():
+def load_adm0() -> gpd.GeoDataFrame:
+    """
+    Loads adm0 from repo file structure
+    Returns
+    -------
+    GeoDF of adm0
+    """
     resource_name = "fji_polbnda_adm0_country.zip"
     zip_path = "data" / Path(resource_name)
     extract_path = "data" / Path(resource_name.removesuffix(".zip"))
@@ -100,7 +107,13 @@ def load_adm0():
     return gdf
 
 
-def load_buffer():
+def load_buffer() -> gpd.GeoDataFrame:
+    """
+    Loads buffer from repo file structure
+    Returns
+    -------
+    GeoDataFrame of buffer
+    """
     buffer_name = "fji_250km_buffer"
     buffer_dir = "data" / Path(buffer_name)
     buffer_path = buffer_dir / f"{buffer_name}.shp"
