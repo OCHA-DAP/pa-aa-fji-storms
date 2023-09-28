@@ -1,5 +1,6 @@
 import argparse
 import base64
+import json
 import os
 import smtplib
 import ssl
@@ -11,7 +12,9 @@ from io import StringIO
 from pathlib import Path
 
 import geopandas as gpd
+import numpy as np
 import pandas as pd
+import plotly.graph_objects as go
 from dotenv import load_dotenv
 from jinja2 import Environment, FileSystemLoader
 from ochanticipy.utils.hdx_api import load_resource_from_hdx
@@ -26,7 +29,17 @@ EMAIL_PASSWORD = os.getenv("CHD_DS_EMAIL_PASSWORD")
 EMAIL_USERNAME = os.getenv("CHD_DS_EMAIL_USERNAME")
 
 
-def load_fms_forecast(path: Path | StringIO) -> pd.DataFrame:
+def decode_forecast_csv(csv: str) -> StringIO:
+    bytes_str = csv.encode("ascii") + b"=="
+    converted_bytes = base64.b64decode(bytes_str)
+    csv_str = converted_bytes.decode("ascii")
+    filepath = StringIO(csv_str)
+    return filepath
+
+
+def process_fms_forecast(
+    path: Path | StringIO, save: bool = True
+) -> pd.DataFrame:
     """
     Loads FMS raw forecast
     Parameters
@@ -34,7 +47,8 @@ def load_fms_forecast(path: Path | StringIO) -> pd.DataFrame:
     path: Path | StringIO
         Path to raw forecast CSV. Path can be a StringIO
         (so CSV can be passed as an encoded string from Power Automate)
-
+    save: bool = True
+        If True, saves forecast as CSV
 
     Returns
     -------
@@ -68,6 +82,9 @@ def load_fms_forecast(path: Path | StringIO) -> pd.DataFrame:
         df_data["leadtime"].dt.days * 24
         + df_data["leadtime"].dt.seconds / 3600
     ).astype(int)
+    base_time_str = base_time.replace(microsecond=0).isoformat()
+    if save:
+        df_data.to_csv(f"data/forecast_{base_time_str}.csv", index=False)
     return df_data
 
 
@@ -86,19 +103,28 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def load_adm0() -> gpd.GeoDataFrame:
+def load_adm(level: int = 0) -> gpd.GeoDataFrame:
     """
-    Loads adm0 from repo file structure
+    Loads adm from repo file structure
     Returns
     -------
     GeoDF of adm0
     """
-    resource_name = "fji_polbnda_adm0_country.zip"
+    adm_name = ""
+    if level == 0:
+        adm_name = "country"
+    elif level == 1:
+        adm_name = "district"
+    elif level == 2:
+        adm_name = "province"
+    elif level == 3:
+        adm_name = "tikina"
+    resource_name = f"fji_polbnda_adm{level}_{adm_name}.zip"
     zip_path = "data" / Path(resource_name)
     if zip_path.exists():
-        print("adm0 already exists")
+        print(f"adm{level} already exists")
     else:
-        print("adm0 does not exist, downloading now")
+        print(f"adm{level} does not exist, downloading now")
         load_resource_from_hdx("cod-ab-fji", resource_name, zip_path)
     gdf = gpd.read_file(
         f"zip://{zip_path.as_posix()}", layer=zip_path.stem
@@ -121,7 +147,7 @@ def load_buffer() -> gpd.GeoDataFrame:
         buffer = gpd.read_file(buffer_path)
     else:
         print("processing buffer")
-        adm0 = load_adm0()
+        adm0 = load_adm(level=0)
         buffer = adm0.simplify(10 * 1000).buffer(250 * 1000)
         if not buffer_dir.exists():
             os.mkdir(buffer_dir)
@@ -129,30 +155,23 @@ def load_buffer() -> gpd.GeoDataFrame:
     return buffer
 
 
-def check_trigger(csv: str) -> dict:
+def check_trigger(forecast: pd.DataFrame) -> dict:
     """
     Checks trigger, from GitHub Action
 
     Parameters
     ----------
-    csv: str
-        Encoded Base64 string outputted from Power Automate of
-        raw CSV file of forecast
+    forecast: pd.DataFrame
+        df of processed forecast
 
     Returns
     -------
 
     """
-    print("Loading forecast...")
-    bytes = csv.encode("ascii") + b"=="
-    converted_bytes = base64.b64decode(bytes)
-    csv_str = converted_bytes.decode("ascii")
-    filepath = StringIO(csv_str)
-    fcast = load_fms_forecast(filepath)
     if not Path("data").exists():
         os.mkdir("data")
-    print("Loading adm0...")
-    adm0 = load_adm0()
+    print("Loading adm...")
+    adm0 = load_adm(level=0)
     print("Processing buffer...")
     buffer = load_buffer()
     print("Checking trigger...")
@@ -161,10 +180,11 @@ def check_trigger(csv: str) -> dict:
         {"distance": 0, "category": 3},
     ]
     readiness, activation = False, False
-    cyclone = fcast.iloc[0]["Name Season"]
-    base_time = str(fcast.iloc[0]["base_time"])
-    fcast = fcast.set_index("leadtime")
-    fcast[["prev_category", "prev_lat", "prev_lon"]] = fcast.shift()[
+    cyclone = forecast.iloc[0]["Name Season"]
+    base_time = forecast.iloc[0]["base_time"]
+    base_time_str = base_time.replace(microsecond=0).isoformat()
+    forecast = forecast.set_index("leadtime")
+    forecast[["prev_category", "prev_lat", "prev_lon"]] = forecast.shift()[
         ["Category", "Latitude", "Longitude"]
     ]
     for threshold in thresholds:
@@ -174,8 +194,8 @@ def check_trigger(csv: str) -> dict:
             zone = adm0.to_crs(FJI_CRS)
         else:
             zone = buffer.to_crs(FJI_CRS)
-        for leadtime in fcast.index[:-1]:
-            row = fcast.loc[leadtime]
+        for leadtime in forecast.index[:-1]:
+            row = forecast.loc[leadtime]
             if row["Category"] >= cat and row["prev_category"] >= cat:
                 ls = LineString(
                     [
@@ -189,14 +209,24 @@ def check_trigger(csv: str) -> dict:
                         activation = True
     report = {
         "cyclone": cyclone,
-        "publication_time": base_time,
+        "publication_time": base_time_str,
         "readiness": readiness,
         "activation": activation,
     }
+    with open(f"data/report_{base_time_str}.json", "w") as outfile:
+        json.dump(report, outfile)
     return report
 
 
-def send_trigger_email(report: dict, suppress_send: bool = False):
+def calculate_distances(forecast: pd.DataFrame, codab: gpd.GeoDataFrame):
+    # fcast = pd.read_csv("data/forecast.csv")
+
+    pass
+
+
+def send_trigger_email(
+    report: dict, suppress_send: bool = False, save: bool = True
+):
     triggers = []
     if report.get("readiness"):
         triggers.append("readiness")
@@ -228,16 +258,76 @@ def send_trigger_email(report: dict, suppress_send: bool = False):
         message.attach(html_part)
 
         context = ssl.create_default_context()
-        with smtplib.SMTP_SSL(
-            EMAIL_HOST, EMAIL_PORT, context=context
-        ) as server:
-            server.login(EMAIL_USERNAME, EMAIL_PASSWORD)
-            if not suppress_send:
+        if not suppress_send:
+            with smtplib.SMTP_SSL(
+                EMAIL_HOST, EMAIL_PORT, context=context
+            ) as server:
                 server.sendmail(from_email, mailing_list, message.as_string())
+        if save:
+            with open(
+                f"data/trigger_email_{report.get('publication_time')}.html",
+                "w",
+            ) as outfile:
+                outfile.write(message.as_string())
+
+
+def plot_forecast(forecast: pd.DataFrame, save: bool = True) -> go.Figure:
+    trigger_zone = load_buffer().to_crs(FJI_CRS)
+    fig = go.Figure()
+    x, y = trigger_zone.geometry[0].boundary.xy
+    fig.add_trace(
+        go.Scattermapbox(
+            lat=np.array(y),
+            lon=np.array(x),
+            mode="lines",
+            name="Area within 250km of Fiji",
+            line=dict(width=1),
+            hoverinfo="skip",
+        )
+    )
+    fig.update_layout(
+        mapbox_style="open-street-map",
+        mapbox_zoom=4.5,
+        mapbox_center_lat=-17,
+        mapbox_center_lon=179,
+        margin={"r": 0, "t": 50, "l": 0, "b": 0},
+        title="hi<br>"
+        "<sup>Fiji Met Services official 72hr forecasts in colour, "
+        "ECMWF 120hr forecasts in grey</sup>",
+    )
+    if save:
+        filepath = f"data/forecast_plot_{report.get('publication_time')}.html"
+        f = open(filepath, "w")
+        f.close()
+        with open(filepath, "a") as f:
+            f.write(
+                fig.to_html(
+                    full_html=True, include_plotlyjs="cdn", auto_play=False
+                )
+            )
+    return fig
+
+
+def send_informational_email(
+    report: dict,
+    forecast: pd.DataFrame,
+    suppress_send: bool = False,
+    save: bool = True,
+):
+    # adm2 = load_adm(level=2)
+    # fig = plot_forecast(forecast)
+    if save:
+        pass
+    pass
 
 
 if __name__ == "__main__":
     args = parse_args()
-    report = check_trigger(csv=args.csv)
+    filepath = decode_forecast_csv(args.csv)
+    forecast = process_fms_forecast(path=filepath, save=True)
+    report = check_trigger(forecast)
     print(report)
     send_trigger_email(report, suppress_send=args.suppress_send)
+    send_informational_email(
+        report, forecast, suppress_send=args.suppress_send
+    )
