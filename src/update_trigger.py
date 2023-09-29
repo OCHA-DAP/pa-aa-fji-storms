@@ -5,9 +5,10 @@ import os
 import smtplib
 import ssl
 from datetime import datetime
+from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from email.utils import formataddr
+from email.utils import formataddr, make_msgid
 from io import StringIO
 from pathlib import Path
 
@@ -100,7 +101,7 @@ def datetime_to_season(date):
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     # if no CSV supplied, set to Yasa (readiness and action activation)
-    yasa = os.getenv("YASA")
+    yasa = os.getenv("YASA_MOD")
     parser.add_argument("csv", nargs="?", type=str, default=yasa)
     parser.add_argument("--suppress-send", action="store_true")
     return parser.parse_args()
@@ -361,7 +362,7 @@ def send_informational_email(
     if save:
         pass
 
-    environment = Environment(loader=FileSystemLoader(["src/email/", "data/"]))
+    environment = Environment(loader=FileSystemLoader("src/email/"))
     template = environment.get_template("informational.html")
 
     sender_email = formataddr(
@@ -376,16 +377,24 @@ def send_informational_email(
 
     pub_time_split = report.get("publication_time").split("T")
 
+    plot_cid = make_msgid(domain="humdata.org")
+    print(plot_cid)
     html = template.render(
         name=report.get("cyclone").split(" ")[0],
         pub_date=pub_time_split[0],
         pub_time=pub_time_split[1],
         readiness="ACTIVATED" if report.get("readiness") else "NOT ACTIVATED",
         action="ACTIVATED" if report.get("action") else "NOT ACTIVATED",
-        plot_path=f"forecast_plot_{pub_time_file_str}.png",
+        plot_cid=plot_cid.replace("<", "").replace(">", ""),
     )
     html_part = MIMEText(html, "html")
     message.attach(html_part)
+
+    image = MIMEImage(
+        open(f"data/forecast_plot_{pub_time_file_str}.png", "rb").read()
+    )
+    image.add_header("Content-ID", plot_cid)
+    message.attach(image)
 
     context = ssl.create_default_context()
     if not suppress_send:
