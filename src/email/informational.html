@@ -1,17 +1,25 @@
 {% extends "base.html" %}
 
 {% block content %}
+<br>
+<div style="font-size:10px;padding: 6px 10px 6px 10px;background-color:#CCCCCC;color:#FFFFFF">
+  <p style="margin:0;">
+    This email is purely advisory, and does not serve as an official notice for the anticipatory action framework. Official notices of activation are sent by a separate email. This email also does not constitute an official forecast. Under the World Meteorological Organization's Tropical Cyclone Programme, RSMC Nadi is responsible for monitoring tropical cyclones in the region, and their forecasts should be treated as authoritative.
+  </p>
+</div>
 <div>
   <p>Dear colleagues,</p>
   <p>
-    The forecast for cyclone {{ name }} produced at {{ pub_date }} has been shared with us by the Fiji Meteorological Service, operators of Regional Specialized Meteorological Centre (RSMC) Nadi.
-    The action trigger of the coordinated anticipatory action pilot for tropical cyclones in Fiji has been reached in line with the 72-hour forecast for cyclone {{ name }} shared by the Fiji Meteorological Service, operators of Regional Specialized Meteorological Centre (RSMC) Nadi.
+    The forecast for cyclone {{ name }} produced at {{ pub_time }} (UTC) on {{ pub_date }} has been shared with us by the Fiji Meteorological Service, operators of Regional Specialized Meteorological Centre (RSMC) Nadi.
   </p>
   <p>
-    All activities in line with the framework document [link] should now commence. OCHA may convene a meeting of the participating partners.
+    Readiness trigger: <b>{{ readiness }}</b><br>
+    Action trigger: <b>{{ action }}</b>
   </p>
-  {{ plot|safe }}
-  <p>Best wishes and good luck,</p>
+  <p>A plot of the forecast is shown below. </p>
+  <img src="{{ plot_path }}" width="400" height="300" />
+
+  <p>Best wishes,</p>
   <p>OCHA Center for Humanitarian Data</p>
 </div>
 {% endblock content %}

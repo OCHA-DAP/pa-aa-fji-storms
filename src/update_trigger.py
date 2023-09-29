@@ -27,6 +27,7 @@ EMAIL_HOST = os.getenv("CHD_DS_HOST")
 EMAIL_PORT = int(os.getenv("CHD_DS_PORT"))
 EMAIL_PASSWORD = os.getenv("CHD_DS_EMAIL_PASSWORD")
 EMAIL_USERNAME = os.getenv("CHD_DS_EMAIL_USERNAME")
+EMAIL_ADDRESS = os.getenv("CHD_DS_EMAIL_ADDRESS")
 
 
 def decode_forecast_csv(csv: str) -> StringIO:
@@ -82,9 +83,11 @@ def process_fms_forecast(
         df_data["leadtime"].dt.days * 24
         + df_data["leadtime"].dt.seconds / 3600
     ).astype(int)
-    base_time_str = base_time.replace(microsecond=0).isoformat()
+    base_time_file_str = (
+        base_time.replace(microsecond=0).isoformat().replace(":", "")
+    )
     if save:
-        df_data.to_csv(f"data/forecast_{base_time_str}.csv", index=False)
+        df_data.to_csv(f"data/forecast_{base_time_file_str}.csv", index=False)
     return df_data
 
 
@@ -179,7 +182,7 @@ def check_trigger(forecast: pd.DataFrame) -> dict:
         {"distance": 250, "category": 4},
         {"distance": 0, "category": 3},
     ]
-    readiness, activation = False, False
+    readiness, action = False, False
     cyclone = forecast.iloc[0]["Name Season"]
     base_time = forecast.iloc[0]["base_time"]
     base_time_str = base_time.replace(microsecond=0).isoformat()
@@ -206,14 +209,15 @@ def check_trigger(forecast: pd.DataFrame) -> dict:
                 if ls.intersects(zone.geometry)[0]:
                     readiness = True
                     if leadtime <= 72:
-                        activation = True
+                        action = True
     report = {
         "cyclone": cyclone,
         "publication_time": base_time_str,
         "readiness": readiness,
-        "activation": activation,
+        "action": action,
     }
-    with open(f"data/report_{base_time_str}.json", "w") as outfile:
+    pub_time_file_str = base_time_str.replace(":", "")
+    with open(f"data/report_{pub_time_file_str}.json", "w") as outfile:
         json.dump(report, outfile)
     return report
 
@@ -230,30 +234,32 @@ def send_trigger_email(
     triggers = []
     if report.get("readiness"):
         triggers.append("readiness")
-    if report.get("activation"):
+    if report.get("action"):
         triggers.append("action")
 
-    from_email = "data.science@humdata.org"
     sender_email = formataddr(
-        ("OCHA Centre for Humanitarian Data", from_email)
+        ("OCHA Centre for Humanitarian Data", EMAIL_ADDRESS)
     )
 
     mailing_list = ["tristan.downing@un.org"]
 
     environment = Environment(loader=FileSystemLoader("src/email/"))
 
-    for trigger_type in triggers:
-        template = environment.get_template(f"{trigger_type}.html")
-
+    for trigger in triggers:
+        template = environment.get_template(f"{trigger}.html")
         message = MIMEMultipart("alternative")
         message["Subject"] = (
             "Anticipatory action Fiji – "
-            f"{trigger_type.capitalize()} trigger reached"
+            f"{trigger.capitalize()} trigger reached"
         )
         message["From"] = sender_email
         message["To"] = ", ".join(mailing_list)
-
-        html = template.render(name=report.get("cyclone"))
+        pub_time_split = report.get("publication_time").split("T")
+        html = template.render(
+            name=report.get("cyclone").split(" ")[0],
+            pub_time=pub_time_split[1],
+            pub_date=pub_time_split[0],
+        )
         html_part = MIMEText(html, "html")
         message.attach(html_part)
 
@@ -262,16 +268,30 @@ def send_trigger_email(
             with smtplib.SMTP_SSL(
                 EMAIL_HOST, EMAIL_PORT, context=context
             ) as server:
-                server.sendmail(from_email, mailing_list, message.as_string())
+                server.login(EMAIL_USERNAME, EMAIL_PASSWORD)
+                server.sendmail(
+                    EMAIL_ADDRESS, mailing_list, message.as_string()
+                )
         if save:
+            pub_time_file_str = report.get("publication_time").replace(":", "")
             with open(
-                f"data/trigger_email_{report.get('publication_time')}.html",
+                f"data/{trigger}_activation_email_{pub_time_file_str}.html",
                 "w",
             ) as outfile:
                 outfile.write(message.as_string())
 
 
-def plot_forecast(forecast: pd.DataFrame, save: bool = True) -> go.Figure:
+def plot_forecast(
+    report: dict, forecast: pd.DataFrame, save_html: bool = False
+) -> go.Figure:
+    colors = (
+        (5, "rebeccapurple"),
+        (4, "crimson"),
+        (3, "orange"),
+        (2, "limegreen"),
+        (1, "skyblue"),
+    )
+    pub_time_split = report.get("publication_time").split("T")
     trigger_zone = load_buffer().to_crs(FJI_CRS)
     fig = go.Figure()
     x, y = trigger_zone.geometry[0].boundary.xy
@@ -285,26 +305,47 @@ def plot_forecast(forecast: pd.DataFrame, save: bool = True) -> go.Figure:
             hoverinfo="skip",
         )
     )
+    official = forecast[forecast["leadtime"] <= 72]
+    fig.add_trace(
+        go.Scattermapbox(
+            lat=official["Latitude"],
+            lon=official["Longitude"],
+            mode="lines",
+            line=dict(width=2, color="black"),
+            name="Official 72-hour forecast",
+            customdata=official[["Category", "forecast_time"]],
+            hovertemplate="Category: %{customdata[0]}<br>"
+            "Datetime: %{customdata[1]}",
+        )
+    )
+    for color in colors:
+        dff = official[official["Category"] == color[0]]
+        fig.add_trace(
+            go.Scattermapbox(
+                lat=dff["Latitude"],
+                lon=dff["Longitude"],
+                mode="markers",
+                line=dict(width=2, color=color[1]),
+                marker=dict(size=10),
+                name="Official 72-hour forecast",
+                hoverinfo="skip",
+            )
+        )
+    print(forecast.columns)
     fig.update_layout(
         mapbox_style="open-street-map",
         mapbox_zoom=4.5,
         mapbox_center_lat=-17,
         mapbox_center_lon=179,
         margin={"r": 0, "t": 50, "l": 0, "b": 0},
-        title="hi<br>"
-        "<sup>Fiji Met Services official 72hr forecasts in colour, "
-        "ECMWF 120hr forecasts in grey</sup>",
+        title=f"RSMC Nadi forecast for {report.get('cyclone')}<br>"
+        f"<sup>Produced at {pub_time_split[1]} (UTC) on {pub_time_split[0]}",
     )
-    if save:
-        filepath = f"data/forecast_plot_{report.get('publication_time')}.html"
-        f = open(filepath, "w")
-        f.close()
-        with open(filepath, "a") as f:
-            f.write(
-                fig.to_html(
-                    full_html=True, include_plotlyjs="cdn", auto_play=False
-                )
-            )
+    pub_time_file_str = report.get("publication_time").replace(":", "")
+    filepath_stem = f"data/forecast_plot_{pub_time_file_str}"
+    fig.write_image(f"{filepath_stem}.png", scale=3)
+    if save_html:
+        fig.write_html(f"{filepath_stem}.html")
     return fig
 
 
@@ -314,10 +355,51 @@ def send_informational_email(
     suppress_send: bool = False,
     save: bool = True,
 ):
+    pub_time_file_str = report.get("publication_time").replace(":", "")
     # adm2 = load_adm(level=2)
-    # fig = plot_forecast(forecast)
+    plot_forecast(report, forecast, save_html=True)
     if save:
         pass
+
+    environment = Environment(loader=FileSystemLoader(["src/email/", "data/"]))
+    template = environment.get_template("informational.html")
+
+    sender_email = formataddr(
+        ("OCHA Centre for Humanitarian Data", EMAIL_ADDRESS)
+    )
+    mailing_list = ["tristan.downing@un.org"]
+
+    message = MIMEMultipart("alternative")
+    message["Subject"] = "Anticipatory action Fiji – Forecast information"
+    message["From"] = sender_email
+    message["To"] = ", ".join(mailing_list)
+
+    pub_time_split = report.get("publication_time").split("T")
+
+    html = template.render(
+        name=report.get("cyclone").split(" ")[0],
+        pub_date=pub_time_split[0],
+        pub_time=pub_time_split[1],
+        readiness="ACTIVATED" if report.get("readiness") else "NOT ACTIVATED",
+        action="ACTIVATED" if report.get("action") else "NOT ACTIVATED",
+        plot_path=f"forecast_plot_{pub_time_file_str}.png",
+    )
+    html_part = MIMEText(html, "html")
+    message.attach(html_part)
+
+    context = ssl.create_default_context()
+    if not suppress_send:
+        with smtplib.SMTP_SSL(
+            EMAIL_HOST, EMAIL_PORT, context=context
+        ) as server:
+            server.login(EMAIL_USERNAME, EMAIL_PASSWORD)
+            server.sendmail(EMAIL_ADDRESS, mailing_list, message.as_string())
+    if save:
+        with open(
+            f"data/informational_email_{pub_time_file_str}.html",
+            "w",
+        ) as outfile:
+            outfile.write(message.as_string())
     pass
 
 

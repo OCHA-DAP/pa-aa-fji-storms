@@ -145,3 +145,6 @@ src/test_gdrive.py
 
 # data folder
 data
+
+# DS Store
+.DS_Store
