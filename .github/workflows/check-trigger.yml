@@ -22,8 +22,8 @@ jobs:
         id: download-artifact
         uses: dawidd6/action-download-artifact@v2
         with:
-          name: data
-          path: data/
+          name: inputs
+          path: inputs/
           if_no_artifact_found: warn
       - name: Run Check Trigger Script
         run: python src/update_trigger.py ${{ github.event.inputs.csv }}
@@ -35,5 +35,9 @@ jobs:
           CHD_DS_PORT: ${{ secrets.CHD_DS_PORT }}
       - uses: actions/upload-artifact@v3
         with:
-          name: data
-          path: data/
+          name: inputs
+          path: inputs/
+      - uses: actions/upload-artifact@v3
+        with:
+          name: outputs
+          path: outputs/

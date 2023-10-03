@@ -5,7 +5,8 @@ import os
 import smtplib
 import ssl
 from datetime import datetime
-from email.mime.image import MIMEImage
+from email.headerregistry import Address
+from email.message import EmailMessage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.utils import formataddr, make_msgid
@@ -29,6 +30,8 @@ EMAIL_PORT = int(os.getenv("CHD_DS_PORT"))
 EMAIL_PASSWORD = os.getenv("CHD_DS_EMAIL_PASSWORD")
 EMAIL_USERNAME = os.getenv("CHD_DS_EMAIL_USERNAME")
 EMAIL_ADDRESS = os.getenv("CHD_DS_EMAIL_ADDRESS")
+INPUT_DIR = Path("inputs")
+OUTPUT_DIR = Path("outputs")
 
 
 def decode_forecast_csv(csv: str) -> StringIO:
@@ -88,7 +91,9 @@ def process_fms_forecast(
         base_time.replace(microsecond=0).isoformat().replace(":", "")
     )
     if save:
-        df_data.to_csv(f"data/forecast_{base_time_file_str}.csv", index=False)
+        df_data.to_csv(
+            OUTPUT_DIR / f"forecast_{base_time_file_str}.csv", index=False
+        )
     return df_data
 
 
@@ -124,7 +129,7 @@ def load_adm(level: int = 0) -> gpd.GeoDataFrame:
     elif level == 3:
         adm_name = "tikina"
     resource_name = f"fji_polbnda_adm{level}_{adm_name}.zip"
-    zip_path = "data" / Path(resource_name)
+    zip_path = INPUT_DIR / resource_name
     if zip_path.exists():
         print(f"adm{level} already exists")
     else:
@@ -144,7 +149,7 @@ def load_buffer() -> gpd.GeoDataFrame:
     GeoDataFrame of buffer
     """
     buffer_name = "fji_250km_buffer"
-    buffer_dir = "data" / Path(buffer_name)
+    buffer_dir = INPUT_DIR / buffer_name
     buffer_path = buffer_dir / f"{buffer_name}.shp"
     if buffer_path.exists():
         print("buffer already exists")
@@ -172,8 +177,8 @@ def check_trigger(forecast: pd.DataFrame) -> dict:
     -------
 
     """
-    if not Path("data").exists():
-        os.mkdir("data")
+    if not OUTPUT_DIR.exists():
+        os.mkdir(OUTPUT_DIR)
     print("Loading adm...")
     adm0 = load_adm(level=0)
     print("Processing buffer...")
@@ -218,15 +223,36 @@ def check_trigger(forecast: pd.DataFrame) -> dict:
         "action": action,
     }
     pub_time_file_str = base_time_str.replace(":", "")
-    with open(f"data/report_{pub_time_file_str}.json", "w") as outfile:
+    with open(OUTPUT_DIR / f"report_{pub_time_file_str}.json", "w") as outfile:
         json.dump(report, outfile)
     return report
 
 
-def calculate_distances(forecast: pd.DataFrame, codab: gpd.GeoDataFrame):
-    # fcast = pd.read_csv("data/forecast.csv")
-
-    pass
+def calculate_distances(
+    report: dict, forecast: pd.DataFrame, save: bool = True
+) -> pd.DataFrame:
+    pub_time_file_str = report.get("publication_time").replace(":", "")
+    adm2 = load_adm(level=2)
+    cols = ["ADM2_PCODE", "ADM2_NAME", "ADM1_PCODE", "ADM1_NAME", "geometry"]
+    distances = adm2[cols].copy()
+    forecast = gpd.GeoDataFrame(
+        forecast,
+        geometry=gpd.points_from_xy(
+            forecast["Longitude"], forecast["Latitude"]
+        ),
+    )
+    forecast.crs = "EPSG:4326"
+    forecast = forecast.to_crs(3832)
+    track = LineString([(p.x, p.y) for p in forecast.geometry])
+    distances["distance (km)"] = np.round(
+        track.distance(adm2.geometry) / 1000
+    ).astype(int)
+    distances = distances.drop(columns="geometry")
+    if save:
+        distances.to_csv(
+            OUTPUT_DIR / f"distances_{pub_time_file_str}.csv", index=False
+        )
+    return distances
 
 
 def send_trigger_email(
@@ -258,7 +284,7 @@ def send_trigger_email(
         pub_time_split = report.get("publication_time").split("T")
         html = template.render(
             name=report.get("cyclone").split(" ")[0],
-            pub_time=pub_time_split[1],
+            pub_time=pub_time_split[1].removesuffix(":00"),
             pub_date=pub_time_split[0],
         )
         html_part = MIMEText(html, "html")
@@ -276,7 +302,8 @@ def send_trigger_email(
         if save:
             pub_time_file_str = report.get("publication_time").replace(":", "")
             with open(
-                f"data/{trigger}_activation_email_{pub_time_file_str}.html",
+                OUTPUT_DIR
+                / f"{trigger}_activation_email_{pub_time_file_str}.html",
                 "w",
             ) as outfile:
                 outfile.write(message.as_string())
@@ -301,7 +328,7 @@ def plot_forecast(
             lat=np.array(y),
             lon=np.array(x),
             mode="lines",
-            name="Area within 250km of Fiji",
+            name="Area within 250 km of Fiji",
             line=dict(width=1),
             hoverinfo="skip",
         )
@@ -319,32 +346,54 @@ def plot_forecast(
             "Datetime: %{customdata[1]}",
         )
     )
+    unofficial = forecast[forecast["leadtime"] >= 72]
+    fig.add_trace(
+        go.Scattermapbox(
+            lat=unofficial["Latitude"],
+            lon=unofficial["Longitude"],
+            mode="lines",
+            line=dict(width=1, color="grey"),
+            name="Unofficial 120-hour forecast",
+            customdata=official[["Category", "forecast_time"]],
+            hovertemplate="Category: %{customdata[0]}<br>"
+            "Datetime: %{customdata[1]}",
+        )
+    )
     for color in colors:
-        dff = official[official["Category"] == color[0]]
+        dff = forecast[forecast["Category"] == color[0]]
         fig.add_trace(
             go.Scattermapbox(
                 lat=dff["Latitude"],
                 lon=dff["Longitude"],
                 mode="markers",
                 line=dict(width=2, color=color[1]),
-                marker=dict(size=10),
-                name="Official 72-hour forecast",
+                marker=dict(size=8),
+                name=f"Category {color[0]}",
                 hoverinfo="skip",
             )
         )
-    print(forecast.columns)
+    lat_max = forecast["Latitude"].max()
+    lat_min = forecast["Latitude"].min()
+    lon_max = forecast["Longitude"].max()
+    lon_min = forecast["Longitude"].min()
+    max_bound = max(lon_max - lon_min, lat_max - lat_min) * 111
+    zoom = 12.5 - np.log(max_bound)
     fig.update_layout(
         mapbox_style="open-street-map",
-        mapbox_zoom=4.5,
-        mapbox_center_lat=-17,
-        mapbox_center_lon=179,
+        mapbox_zoom=zoom,
+        mapbox_center_lat=(lat_max + lat_min) / 2,
+        mapbox_center_lon=(lon_max + lon_min) / 2,
         margin={"r": 0, "t": 50, "l": 0, "b": 0},
         title=f"RSMC Nadi forecast for {report.get('cyclone')}<br>"
-        f"<sup>Produced at {pub_time_split[1]} (UTC) on {pub_time_split[0]}",
+        f"<sup>Produced at {pub_time_split[1].removesuffix(':00')} (UTC) "
+        f"on {pub_time_split[0]}",
+        legend=dict(xanchor="right", x=1, bgcolor="rgba(255, 255, 255, 0.3)"),
+        height=800,
+        width=800,
     )
     pub_time_file_str = report.get("publication_time").replace(":", "")
-    filepath_stem = f"data/forecast_plot_{pub_time_file_str}"
-    fig.write_image(f"{filepath_stem}.png", scale=3)
+    filepath_stem = OUTPUT_DIR / f"forecast_plot_{pub_time_file_str}"
+    fig.write_image(f"{filepath_stem}.png", scale=4)
     if save_html:
         fig.write_html(f"{filepath_stem}.html")
     return fig
@@ -353,48 +402,51 @@ def plot_forecast(
 def send_informational_email(
     report: dict,
     forecast: pd.DataFrame,
+    distances: pd.DataFrame,
     suppress_send: bool = False,
     save: bool = True,
 ):
     pub_time_file_str = report.get("publication_time").replace(":", "")
-    # adm2 = load_adm(level=2)
     plot_forecast(report, forecast, save_html=True)
-    if save:
-        pass
 
     environment = Environment(loader=FileSystemLoader("src/email/"))
     template = environment.get_template("informational.html")
 
-    sender_email = formataddr(
-        ("OCHA Centre for Humanitarian Data", EMAIL_ADDRESS)
-    )
     mailing_list = ["tristan.downing@un.org"]
 
-    message = MIMEMultipart("alternative")
-    message["Subject"] = "Anticipatory action Fiji – Forecast information"
-    message["From"] = sender_email
-    message["To"] = ", ".join(mailing_list)
+    msg = EmailMessage()
+    msg["Subject"] = "Anticipatory action Fiji – Forecast information"
+    msg["From"] = Address(
+        "OCHA Centre for Humanitarian Data",
+        EMAIL_ADDRESS.split("@")[0],
+        EMAIL_ADDRESS.split("@")[1],
+    )
+    msg["To"] = [
+        Address(x.split("@")[0], x.split("@")[0], x.split("@")[1])
+        for x in mailing_list
+    ]
+    msg.set_content("plain text content")
 
     pub_time_split = report.get("publication_time").split("T")
 
     plot_cid = make_msgid(domain="humdata.org")
-    print(plot_cid)
-    html = template.render(
+    html_str = template.render(
         name=report.get("cyclone").split(" ")[0],
         pub_date=pub_time_split[0],
         pub_time=pub_time_split[1],
         readiness="ACTIVATED" if report.get("readiness") else "NOT ACTIVATED",
         action="ACTIVATED" if report.get("action") else "NOT ACTIVATED",
-        plot_cid=plot_cid.replace("<", "").replace(">", ""),
+        plot_cid=plot_cid[1:-1],
     )
-    html_part = MIMEText(html, "html")
-    message.attach(html_part)
 
-    image = MIMEImage(
-        open(f"data/forecast_plot_{pub_time_file_str}.png", "rb").read()
-    )
-    image.add_header("Content-ID", plot_cid)
-    message.attach(image)
+    msg.add_alternative(html_str, subtype="html")
+
+    with open(
+        OUTPUT_DIR / f"forecast_plot_{pub_time_file_str}.png", "rb"
+    ) as img:
+        msg.get_payload()[1].add_related(
+            img.read(), "image", "png", cid=plot_cid
+        )
 
     context = ssl.create_default_context()
     if not suppress_send:
@@ -402,13 +454,17 @@ def send_informational_email(
             EMAIL_HOST, EMAIL_PORT, context=context
         ) as server:
             server.login(EMAIL_USERNAME, EMAIL_PASSWORD)
-            server.sendmail(EMAIL_ADDRESS, mailing_list, message.as_string())
+            server.sendmail(EMAIL_ADDRESS, mailing_list, msg.as_string())
     if save:
         with open(
-            f"data/informational_email_{pub_time_file_str}.html",
+            OUTPUT_DIR / f"informational_email_{pub_time_file_str}.html",
             "w",
-        ) as outfile:
-            outfile.write(message.as_string())
+        ) as f:
+            f.write(html_str)
+        with open(
+            OUTPUT_DIR / f"informational_email_{pub_time_file_str}.msg", "wb"
+        ) as f:
+            f.write(bytes(msg))
     pass
 
 
@@ -419,6 +475,7 @@ if __name__ == "__main__":
     report = check_trigger(forecast)
     print(report)
     send_trigger_email(report, suppress_send=args.suppress_send)
+    distances = calculate_distances(report, forecast)
     send_informational_email(
-        report, forecast, suppress_send=args.suppress_send
+        report, forecast, distances, suppress_send=args.suppress_send
     )

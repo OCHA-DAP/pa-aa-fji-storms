@@ -143,8 +143,10 @@ credentials.json
 token.json
 src/test_gdrive.py
 
-# data folder
+# data
 data
+inputs
+outputs
 
 # DS Store
 .DS_Store
