@@ -44,7 +44,7 @@ def decode_forecast_csv(csv: str) -> StringIO:
 
 def process_fms_forecast(
     path: Path | StringIO, save: bool = True
-) -> pd.DataFrame:
+) -> gpd.GeoDataFrame:
     """
     Loads FMS raw forecast
     Parameters
@@ -87,14 +87,19 @@ def process_fms_forecast(
         df_data["leadtime"].dt.days * 24
         + df_data["leadtime"].dt.seconds / 3600
     ).astype(int)
-    base_time_file_str = (
-        base_time.replace(microsecond=0).isoformat().replace(":", "")
+    base_time_file_str = base_time.isoformat(timespec="minutes").replace(
+        ":", ""
     )
     if save:
         df_data.to_csv(
             OUTPUT_DIR / f"forecast_{base_time_file_str}.csv", index=False
         )
-    return df_data
+    gdf = gpd.GeoDataFrame(
+        df_data,
+        geometry=gpd.points_from_xy(df_data["Longitude"], df_data["Latitude"]),
+    )
+    gdf = gdf.set_crs(FJI_CRS)
+    return gdf
 
 
 def datetime_to_season(date):
@@ -138,6 +143,10 @@ def load_adm(level: int = 0) -> gpd.GeoDataFrame:
     gdf = gpd.read_file(
         f"zip://{zip_path.as_posix()}", layer=zip_path.stem
     ).set_crs(3832)
+    if level >= 2:
+        gdf["ADM1_NAME"] = gdf["ADM1_NAME"].apply(
+            lambda x: x.replace("  ", " ")
+        )
     return gdf
 
 
@@ -164,7 +173,7 @@ def load_buffer() -> gpd.GeoDataFrame:
     return buffer
 
 
-def check_trigger(forecast: pd.DataFrame) -> dict:
+def check_trigger(forecast: gpd.GeoDataFrame) -> dict:
     """
     Checks trigger, from GitHub Action
 
@@ -191,7 +200,7 @@ def check_trigger(forecast: pd.DataFrame) -> dict:
     readiness, action = False, False
     cyclone = forecast.iloc[0]["Name Season"]
     base_time = forecast.iloc[0]["base_time"]
-    base_time_str = base_time.replace(microsecond=0).isoformat()
+    base_time_str = base_time.isoformat(timespec="minutes")
     forecast = forecast.set_index("leadtime")
     forecast[["prev_category", "prev_lat", "prev_lon"]] = forecast.shift()[
         ["Category", "Latitude", "Longitude"]
@@ -229,24 +238,24 @@ def check_trigger(forecast: pd.DataFrame) -> dict:
 
 
 def calculate_distances(
-    report: dict, forecast: pd.DataFrame, save: bool = True
+    report: dict, forecast: gpd.GeoDataFrame, save: bool = True
 ) -> pd.DataFrame:
     pub_time_file_str = report.get("publication_time").replace(":", "")
     adm2 = load_adm(level=2)
-    cols = ["ADM2_PCODE", "ADM2_NAME", "ADM1_PCODE", "ADM1_NAME", "geometry"]
+    cols = ["ADM1_PCODE", "ADM1_NAME", "ADM2_PCODE", "ADM2_NAME", "geometry"]
     distances = adm2[cols].copy()
-    forecast = gpd.GeoDataFrame(
-        forecast,
-        geometry=gpd.points_from_xy(
-            forecast["Longitude"], forecast["Latitude"]
-        ),
-    )
-    forecast.crs = "EPSG:4326"
     forecast = forecast.to_crs(3832)
     track = LineString([(p.x, p.y) for p in forecast.geometry])
     distances["distance (km)"] = np.round(
         track.distance(adm2.geometry) / 1000
     ).astype(int)
+    distances["uncertainty (km)"] = None
+    # find closest point to use for uncertainty
+    for i, row in distances.iterrows():
+        forecast["distance"] = row.geometry.distance(forecast.geometry)
+        distances.loc[i, "uncertainty (km)"] = np.round(
+            forecast.loc[forecast["distance"].idxmin(), "Uncertainty"]
+        ).astype(int)
     distances = distances.drop(columns="geometry")
     if save:
         distances.to_csv(
@@ -284,7 +293,7 @@ def send_trigger_email(
         pub_time_split = report.get("publication_time").split("T")
         html = template.render(
             name=report.get("cyclone").split(" ")[0],
-            pub_time=pub_time_split[1].removesuffix(":00"),
+            pub_time=pub_time_split[1],
             pub_date=pub_time_split[0],
         )
         html_part = MIMEText(html, "html")
@@ -310,7 +319,7 @@ def send_trigger_email(
 
 
 def plot_forecast(
-    report: dict, forecast: pd.DataFrame, save_html: bool = False
+    report: dict, forecast: gpd.GeoDataFrame, save_html: bool = False
 ) -> go.Figure:
     colors = (
         (5, "rebeccapurple"),
@@ -321,44 +330,72 @@ def plot_forecast(
     )
     pub_time_split = report.get("publication_time").split("T")
     trigger_zone = load_buffer().to_crs(FJI_CRS)
+    forecast = forecast.to_crs(3832)
+    official = forecast[forecast["leadtime"] <= 72]
+    unofficial = forecast[forecast["leadtime"] >= 72]
+    # produce uncertainty cone
+    circles = []
+    for _, row in official.iterrows():
+        circles.append(row["geometry"].buffer(row["Uncertainty"] * 1000))
+    o_zone = (
+        gpd.GeoDataFrame(geometry=circles)
+        .dissolve()
+        .set_crs(3832)
+        .to_crs(FJI_CRS)
+    )
+    circles = []
+    for _, row in forecast.iterrows():
+        circles.append(row["geometry"].buffer(row["Uncertainty"] * 1000))
+    u_zone = (
+        gpd.GeoDataFrame(geometry=circles)
+        .dissolve()
+        .set_crs(3832)
+        .to_crs(FJI_CRS)
+    )
     fig = go.Figure()
-    x, y = trigger_zone.geometry[0].boundary.xy
+    # trigger zone
+    x_b, y_b = trigger_zone.geometry[0].boundary.xy
     fig.add_trace(
         go.Scattermapbox(
-            lat=np.array(y),
-            lon=np.array(x),
+            lat=np.array(y_b),
+            lon=np.array(x_b),
             mode="lines",
             name="Area within 250 km of Fiji",
             line=dict(width=1),
             hoverinfo="skip",
         )
     )
-    official = forecast[forecast["leadtime"] <= 72]
+    # official forecast
     fig.add_trace(
         go.Scattermapbox(
             lat=official["Latitude"],
             lon=official["Longitude"],
             mode="lines",
             line=dict(width=2, color="black"),
-            name="Official 72-hour forecast",
+            name="Best Track",
             customdata=official[["Category", "forecast_time"]],
             hovertemplate="Category: %{customdata[0]}<br>"
             "Datetime: %{customdata[1]}",
+            legendgroup="official",
+            legendgrouptitle_text="Official 72-hour forecast",
         )
     )
-    unofficial = forecast[forecast["leadtime"] >= 72]
+    # unofficial forecast
     fig.add_trace(
         go.Scattermapbox(
             lat=unofficial["Latitude"],
             lon=unofficial["Longitude"],
             mode="lines",
-            line=dict(width=1, color="grey"),
-            name="Unofficial 120-hour forecast",
-            customdata=official[["Category", "forecast_time"]],
+            line=dict(width=2, color="white"),
+            name="Best Track",
+            customdata=unofficial[["Category", "forecast_time"]],
             hovertemplate="Category: %{customdata[0]}<br>"
             "Datetime: %{customdata[1]}",
+            legendgroup="unofficial",
+            legendgrouptitle_text="Unofficial 120-hour forecast",
         )
     )
+    # by category
     for color in colors:
         dff = forecast[forecast["Category"] == color[0]]
         fig.add_trace(
@@ -367,17 +404,43 @@ def plot_forecast(
                 lon=dff["Longitude"],
                 mode="markers",
                 line=dict(width=2, color=color[1]),
-                marker=dict(size=8),
+                marker=dict(size=10),
                 name=f"Category {color[0]}",
                 hoverinfo="skip",
             )
         )
-    lat_max = forecast["Latitude"].max()
-    lat_min = forecast["Latitude"].min()
-    lon_max = forecast["Longitude"].max()
-    lon_min = forecast["Longitude"].min()
+    # uncertainty
+    x_u, y_u = u_zone.geometry[0].boundary.xy
+    fig.add_trace(
+        go.Scattermapbox(
+            lat=np.array(y_u),
+            lon=np.array(x_u),
+            mode="lines",
+            name="Uncertainty",
+            line=dict(width=1, color="white"),
+            hoverinfo="skip",
+            legendgroup="unofficial",
+        )
+    )
+    x_o, y_o = o_zone.geometry[0].boundary.xy
+    fig.add_trace(
+        go.Scattermapbox(
+            lat=np.array(y_o),
+            lon=np.array(x_o),
+            mode="lines",
+            name="Uncertainty",
+            line=dict(width=1, color="black"),
+            hoverinfo="skip",
+            legendgroup="official",
+        )
+    )
+    # set map bounds based on uncertainty cone of unofficial forecast
+    lat_max = max(y_u)
+    lat_min = min(y_u)
+    lon_max = max(x_u)
+    lon_min = min(x_u)
     max_bound = max(lon_max - lon_min, lat_max - lat_min) * 111
-    zoom = 12.5 - np.log(max_bound)
+    zoom = 12.7 - np.log(max_bound)
     fig.update_layout(
         mapbox_style="open-street-map",
         mapbox_zoom=zoom,
@@ -385,7 +448,7 @@ def plot_forecast(
         mapbox_center_lon=(lon_max + lon_min) / 2,
         margin={"r": 0, "t": 50, "l": 0, "b": 0},
         title=f"RSMC Nadi forecast for {report.get('cyclone')}<br>"
-        f"<sup>Produced at {pub_time_split[1].removesuffix(':00')} (UTC) "
+        f"<sup>Produced at {pub_time_split[1]} (UTC) "
         f"on {pub_time_split[0]}",
         legend=dict(xanchor="right", x=1, bgcolor="rgba(255, 255, 255, 0.3)"),
         height=800,
@@ -401,8 +464,7 @@ def plot_forecast(
 
 def send_informational_email(
     report: dict,
-    forecast: pd.DataFrame,
-    distances: pd.DataFrame,
+    forecast: gpd.GeoDataFrame,
     suppress_send: bool = False,
     save: bool = True,
 ):
@@ -448,6 +510,13 @@ def send_informational_email(
             img.read(), "image", "png", cid=plot_cid
         )
 
+    csv_name = f"distances_{pub_time_file_str}.csv"
+    with open(OUTPUT_DIR / csv_name, "rb") as f:
+        f_data = f.read()
+    msg.add_attachment(
+        f_data, maintype="text", subtype="csv", filename=csv_name
+    )
+
     context = ssl.create_default_context()
     if not suppress_send:
         with smtplib.SMTP_SSL(
@@ -477,5 +546,5 @@ if __name__ == "__main__":
     send_trigger_email(report, suppress_send=args.suppress_send)
     distances = calculate_distances(report, forecast)
     send_informational_email(
-        report, forecast, distances, suppress_send=args.suppress_send
+        report, forecast, suppress_send=args.suppress_send
     )

@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 
 {% block content %}
-<br>
 <div style="font-size:10px;padding: 6px 10px 6px 10px;background-color:#CCCCCC;color:#FFFFFF">
   <p style="margin:0;">
     This email is purely advisory, and does not serve as an official notice for the anticipatory action framework. Official notices of activation are sent by a separate email. This email also does not constitute an official forecast. Under the World Meteorological Organization's Tropical Cyclone Programme, RSMC Nadi is responsible for monitoring tropical cyclones in the region, and their forecasts should be treated as authoritative.
@@ -16,9 +15,11 @@
     Readiness trigger: <b>{{ readiness }}</b><br>
     Action trigger: <b>{{ action }}</b>
   </p>
-  <p>A plot of the forecast is shown below. </p>
+  <p>A plot of the forecast is shown below. Due to the increased uncertainty of forecasting tropical cyclones beyond 72 hours, this portion of the forecast should be treated with caution.</p>
   <img src="cid:{{ plot_cid }}" width="600" height="600"/>
-
+  <p>Attached is a CSV indicating the distance of each Province to the forecasted cyclone path, including the approximate uncertainty of the cyclone's path at its closest pass to the Province.</p>
+  <p>The code used to produce this alert is available on GitHub <a href="https://github.com/OCHA-DAP/pa-aa-fji-storms/blob/add-trigger/src/update_trigger.py">here</a>.</p>
+  <p>Contact the OCHA Centre for Humanitarian Data via Tristan Downing, focal point for Fiji Anticipatory Action at <a href="mailto:tristan.downing@un.org">tristan.downing@un.org</a> with any questions or feedback.</p>
   <p>Best wishes,</p>
   <p>OCHA Center for Humanitarian Data</p>
 </div>
