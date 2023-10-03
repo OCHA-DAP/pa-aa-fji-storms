@@ -7,9 +7,7 @@ import ssl
 from datetime import datetime
 from email.headerregistry import Address
 from email.message import EmailMessage
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from email.utils import formataddr, make_msgid
+from email.utils import make_msgid
 from io import StringIO
 from pathlib import Path
 
@@ -186,8 +184,6 @@ def check_trigger(forecast: gpd.GeoDataFrame) -> dict:
     -------
 
     """
-    if not OUTPUT_DIR.exists():
-        os.mkdir(OUTPUT_DIR)
     print("Loading adm...")
     adm0 = load_adm(level=0)
     print("Processing buffer...")
@@ -273,31 +269,35 @@ def send_trigger_email(
     if report.get("action"):
         triggers.append("action")
 
-    sender_email = formataddr(
-        ("OCHA Centre for Humanitarian Data", EMAIL_ADDRESS)
-    )
-
     mailing_list = ["tristan.downing@un.org"]
 
     environment = Environment(loader=FileSystemLoader("src/email/"))
 
     for trigger in triggers:
         template = environment.get_template(f"{trigger}.html")
-        message = MIMEMultipart("alternative")
-        message["Subject"] = (
+        msg = EmailMessage()
+        msg["Subject"] = (
             "Anticipatory action Fiji – "
             f"{trigger.capitalize()} trigger reached"
         )
-        message["From"] = sender_email
-        message["To"] = ", ".join(mailing_list)
+        msg["From"] = Address(
+            "OCHA Centre for Humanitarian Data",
+            EMAIL_ADDRESS.split("@")[0],
+            EMAIL_ADDRESS.split("@")[1],
+        )
+        msg["To"] = [
+            Address(x.split("@")[0], x.split("@")[0], x.split("@")[1])
+            for x in mailing_list
+        ]
+        msg.set_content("plain text content")
         pub_time_split = report.get("publication_time").split("T")
-        html = template.render(
+
+        html_str = template.render(
             name=report.get("cyclone").split(" ")[0],
             pub_time=pub_time_split[1],
             pub_date=pub_time_split[0],
         )
-        html_part = MIMEText(html, "html")
-        message.attach(html_part)
+        msg.add_alternative(html_str, subtype="html")
 
         context = ssl.create_default_context()
         if not suppress_send:
@@ -305,17 +305,21 @@ def send_trigger_email(
                 EMAIL_HOST, EMAIL_PORT, context=context
             ) as server:
                 server.login(EMAIL_USERNAME, EMAIL_PASSWORD)
-                server.sendmail(
-                    EMAIL_ADDRESS, mailing_list, message.as_string()
-                )
+                server.sendmail(EMAIL_ADDRESS, mailing_list, msg.as_string())
         if save:
             pub_time_file_str = report.get("publication_time").replace(":", "")
             with open(
                 OUTPUT_DIR
                 / f"{trigger}_activation_email_{pub_time_file_str}.html",
                 "w",
-            ) as outfile:
-                outfile.write(message.as_string())
+            ) as f:
+                f.write(html_str)
+            with open(
+                OUTPUT_DIR
+                / f"{trigger}_activation_email_{pub_time_file_str}.msg",
+                "wb",
+            ) as f:
+                f.write(bytes(msg))
 
 
 def plot_forecast(
@@ -462,7 +466,7 @@ def plot_forecast(
     return fig
 
 
-def send_informational_email(
+def send_info_email(
     report: dict,
     forecast: gpd.GeoDataFrame,
     suppress_send: bool = False,
@@ -539,12 +543,14 @@ def send_informational_email(
 
 if __name__ == "__main__":
     args = parse_args()
+    if not OUTPUT_DIR.exists():
+        os.mkdir(OUTPUT_DIR)
+    if not INPUT_DIR.exists():
+        os.mkdir(INPUT_DIR)
     filepath = decode_forecast_csv(args.csv)
     forecast = process_fms_forecast(path=filepath, save=True)
     report = check_trigger(forecast)
     print(report)
     send_trigger_email(report, suppress_send=args.suppress_send)
     distances = calculate_distances(report, forecast)
-    send_informational_email(
-        report, forecast, suppress_send=args.suppress_send
-    )
+    send_info_email(report, forecast, suppress_send=args.suppress_send)
