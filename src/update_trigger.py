@@ -16,6 +16,7 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 from dotenv import load_dotenv
+from html2text import html2text
 from jinja2 import Environment, FileSystemLoader
 from ochanticipy.utils.hdx_api import load_resource_from_hdx
 from shapely.geometry import LineString
@@ -30,6 +31,17 @@ EMAIL_USERNAME = os.getenv("CHD_DS_EMAIL_USERNAME")
 EMAIL_ADDRESS = os.getenv("CHD_DS_EMAIL_ADDRESS")
 INPUT_DIR = Path("inputs")
 OUTPUT_DIR = Path("outputs")
+TRIGGER_TO = os.getenv("TRIGGER_TO")
+TRIGGER_CC = os.getenv("TRIGGER_CC")
+INFO_TO = os.getenv("INFO_TO")
+INFO_CC = os.getenv("INFO_CC")
+CAT2COLOR = (
+    (5, "rebeccapurple"),
+    (4, "crimson"),
+    (3, "orange"),
+    (2, "limegreen"),
+    (1, "skyblue"),
+)
 
 
 def decode_forecast_csv(csv: str) -> StringIO:
@@ -85,6 +97,7 @@ def process_fms_forecast(
         df_data["leadtime"].dt.days * 24
         + df_data["leadtime"].dt.seconds / 3600
     ).astype(int)
+    df_data["Category"] = df_data["Category"].astype(int)
     base_time_file_str = base_time.isoformat(timespec="minutes").replace(
         ":", ""
     )
@@ -104,15 +117,6 @@ def datetime_to_season(date):
     # July 1 (182nd day of the year) is technically the start of the season
     eff_date = date - pd.Timedelta(days=182)
     return f"{eff_date.year}/{eff_date.year + 1}"
-
-
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser()
-    # if no CSV supplied, set to Yasa (readiness and action activation)
-    yasa = os.getenv("YASA_MOD")
-    parser.add_argument("csv", nargs="?", type=str, default=yasa)
-    parser.add_argument("--suppress-send", action="store_true")
-    return parser.parse_args()
 
 
 def load_adm(level: int = 0) -> gpd.GeoDataFrame:
@@ -233,105 +237,9 @@ def check_trigger(forecast: gpd.GeoDataFrame) -> dict:
     return report
 
 
-def calculate_distances(
-    report: dict, forecast: gpd.GeoDataFrame, save: bool = True
-) -> pd.DataFrame:
-    pub_time_file_str = report.get("publication_time").replace(":", "")
-    adm2 = load_adm(level=2)
-    cols = ["ADM1_PCODE", "ADM1_NAME", "ADM2_PCODE", "ADM2_NAME", "geometry"]
-    distances = adm2[cols].copy()
-    forecast = forecast.to_crs(3832)
-    track = LineString([(p.x, p.y) for p in forecast.geometry])
-    distances["distance (km)"] = np.round(
-        track.distance(adm2.geometry) / 1000
-    ).astype(int)
-    distances["uncertainty (km)"] = None
-    # find closest point to use for uncertainty
-    for i, row in distances.iterrows():
-        forecast["distance"] = row.geometry.distance(forecast.geometry)
-        distances.loc[i, "uncertainty (km)"] = np.round(
-            forecast.loc[forecast["distance"].idxmin(), "Uncertainty"]
-        ).astype(int)
-    distances = distances.drop(columns="geometry")
-    if save:
-        distances.to_csv(
-            OUTPUT_DIR / f"distances_{pub_time_file_str}.csv", index=False
-        )
-    return distances
-
-
-def send_trigger_email(
-    report: dict, suppress_send: bool = False, save: bool = True
-):
-    triggers = []
-    if report.get("readiness"):
-        triggers.append("readiness")
-    if report.get("action"):
-        triggers.append("action")
-
-    mailing_list = ["tristan.downing@un.org"]
-
-    environment = Environment(loader=FileSystemLoader("src/email/"))
-
-    for trigger in triggers:
-        template = environment.get_template(f"{trigger}.html")
-        msg = EmailMessage()
-        msg["Subject"] = (
-            "Anticipatory action Fiji – "
-            f"{trigger.capitalize()} trigger reached"
-        )
-        msg["From"] = Address(
-            "OCHA Centre for Humanitarian Data",
-            EMAIL_ADDRESS.split("@")[0],
-            EMAIL_ADDRESS.split("@")[1],
-        )
-        msg["To"] = [
-            Address(x.split("@")[0], x.split("@")[0], x.split("@")[1])
-            for x in mailing_list
-        ]
-        msg.set_content("plain text content")
-        pub_time_split = report.get("publication_time").split("T")
-
-        html_str = template.render(
-            name=report.get("cyclone").split(" ")[0],
-            pub_time=pub_time_split[1],
-            pub_date=pub_time_split[0],
-        )
-        msg.add_alternative(html_str, subtype="html")
-
-        context = ssl.create_default_context()
-        if not suppress_send:
-            with smtplib.SMTP_SSL(
-                EMAIL_HOST, EMAIL_PORT, context=context
-            ) as server:
-                server.login(EMAIL_USERNAME, EMAIL_PASSWORD)
-                server.sendmail(EMAIL_ADDRESS, mailing_list, msg.as_string())
-        if save:
-            pub_time_file_str = report.get("publication_time").replace(":", "")
-            with open(
-                OUTPUT_DIR
-                / f"{trigger}_activation_email_{pub_time_file_str}.html",
-                "w",
-            ) as f:
-                f.write(html_str)
-            with open(
-                OUTPUT_DIR
-                / f"{trigger}_activation_email_{pub_time_file_str}.msg",
-                "wb",
-            ) as f:
-                f.write(bytes(msg))
-
-
 def plot_forecast(
     report: dict, forecast: gpd.GeoDataFrame, save_html: bool = False
 ) -> go.Figure:
-    colors = (
-        (5, "rebeccapurple"),
-        (4, "crimson"),
-        (3, "orange"),
-        (2, "limegreen"),
-        (1, "skyblue"),
-    )
     pub_time_split = report.get("publication_time").split("T")
     trigger_zone = load_buffer().to_crs(FJI_CRS)
     forecast = forecast.to_crs(3832)
@@ -400,7 +308,7 @@ def plot_forecast(
         )
     )
     # by category
-    for color in colors:
+    for color in CAT2COLOR:
         dff = forecast[forecast["Category"] == color[0]]
         fig.add_trace(
             go.Scattermapbox(
@@ -466,53 +374,209 @@ def plot_forecast(
     return fig
 
 
-def send_info_email(
+def calculate_distances(
+    report: dict, forecast: gpd.GeoDataFrame, save: bool = True
+) -> pd.DataFrame:
+    pub_time_file_str = report.get("publication_time").replace(":", "")
+    adm2 = load_adm(level=2)
+    cols = ["ADM1_PCODE", "ADM1_NAME", "ADM2_PCODE", "ADM2_NAME", "geometry"]
+    distances = adm2[cols].copy()
+    forecast = forecast.to_crs(3832)
+    track = LineString([(p.x, p.y) for p in forecast.geometry])
+    distances["distance (km)"] = np.round(
+        track.distance(adm2.geometry) / 1000
+    ).astype(int)
+    distances["uncertainty (km)"] = None
+    distances["category"] = None
+    # find closest point to use for uncertainty
+    for i, row in distances.iterrows():
+        forecast["distance"] = row.geometry.distance(forecast.geometry)
+        i_min = forecast["distance"].idxmin()
+        distances.loc[i, "uncertainty (km)"] = np.round(
+            forecast.loc[i_min, "Uncertainty"]
+        ).astype(int)
+        distances.loc[i, "category"] = forecast.loc[i_min, "Category"]
+    distances = distances.drop(columns="geometry")
+    distances = distances.sort_values("distance (km)")
+    if save:
+        distances.to_csv(
+            OUTPUT_DIR / f"distances_{pub_time_file_str}.csv", index=False
+        )
+    return distances
+
+
+def plot_distances(report: dict, distances: pd.DataFrame) -> go.Figure():
+    pub_time_split = report.get("publication_time").split("T")
+    fig = go.Figure()
+    distances = distances.sort_values("distance (km)", ascending=False)
+    distances["adm2_adm1"] = distances.apply(
+        lambda row: f"{row['ADM2_NAME']} "
+        f"({row['ADM1_NAME'].removesuffix(' Division')})",
+        axis=1,
+    )
+    adm_order = distances["adm2_adm1"]
+    for color in CAT2COLOR:
+        dff = distances[distances["category"] == color[0]]
+        fig.add_trace(
+            go.Scatter(
+                y=dff["adm2_adm1"],
+                x=dff["distance (km)"],
+                mode="markers",
+                error_x=dict(
+                    type="data", array=dff["uncertainty (km)"], visible=True
+                ),
+                marker=dict(size=8, color=color[1]),
+                name=color[0],
+            )
+        )
+    fig.update_yaxes(categoryorder="array", categoryarray=adm_order)
+    fig.update_xaxes(
+        rangemode="nonnegative",
+        title="Minimum distance from best track forecast to Province (km)",
+    )
+    title = (
+        f"{report.get('cyclone').split(' ')[0]} "
+        f"{pub_time_split[1]} {pub_time_split[0]} "
+        "forecast distances<br>"
+        "<sup>Error bars estimated based on uncertainty cone of forecast</sup>"
+    )
+    fig.update_layout(
+        template="simple_white",
+        title_text=title,
+        margin={"r": 0, "t": 50, "l": 0, "b": 0},
+        legend=dict(
+            xanchor="right",
+            x=1,
+            bgcolor="rgba(255, 255, 255, 0.3)",
+            title="Category at<br>closest pass",
+        ),
+    )
+    pub_time_file_str = report.get("publication_time").replace(":", "")
+    filepath_stem = OUTPUT_DIR / f"distances_plot_{pub_time_file_str}"
+    fig.write_image(f"{filepath_stem}.png", scale=4)
+    return fig
+
+
+def send_trigger_email(
     report: dict,
-    forecast: gpd.GeoDataFrame,
     suppress_send: bool = False,
     save: bool = True,
+    test_email: bool = False,
 ):
+    test_subject = "[TEST] " if test_email else ""
+    triggers = []
+    if report.get("readiness"):
+        triggers.append("readiness")
+    if report.get("action"):
+        triggers.append("action")
+    pub_time_split = report.get("publication_time").split("T")
+
+    to_list = [x.strip() for x in TRIGGER_TO.split(",") if x]
+    cc_list = [x.strip() for x in TRIGGER_CC.split(",") if x]
+
+    environment = Environment(loader=FileSystemLoader("src/email/"))
+
+    for trigger in triggers:
+        template = environment.get_template(f"{trigger}.html")
+        msg = EmailMessage()
+        msg["Subject"] = (
+            f"{test_subject}Anticipatory action Fiji – "
+            f"{trigger.capitalize()} trigger reached"
+        )
+        msg["From"] = Address(
+            "OCHA Centre for Humanitarian Data",
+            EMAIL_ADDRESS.split("@")[0],
+            EMAIL_ADDRESS.split("@")[1],
+        )
+        for mail_list, name in zip([to_list, cc_list], ["To", "Cc"]):
+            msg[name] = [
+                Address(x.split("@")[0], x.split("@")[0], x.split("@")[1])
+                for x in mail_list
+            ]
+
+        html_str = template.render(
+            name=report.get("cyclone").split(" ")[0],
+            pub_time=pub_time_split[1],
+            pub_date=pub_time_split[0],
+            test_email=test_email,
+        )
+        text_str = html2text(html_str)
+        msg.set_content(text_str)
+        msg.add_alternative(html_str, subtype="html")
+
+        context = ssl.create_default_context()
+        if not suppress_send:
+            with smtplib.SMTP_SSL(
+                EMAIL_HOST, EMAIL_PORT, context=context
+            ) as server:
+                server.login(EMAIL_USERNAME, EMAIL_PASSWORD)
+                server.sendmail(
+                    EMAIL_ADDRESS, to_list + cc_list, msg.as_string()
+                )
+        if save:
+            pub_time_file_str = report.get("publication_time").replace(":", "")
+            name_stem = f"{trigger}_activation_email_{pub_time_file_str}"
+            with open(OUTPUT_DIR / f"{name_stem}.txt", "w") as f:
+                f.write(text_str)
+            with open(OUTPUT_DIR / f"{name_stem}.html", "w") as f:
+                f.write(html_str)
+            with open(OUTPUT_DIR / f"{name_stem}.msg", "wb") as f:
+                f.write(bytes(msg))
+
+
+def send_info_email(
+    report: dict,
+    suppress_send: bool = False,
+    save: bool = True,
+    test_email: bool = False,
+):
+    test_subject = "[TEST] " if test_email else ""
+    pub_time_split = report.get("publication_time").split("T")
     pub_time_file_str = report.get("publication_time").replace(":", "")
-    plot_forecast(report, forecast, save_html=True)
 
     environment = Environment(loader=FileSystemLoader("src/email/"))
     template = environment.get_template("informational.html")
 
-    mailing_list = ["tristan.downing@un.org"]
+    to_list = [x.strip() for x in INFO_TO.split(",") if x]
+    cc_list = [x.strip() for x in INFO_CC.split(",") if x]
 
     msg = EmailMessage()
-    msg["Subject"] = "Anticipatory action Fiji – Forecast information"
+    msg[
+        "Subject"
+    ] = f"{test_subject}Anticipatory action Fiji – Forecast information"
     msg["From"] = Address(
         "OCHA Centre for Humanitarian Data",
         EMAIL_ADDRESS.split("@")[0],
         EMAIL_ADDRESS.split("@")[1],
     )
-    msg["To"] = [
-        Address(x.split("@")[0], x.split("@")[0], x.split("@")[1])
-        for x in mailing_list
-    ]
-    msg.set_content("plain text content")
+    for mail_list, name in zip([to_list, cc_list], ["To", "Cc"]):
+        msg[name] = [
+            Address(x.split("@")[0], x.split("@")[0], x.split("@")[1])
+            for x in mail_list
+        ]
 
-    pub_time_split = report.get("publication_time").split("T")
-
-    plot_cid = make_msgid(domain="humdata.org")
+    map_cid = make_msgid(domain="humdata.org")
+    distances_cid = make_msgid(domain="humdata.org")
     html_str = template.render(
         name=report.get("cyclone").split(" ")[0],
         pub_date=pub_time_split[0],
         pub_time=pub_time_split[1],
         readiness="ACTIVATED" if report.get("readiness") else "NOT ACTIVATED",
         action="ACTIVATED" if report.get("action") else "NOT ACTIVATED",
-        plot_cid=plot_cid[1:-1],
+        map_cid=map_cid[1:-1],
+        distances_cid=distances_cid[1:-1],
+        test_email=test_email,
     )
-
+    text_str = html2text(html_str)
+    msg.set_content(text_str)
     msg.add_alternative(html_str, subtype="html")
 
-    with open(
-        OUTPUT_DIR / f"forecast_plot_{pub_time_file_str}.png", "rb"
-    ) as img:
-        msg.get_payload()[1].add_related(
-            img.read(), "image", "png", cid=plot_cid
-        )
+    for plot, cid in zip(["forecast", "distances"], [map_cid, distances_cid]):
+        img_path = OUTPUT_DIR / f"{plot}_plot_{pub_time_file_str}.png"
+        with open(img_path, "rb") as img:
+            msg.get_payload()[1].add_related(
+                img.read(), "image", "png", cid=cid
+            )
 
     csv_name = f"distances_{pub_time_file_str}.csv"
     with open(OUTPUT_DIR / csv_name, "rb") as f:
@@ -527,18 +591,26 @@ def send_info_email(
             EMAIL_HOST, EMAIL_PORT, context=context
         ) as server:
             server.login(EMAIL_USERNAME, EMAIL_PASSWORD)
-            server.sendmail(EMAIL_ADDRESS, mailing_list, msg.as_string())
+            server.sendmail(EMAIL_ADDRESS, to_list + cc_list, msg.as_string())
     if save:
-        with open(
-            OUTPUT_DIR / f"informational_email_{pub_time_file_str}.html",
-            "w",
-        ) as f:
+        file_stem = f"informational_email_{pub_time_file_str}"
+        with open(OUTPUT_DIR / f"{file_stem}.txt", "w") as f:
+            f.write(text_str)
+        with open(OUTPUT_DIR / f"{file_stem}.html", "w") as f:
             f.write(html_str)
-        with open(
-            OUTPUT_DIR / f"informational_email_{pub_time_file_str}.msg", "wb"
-        ) as f:
+        with open(OUTPUT_DIR / f"{file_stem}.msg", "wb") as f:
             f.write(bytes(msg))
     pass
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    # if no CSV supplied, set to Yasa (readiness and action activation)
+    yasa = os.getenv("YASA_MOD")
+    parser.add_argument("csv", nargs="?", type=str, default=yasa)
+    parser.add_argument("--suppress-send", action="store_true")
+    parser.add_argument("--test-email", action="store_true")
+    return parser.parse_args()
 
 
 if __name__ == "__main__":
@@ -551,6 +623,14 @@ if __name__ == "__main__":
     forecast = process_fms_forecast(path=filepath, save=True)
     report = check_trigger(forecast)
     print(report)
-    send_trigger_email(report, suppress_send=args.suppress_send)
+    send_trigger_email(
+        report, suppress_send=args.suppress_send, test_email=args.test_email
+    )
+    plot_forecast(report, forecast, save_html=True)
     distances = calculate_distances(report, forecast)
-    send_info_email(report, forecast, suppress_send=args.suppress_send)
+    plot_distances(report, distances)
+    send_info_email(
+        report,
+        suppress_send=args.suppress_send,
+        test_email=args.test_email,
+    )

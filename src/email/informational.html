@@ -15,11 +15,20 @@
     Readiness trigger: <b>{{ readiness }}</b><br>
     Action trigger: <b>{{ action }}</b>
   </p>
-  <p>A plot of the forecast is shown below. Due to the increased uncertainty of forecasting tropical cyclones beyond 72 hours, this portion of the forecast should be treated with caution.</p>
-  <img src="cid:{{ plot_cid }}" width="600" height="600"/>
-  <p>Attached is a CSV indicating the distance of each Province to the forecasted cyclone path, including the approximate uncertainty of the cyclone's path at its closest pass to the Province.</p>
-  <p>The code used to produce this alert is available on GitHub <a href="https://github.com/OCHA-DAP/pa-aa-fji-storms/blob/add-trigger/src/update_trigger.py">here</a>.</p>
-  <p>Contact the OCHA Centre for Humanitarian Data via Tristan Downing, focal point for Fiji Anticipatory Action at <a href="mailto:tristan.downing@un.org">tristan.downing@un.org</a> with any questions or feedback.</p>
+  <p>
+    A plot of the forecast is shown below. Due to the increased uncertainty of forecasting tropical cyclones beyond 72 hours, this portion of the forecast should be treated with caution.
+  </p>
+  <img src="cid:{{ map_cid }}" width="600" height="600"/>
+  <p>
+    The plot below shows the distance of each Province to the forecasted cyclone path, including the approximate uncertainty of the cyclone's path at its closest pass to the Province. This data is also included in the attached CSV.
+  </p>
+  <img src="cid:{{ distances_cid }}" width="600"/>
+  <p>
+    The code used to produce this alert is available on GitHub <a href="https://github.com/OCHA-DAP/pa-aa-fji-storms/blob/add-trigger/src/update_trigger.py">here</a>.
+  </p>
+  <p>
+    Contact the OCHA Centre for Humanitarian Data via Tristan Downing, focal point for Fiji Anticipatory Action at <a href="mailto:tristan.downing@un.org">tristan.downing@un.org</a> with any questions or feedback.
+  </p>
   <p>Best wishes,</p>
   <p>OCHA Center for Humanitarian Data</p>
 </div>

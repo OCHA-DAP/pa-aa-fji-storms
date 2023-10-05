@@ -14,6 +14,12 @@
   </style>
 </head>
 <body>
+  {% if test_email %}
+    <div>
+      <p><b>This is a test of the automated email notification system. The information in this email is not valid and has been fabricated purely to test the system.</b></p>
+    </div>
+  {% else %}
+  {% endif %}
   <div style="font-size:10px;padding: 6px 10px 6px 10px;background-color:#CCCCCC;color:#FFFFFF">
     <p style="margin:0;">
       This is an automated message produced by the OCHA Centre for Humanitarian Data.
