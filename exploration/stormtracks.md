@@ -44,7 +44,7 @@ import plotly.figure_factory as ff
 import chart_studio
 import chart_studio.plotly as py
 
-import utils
+from src import utils
 
 pyo.init_notebook_mode()
 load_dotenv()
@@ -69,20 +69,15 @@ CODAB_PATH = RAW_DIR / "cod_ab/fji_polbnda_adm0_country"
 CODAB3_PATH = RAW_DIR / "cod_ab/fji_polbnda_adm3_tikina"
 IMPACT_PATH = EXP_DIR / "rsmc/FIJI_ DesInventar data 20230626.xlsx"
 PROC_PATH = Path(os.environ["AA_DATA_DIR"]) / "public/processed/fji"
-SAVE_DIR = Path("/Users/tdowning/OCHA/data/fji")
+SAVE_DIR = utils.SAVE_DIR
+```
+
+```python
+utils.process_fms_cyclonetracks()
 ```
 
 ```python
 df_clean = utils.process_desinventar()
-```
-
-```python
-# metrics histograms
-
-for metric in metrics:
-    fig, ax = plt.subplots()
-    df_clean[metric][df_clean[metric] > 0].hist(ax=ax, bins=20)
-    ax.set_title(metric)
 ```
 
 ```python
@@ -93,6 +88,10 @@ gdf_tracks = utils.load_cyclonetracks()
 gdf_adm0 = gpd.read_file(CODAB_PATH, layer="fji_polbnda_adm0_country").set_crs(
     "EPSG:3832"
 )
+```
+
+```python
+gdf_tracks
 ```
 
 ```python

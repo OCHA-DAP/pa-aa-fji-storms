@@ -1,7 +1,8 @@
 import argparse
 import logging
+import os
 
-from src import constants  # noqa: F401
+from src import utils
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -15,6 +16,17 @@ def parse_args() -> argparse.Namespace:
 
 
 def run_pipeline(clobber: bool = False):
+    utils.download_codab(clobber=clobber)
+    utils.process_buffer(distance=250, clobber=clobber)
+    forecast_names = [
+        x for x in os.listdir(utils.CURRENT_FCAST_DIR) if not x.startswith(".")
+    ]
+    for forecast_name in forecast_names:
+        utils.check_fms_forecast(
+            utils.CURRENT_FCAST_DIR / forecast_name, clobber=clobber
+        )
+    # check trigger
+    # write trigger report
     pass
 
 

@@ -24,10 +24,6 @@ From Fiji Met Services
 ```
 
 ```python
-print("hello")
-```
-
-```python
 from dotenv import load_dotenv
 from pathlib import Path
 from datetime import datetime
@@ -51,9 +47,7 @@ import chart_studio
 import chart_studio.plotly as py
 import plotly.io as pio
 
-import utils
-
-pio.renderers.default = "notebook"
+from src import utils
 ```
 
 ```python
@@ -81,7 +75,7 @@ gdf_adm0 = gpd.read_file(
 ```python
 forecasts = utils.load_hindcasts()
 actual = utils.load_cyclonetracks()
-forecast_nameseasons = forecasts["name_season"].unique()
+forecast_nameseasons = forecasts["Name Season"].unique()
 actual = actual[actual["Name Season"].isin(forecast_nameseasons)]
 ```
 
@@ -92,7 +86,7 @@ actual_interp = utils.interpolate_cyclonetracks(actual)
 ```python
 df = forecasts.merge(
     actual_interp,
-    left_on=["name_season", "forecast_time"],
+    left_on=["Name Season", "forecast_time"],
     right_on=["Name Season", "datetime"],
     suffixes=["_forecast", "_actual"],
 )
@@ -164,10 +158,13 @@ fig.show()
 
 ```python
 # load buffer (default 250 km)
+import src.constants
+import src.check_trigger
+
 buffer_distance = 250
 # utils.process_buffer(buffer_distance)
 trigger_zone = utils.load_buffer(buffer_distance)
-trigger_zone = trigger_zone.to_crs(utils.FJI_CRS)
+trigger_zone = trigger_zone.to_crs(src.constants.FJI_CRS)
 ```
 
 ```python
@@ -268,11 +265,14 @@ print(mean_fms_leadtime.days + mean_fms_leadtime.seconds / 3600 / 24)
 ## Plot tracks
 
 ```python
+import src.constants
+import src.check_trigger
+
 pio.renderers.default = "notebook"
 pio.renderers.default = "browser"
 # utils.process_buffer(200)
 trigger_zone = utils.load_buffer(250)
-trigger_zone = trigger_zone.to_crs(utils.FJI_CRS)
+trigger_zone = trigger_zone.to_crs(src.constants.FJI_CRS)
 
 for name_season in df["Name Season"].unique():
     df_plot = df[df["Name Season"] == name_season].sort_values("base_time")

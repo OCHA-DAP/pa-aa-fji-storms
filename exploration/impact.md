@@ -38,7 +38,7 @@ import plotly.graph_objects as go
 from shapely import LineString
 import shapely
 
-import utils
+from src import utils
 ```
 
 ```python
@@ -47,7 +47,7 @@ load_dotenv()
 
 ```python
 # if needed, process impact data
-utils.process_housing_impact()
+# utils.process_housing_impact()
 ```
 
 ```python
@@ -58,6 +58,10 @@ cod3 = utils.load_codab(level=3)
 impact = utils.load_geo_impact()
 des = utils.load_desinventar()
 housing = utils.load_housing_impact()
+```
+
+```python
+housing
 ```
 
 ```python
@@ -87,7 +91,7 @@ dff = dff.rename(columns={0: "count"})
 
 # plot geo impact by event
 event = "Winston 2015/2016"
-gdf = cod.merge(dff[dff["Event"] == event], on=utils.ADM3, how="left")
+gdf = cod3.merge(dff[dff["Event"] == event], on=utils.ADM3, how="left")
 gdf["count"] = gdf["count"].fillna(0)
 gdf.plot(column="count")
 ```
@@ -101,11 +105,13 @@ housing["nameseason"].value_counts()
 ```
 
 ```python
-utils.process_housing_impact()
+utils.process_fms_cyclonetracks()
 ```
 
 ```python
 # housing plot with forecasts and bands
+import src.constants
+import src.check_trigger
 
 # nameseason = "Tino 2019/2020"
 nameseason = "Winston 2015/2016"
@@ -122,7 +128,8 @@ dff = codn.merge(dff, on=f"ADM{admn}_PCODE", how="left")
 cols = ["Destroyed", "Major Damage"]
 dff[cols] = dff[cols].fillna(0)
 dff.geometry = dff.geometry.simplify(100)
-dff = dff.to_crs(utils.FJI_CRS)
+dff = dff.to_crs(src.constants.FJI_CRS)
+
 dff = dff.set_index(f"ADM{admn}_PCODE")
 fig = px.choropleth(
     dff,
@@ -140,7 +147,7 @@ fig.update_geos(fitbounds="locations", visible=False)
 fig.show()
 
 trigger_zone = utils.load_buffer(250)
-trigger_zone = trigger_zone.to_crs(utils.FJI_CRS)
+trigger_zone = trigger_zone.to_crs(src.constants.FJI_CRS)
 distances = [50, 100, 200]
 colors = ["Reds", "Oranges", ""]
 
@@ -158,7 +165,7 @@ def gdf_buffers(gdf, distances):
 
     buffers = gpd.GeoDataFrame(
         data=distances, geometry=polys, crs=3832
-    ).to_crs(utils.FJI_CRS)
+    ).to_crs(src.constants.FJI_CRS)
     buffers = buffers.rename(columns={0: "distance"})
     return buffers
 

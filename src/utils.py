@@ -1,9 +1,12 @@
 import getpass
+import json
 import os
 import re
 import xml.etree.ElementTree as ET
+import zipfile
 from datetime import datetime
 from pathlib import Path
+from typing import Dict, List
 
 import geopandas as gpd
 import numpy as np
@@ -11,7 +14,12 @@ import pandas as pd
 import requests
 from dateutil import rrule
 from dotenv import load_dotenv
+from ochanticipy.utils.hdx_api import load_resource_from_hdx
+from shapely.geometry import LineString
 from tqdm.auto import tqdm
+
+from src.check_trigger import datetime_to_season, load_fms_forecast
+from src.constants import FJI_CRS
 
 load_dotenv()
 
@@ -25,7 +33,6 @@ IMPACT_PATH = EXP_DIR / "rsmc/FIJI_ DesInventar data 20230626.xlsx"
 RAW_DIR = Path(os.environ["AA_DATA_DIR"]) / "public/raw/fji"
 ADM0_PATH = RAW_DIR / "cod_ab/fji_polbnda_adm0_country"
 PROC_PATH = Path(os.environ["AA_DATA_DIR"]) / "public/processed/fji"
-FJI_CRS = "+proj=longlat +ellps=WGS84 +lon_wrap=180 +datum=WGS84 +no_defs"
 CODAB_PATH = RAW_DIR / "cod_ab"
 NDMO_DIR = AA_DATA_DIR / "private/raw/fji/ndmo"
 ADM3 = "ADM3_PCODE"
@@ -36,10 +43,129 @@ ECMWF_PROCESSED = (
     AA_DATA_DIR / "public/exploration/fji/ecmwf/cyclone_hindcasts"
 )
 KNOTS_PER_MS = 1.94384
+CODAB_DATASET = "cod-ab-fji"
+CURRENT_FCAST_DIR = AA_DATA_DIR / "private/raw/fji/fms/forecast"
+PROC_FCAST_DIR = AA_DATA_DIR / "private/processed/fji/fms/forecast"
+MB_TOKEN = os.environ.get("MAPBOX_TOKEN")
+CS_KEY = os.environ.get("CHARTSTUDIO_APIKEY")
+MAPS_DIR = PROC_PATH / "historical_forecast_maps"
+STORM_DATA_DIR = Path(os.getenv("STORM_DATA_DIR"))
 
 
-def check_fms_forecast(filename):
-    return
+def check_fms_forecast(
+    forecast_path: Path,
+    thresholds: List[Dict] = None,
+    clobber: bool = False,
+    save_dir: Path = PROC_FCAST_DIR,
+) -> Path:
+    """
+    Checks Fiji Met Service forecast for readiness and activation trigger.
+    Saves output as simple trigger report .txt file.
+
+    Parameters
+    ----------
+    forecast_path: Path
+        Path of the forecast file
+    thresholds: List[Dict]
+        Dict of the trigger thresholds. Defaults to
+            thresholds = [
+                {"distance": 250, "category": 4},
+                {"distance": 0, "category": 3},
+            ]
+    clobber: bool = False
+        If True, overwrites
+    save_dir: Path = PROC_FCAST_DIR,
+        Directory to save trigger report to
+
+    Returns
+    -------
+    Path of trigger report
+    """
+    if thresholds is None:
+        thresholds = [
+            {"distance": 250, "category": 4},
+            {"distance": 0, "category": 3},
+        ]
+    print(f"Checking file: {forecast_path.stem}")
+    save_path = save_dir / f"{forecast_path.stem}_checked.txt"
+    if save_path.exists() and not clobber:
+        print("Already checked, passing")
+        return save_path
+    readiness, activation = False, False
+    fcast = load_fms_forecast(forecast_path)
+    cyclone = fcast.iloc[0]["Name Season"]
+    base_time = str(fcast.iloc[0]["base_time"])
+    fcast = fcast.set_index("leadtime")
+    fcast[["prev_category", "prev_lat", "prev_lon"]] = fcast.shift()[
+        ["Category", "Latitude", "Longitude"]
+    ]
+    # first check with intersection
+    for threshold in thresholds:
+        cat = threshold.get("category")
+        dist = threshold.get("distance")
+        if dist == 0:
+            # clobber False, since already downloaded in main script
+            download_codab(clobber=False)
+            zone = load_codab(level=0).to_crs(FJI_CRS)
+        else:
+            # clobber False, since already downloaded in main script
+            process_buffer(distance=dist, clobber=False)
+            zone = load_buffer(distance=dist).to_crs(FJI_CRS)
+        for leadtime in fcast.index[:-1]:
+            row = fcast.loc[leadtime]
+            if row["Category"] >= cat and row["prev_category"] >= cat:
+                ls = LineString(
+                    [
+                        row[["Longitude", "Latitude"]],
+                        row[["prev_lon", "prev_lat"]],
+                    ]
+                )
+                if ls.intersects(zone.geometry)[0]:
+                    readiness = True
+                    if leadtime <= 72:
+                        activation = True
+    report = {
+        "cyclone": cyclone,
+        "publication_time": base_time,
+        "readiness": readiness,
+        "activation": activation,
+    }
+    print(f"{report=}")
+    with open(save_path, "w") as f:
+        f.write(json.dumps(report))
+    return save_path
+
+
+def download_codab(clobber: bool = False) -> List[Path]:
+    """
+
+    Parameters
+    ----------
+    clobber: bool = False
+        If True, overwrites existing files
+
+    Returns
+    -------
+    List of paths CODABs were extracted to
+    """
+    adm_levels = [
+        (0, "country"),
+        (1, "district"),
+        (2, "province"),
+        (3, "tikina"),
+    ]
+    extract_paths = []
+    for level in adm_levels:
+        resource_name = f"fji_polbnda_adm{level[0]}_{level[1]}.zip"
+        zip_path = CODAB_PATH / resource_name
+        if not zip_path.exists() or clobber:
+            load_resource_from_hdx(CODAB_DATASET, resource_name, zip_path)
+        extract_path = CODAB_PATH / resource_name.removesuffix(".zip")
+        if not extract_path.exists() or clobber:
+            with zipfile.ZipFile(zip_path, "r") as zip_ref:
+                zip_ref.extractall(extract_path)
+            extract_paths.append(extract_paths)
+    return extract_paths
 
 
 def load_hindcasts() -> gpd.GeoDataFrame:
@@ -55,30 +181,7 @@ def load_hindcasts() -> gpd.GeoDataFrame:
     for filename in filenames:
         if filename.startswith("."):
             continue
-        df_date = pd.read_csv(FCAST_DIR / filename, header=None, nrows=3)
-        date_str = df_date.iloc[0, 1].removeprefix("baseTime=")
-        base_time = datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%SZ")
-        cyclone_name = (
-            df_date.iloc[2, 0].removeprefix("# CycloneName=").capitalize()
-        )
-        df_data = pd.read_csv(
-            FCAST_DIR / filename,
-            skiprows=range(6),
-        )
-        df_data = df_data.drop([0])
-        df_data = df_data.rename(
-            columns={"Time[fmt=yyyy-MM-dd'T'HH:mm:ss'Z']": "forecast_time"}
-        )
-        df_data["forecast_time"] = pd.to_datetime(
-            df_data["forecast_time"]
-        ).dt.tz_localize(None)
-        df_data["cyclone_name"] = cyclone_name
-        df_data["base_time"] = base_time
-        df_data["season"] = datetime_to_season(base_time)
-        df_data["Name Season"] = (
-            df_data["cyclone_name"] + " " + df_data["season"]
-        )
-
+        df_data = load_fms_forecast(FCAST_DIR / filename)
         df = pd.concat([df, df_data], ignore_index=True)
 
     gdf = gpd.GeoDataFrame(
@@ -89,7 +192,7 @@ def load_hindcasts() -> gpd.GeoDataFrame:
     return gdf
 
 
-def load_cyclonetracks() -> gpd.GeoDataFrame:
+def process_fms_cyclonetracks():
     df = pd.read_csv(CYCLONETRACKS_PATH)
     df["Date"] = df["Date"].apply(lambda x: x.strip())
     df["datetime"] = df["Date"] + " " + df["Time"]
@@ -116,7 +219,22 @@ def load_cyclonetracks() -> gpd.GeoDataFrame:
     ).astype(
         str
     )
+    # save full tracks
+    df.to_csv(PROC_PATH / "fms_tracks_processed.csv", index=False)
+    # also save just names
+    cols = ["nameyear", "Name Season", "Cyclone Name"]
+    df[cols].drop_duplicates().to_csv(
+        PROC_PATH / "fms_cyclone_names.csv", index=False
+    )
 
+
+def load_cyclonenames() -> pd.DataFrame:
+    return pd.read_csv(PROC_PATH / "fms_cyclone_names.csv")
+
+
+def load_cyclonetracks() -> gpd.GeoDataFrame:
+    df = pd.read_csv(PROC_PATH / "fms_tracks_processed.csv")
+    df["datetime"] = pd.to_datetime(df["datetime"])
     gdf_tracks = gpd.GeoDataFrame(
         df, geometry=gpd.points_from_xy(df["Longitude"], df["Latitude"])
     )
@@ -175,6 +293,8 @@ def interpolate_cyclonetracks(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
 def load_codab(level: int = 3) -> gpd.GeoDataFrame:
     """
     Load Fiji codab
+    Note: there seems to be a problem with level=2 (province)
+
     Parameters
     ----------
     level: int = 3
@@ -308,7 +428,18 @@ def process_geo_impact():
     )
 
 
-def knots2cat(knots):
+def knots2cat(knots: float) -> int:
+    """
+    Convert from knots to Category (Australian scale)
+    Parameters
+    ----------
+    knots: float
+        Wind speed in knots
+
+    Returns
+    -------
+    Category
+    """
     category = 0
     if knots > 107:
         category = 5
@@ -325,6 +456,9 @@ def knots2cat(knots):
 
 def load_ecmwf_besttrack_hindcasts():
     df = pd.read_csv(ECMWF_PROCESSED / "besttrack_forecasts.csv")
+    cols = ["time", "forecast_time"]
+    for col in cols:
+        df[col] = pd.to_datetime(df[col])
     gdf = gpd.GeoDataFrame(
         data=df,
         geometry=gpd.points_from_xy(df["lon"], df["lat"], crs="EPSG:4326"),
@@ -402,6 +536,19 @@ def process_ecmwf_besttrack_hindcasts():
 
     forecast = forecast.drop(columns="year")
     forecast.to_csv(ECMWF_PROCESSED / "besttrack_forecasts.csv", index=False)
+
+
+def load_historical_triggers() -> pd.DataFrame:
+    df = pd.read_csv(PROC_PATH / "historical_triggers.csv")
+    cols = [
+        "ec_3day_date",
+        "ec_5day_date",
+        "fms_fcast_date",
+        "fms_actual_date",
+    ]
+    for col in cols:
+        df[col] = pd.to_datetime(df[col])
+    return df
 
 
 def process_ecmwf_hindcasts(dry_run: bool = False):
@@ -589,28 +736,48 @@ def load_housing_impact() -> pd.DataFrame:
 
 def process_housing_impact():
     """
-    Process housing impact (by adm 1 or 2) from NDMO
+    Process housing impact (by adm 1 or 2) from NDMO or from ReliefWeb
     """
     cod = load_codab(level=2)
+    cyclone_names = load_cyclonenames()
 
-    cyclones = ["Winston", "Sarai", "Tino", "Harold", "Yasa", "Ana", "Evan"]
-
-    dfs = []
-    name2season = {
+    # list of TCs in file received from NDMO
+    ndmo_tcs = {
         "Winston": "2015/2016",
         "Sarai": "2019/2020",
         "Tino": "2019/2020",
         "Harold": "2019/2020",
         "Yasa": "2020/2021",
         "Ana": "2020/2021",
-        "Evan": "2012/2013",
     }
-    for cyclone in cyclones:
-        evan = "_Evan" if cyclone == "Evan" else ""
+    # list of TCs for which we could find sub-national housing impact data
+    # on ReliefWeb
+    rw_tcs = {
+        "Evan": "2012/2013",
+        "Gita": "2017/2018",
+        "Tomas": "2009/2010",
+    }
+
+    dfs_in = []
+    # read from NDMO file
+    for cyclone in ndmo_tcs.keys():
         df_in = pd.read_excel(
-            NDMO_DIR / f"Disaster Damaged Housing{evan}.xlsx",
+            NDMO_DIR / "Disaster Damaged Housing Updated 260923.xlsx",
             sheet_name=f"TC_{cyclone}",
         )
+        df_in["nameseason"] = f"{cyclone} {ndmo_tcs.get(cyclone)}"
+        dfs_in.append(df_in)
+    # read from ReliefWeb file
+    for cyclone in rw_tcs.keys():
+        df_in = pd.read_excel(
+            NDMO_DIR / "Disaster Damaged Housing_ReliefWeb.xlsx",
+            sheet_name=f"TC_{cyclone}",
+        )
+        df_in["nameseason"] = f"{cyclone} {rw_tcs.get(cyclone)}"
+        dfs_in.append(df_in)
+
+    dfs = []
+    for df_in in dfs_in:
         df_in = df_in.rename(
             columns={
                 "Completely Damaged": "Destroyed",
@@ -618,7 +785,6 @@ def process_housing_impact():
             }
         )
         df_in = df_in.dropna()
-        df_in["nameseason"] = f"{cyclone} {name2season.get(cyclone)}"
         dfs.append(df_in)
 
     df = pd.concat(dfs, ignore_index=True)
@@ -635,8 +801,24 @@ def process_housing_impact():
         left_on="Province",
         how="left",
     )
+
+    df = df.merge(
+        cyclone_names, left_on="nameseason", right_on="Name Season", how="left"
+    )
+
+    # write to AA_DATA_DIR
     df.to_csv(
-        AA_DATA_DIR / "private/processed/fji/ndmo/processed_house_impact.csv",
+        AA_DATA_DIR
+        / "private/processed/fji/ndmo/"
+        / "processed_house_impact.csv",
+        index=False,
+    )
+    # also write to ISI collab dir for GlobalTropicalCycloneModel
+    df.to_csv(
+        STORM_DATA_DIR
+        / "analysis_fji/02_new_model_input/02_housing_damage"
+        / "input/fji_impact_data"
+        / "processed_house_impact.csv",
         index=False,
     )
 
@@ -750,7 +932,7 @@ def process_desinventar():
     df_clean.to_csv(EXP_DIR / "processed_desinventar.csv", index=False)
 
 
-def process_buffer(distance: int = 250):
+def process_buffer(distance: int = 250, clobber: bool = False) -> Path:
     """
     Produce and save buffer
 
@@ -758,22 +940,22 @@ def process_buffer(distance: int = 250):
     ----------
     distance: int = 250
         Distance from adm0 in km
+    clobber: bool = False
+        If True, reprocesses even if file exists
 
     Returns
     -------
-    None
+    Path of buffer SHP
     """
     filename = f"fji_{distance}km_buffer"
-    save_dir = PROC_PATH / filename
-    if save_dir.exists():
-        print(f"already exists at {save_dir}")
-        # return
-
-    gdf_adm0 = gpd.read_file(
-        ADM0_PATH, layer="fji_polbnda_adm0_country"
-    ).set_crs(3832)
-    gdf_buffer = gdf_adm0.buffer(distance * 1000)
-    gdf_buffer.to_file(save_dir / f"{filename}.shp")
+    save_dir = PROC_PATH / "buffer" / filename
+    if not save_dir.exists() or clobber:
+        cod = load_codab(level=0)
+        gdf_buffer = cod.buffer(distance * 1000)
+        if not save_dir.exists():
+            os.mkdir(save_dir)
+        gdf_buffer.to_file(save_dir / f"{filename}.shp")
+    return save_dir
 
 
 def load_buffer(distance: int = 250) -> gpd.GeoDataFrame:
@@ -790,12 +972,6 @@ def load_buffer(distance: int = 250) -> gpd.GeoDataFrame:
 
     """
     filename = f"fji_{distance}km_buffer"
-    load_path = PROC_PATH / filename / f"{filename}.shp"
+    load_path = PROC_PATH / "buffer" / filename / f"{filename}.shp"
 
     return gpd.read_file(load_path)
-
-
-def datetime_to_season(date):
-    # July 1 (182nd day of the year) is technically the start of the season
-    eff_date = date - pd.Timedelta(days=182)
-    return f"{eff_date.year}/{eff_date.year + 1}"
