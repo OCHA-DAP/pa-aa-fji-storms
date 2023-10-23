@@ -351,18 +351,5 @@ for nameyear in housing["nameyear"].unique():
 ```
 
 ```python
-# save as html
-filename = f"{nameyear}_forecasts.html"
-
-f = open(utils.MAPS_DIR / filename, "w")
-f.close()
-with open(utils.MAPS_DIR / filename, "a") as f:
-    f.write(
-        fig.to_html(full_html=True, include_plotlyjs="cdn", auto_play=False)
-    )
-f.close()
-```
-
-```python
 
 ```
