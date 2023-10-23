@@ -38,7 +38,8 @@ from dotenv import load_dotenv
 import shapely
 from shapely.geometry import Point, LineString
 
-import utils
+from src import utils
+from src.constants import FJI_CRS
 ```
 
 ```python
@@ -244,8 +245,6 @@ fms
 
 ```python
 # create plots for pptx and demo
-import src.constants
-import src.update_trigger
 
 pio.renderers.default = "browser"
 # pio.renderers.default = "notebook"
@@ -352,11 +351,15 @@ for nameyear in nameyear_sel:
 import src.constants
 import src.update_trigger
 
+import src.constants
+import src.check_trigger
+
 pio.renderers.default = "browser"
 # pio.renderers.default = "notebook"
 # utils.process_buffer(200)
 trigger_zone = utils.load_buffer(250)
 trigger_zone = trigger_zone.to_crs(src.constants.FJI_CRS)
+
 distances = [50, 100, 200]
 colors = ["Reds", "Oranges", ""]
 

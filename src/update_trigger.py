@@ -97,7 +97,7 @@ def process_fms_forecast(
         df_data["leadtime"].dt.days * 24
         + df_data["leadtime"].dt.seconds / 3600
     ).astype(int)
-    df_data["Category"] = df_data["Category"].astype(int)
+    df_data["Category"] = df_data["Category"].astype(int, errors="ignore")
     base_time_file_str = base_time.isoformat(timespec="minutes").replace(
         ":", ""
     )

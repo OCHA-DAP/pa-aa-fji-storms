@@ -48,10 +48,6 @@ cod2 = utils.load_codab(level=2).to_crs(3832)
 cod3 = utils.load_codab(level=3).to_crs(3832)
 ```
 
-```python
-cod3
-```
-
 ## Calculate distance - admin2
 
 ```python
@@ -190,4 +186,8 @@ for cutoff in cutoffs:
             ]
             dff = dff.reset_index()
             dff.to_excel(writer, sheet_name=nameyear, index=False)
+```
+
+```python
+
 ```

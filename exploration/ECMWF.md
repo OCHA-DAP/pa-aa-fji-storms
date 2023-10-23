@@ -45,7 +45,8 @@ import plotly.graph_objects as go
 
 pio.renderers.default = "notebook"
 
-import utils
+from src import utils
+from src.constants import FJI_CRS
 ```
 
 ```python
@@ -81,11 +82,8 @@ forecast
 ```
 
 ```python
-import src.constants
-import src.update_trigger
-
 trigger_zone = utils.load_buffer()
-trigger_zone = trigger_zone.to_crs(src.constants.FJI_CRS)
+trigger_zone = trigger_zone.to_crs(FJI_CRS)
 ```
 
 ```python

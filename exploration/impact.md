@@ -39,6 +39,7 @@ from shapely import LineString
 import shapely
 
 from src import utils
+from src.constants import FJI_CRS
 ```
 
 ```python
@@ -110,8 +111,6 @@ utils.process_fms_cyclonetracks()
 
 ```python
 # housing plot with forecasts and bands
-import src.constants
-import src.update_trigger
 
 # nameseason = "Tino 2019/2020"
 nameseason = "Winston 2015/2016"
@@ -129,6 +128,7 @@ cols = ["Destroyed", "Major Damage"]
 dff[cols] = dff[cols].fillna(0)
 dff.geometry = dff.geometry.simplify(100)
 dff = dff.to_crs(src.constants.FJI_CRS)
+
 dff = dff.set_index(f"ADM{admn}_PCODE")
 fig = px.choropleth(
     dff,
