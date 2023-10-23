@@ -144,3 +144,6 @@ token.json
 src/test_gdrive.py
 
 data
+inputs
+outputs
+.DS_Store
