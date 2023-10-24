@@ -40,11 +40,24 @@ CAT2COLOR = (
     (4, "crimson"),
     (3, "orange"),
     (2, "limegreen"),
-    (1, "skyblue"),
+    (1, "dodgerblue"),
+    (0, "gray"),
 )
 
 
 def decode_forecast_csv(csv: str) -> StringIO:
+    """Decodes encoded string of CSV.
+
+    Parameters
+    ----------
+    csv: str
+        String of CSV (received as command line argument of script)
+
+    Returns
+    -------
+    StringIO
+        StringIO of CSV, to be used in process_fms_forecast()
+    """
     bytes_str = csv.encode("ascii") + b"=="
     converted_bytes = base64.b64decode(bytes_str)
     csv_str = converted_bytes.decode("ascii")
@@ -55,8 +68,8 @@ def decode_forecast_csv(csv: str) -> StringIO:
 def process_fms_forecast(
     path: Path | StringIO, save: bool = True
 ) -> gpd.GeoDataFrame:
-    """
-    Loads FMS raw forecast
+    """Loads FMS raw forecast in default CSV export format from FMS cyclone
+    forecast software.
     Parameters
     ----------
     path: Path | StringIO
@@ -97,6 +110,7 @@ def process_fms_forecast(
         df_data["leadtime"].dt.days * 24
         + df_data["leadtime"].dt.seconds / 3600
     ).astype(int)
+    df_data["Category"] = df_data["Category"].fillna(0)
     df_data["Category"] = df_data["Category"].astype(int, errors="ignore")
     base_time_file_str = base_time.isoformat(timespec="minutes").replace(
         ":", ""
@@ -120,8 +134,13 @@ def datetime_to_season(date):
 
 
 def load_adm(level: int = 0) -> gpd.GeoDataFrame:
-    """
-    Loads adm from repo file structure
+    """Loads adm from repo file structure
+
+    Parameters
+    ----------
+    level: int = 0
+        Admin level to load.
+
     Returns
     -------
     GeoDF of adm0
@@ -153,8 +172,8 @@ def load_adm(level: int = 0) -> gpd.GeoDataFrame:
 
 
 def load_buffer() -> gpd.GeoDataFrame:
-    """
-    Loads buffer from repo file structure
+    """Loads buffer from repo file structure
+
     Returns
     -------
     GeoDataFrame of buffer
@@ -176,8 +195,7 @@ def load_buffer() -> gpd.GeoDataFrame:
 
 
 def check_trigger(forecast: gpd.GeoDataFrame) -> dict:
-    """
-    Checks trigger, from GitHub Action
+    """Checks trigger, from GitHub Action
 
     Parameters
     ----------
@@ -186,7 +204,9 @@ def check_trigger(forecast: gpd.GeoDataFrame) -> dict:
 
     Returns
     -------
-
+    dict
+        Dict of cyclone name, forecast publication time, and boolean for
+        readiness and action triggers.
     """
     print("Loading adm...")
     adm0 = load_adm(level=0)
@@ -240,6 +260,22 @@ def check_trigger(forecast: gpd.GeoDataFrame) -> dict:
 def plot_forecast(
     report: dict, forecast: gpd.GeoDataFrame, save_html: bool = False
 ) -> go.Figure:
+    """Plot forecast path and uncertainty over map of Fiji.
+
+    Parameters
+    ----------
+    report: dict
+        dict of forecast report from check_trigger()
+    forecast: gpd.GeoDataFrame
+        GeoDF of processed FMS forecast
+    save_html: bool = False
+        If True, saves HTML file of plot in outputs.
+
+    Returns
+    -------
+    go.Figure
+        Plotly figure of forecast
+    """
     pub_time_split = report.get("publication_time").split("T")
     trigger_zone = load_buffer().to_crs(FJI_CRS)
     forecast = forecast.to_crs(3832)
@@ -310,6 +346,7 @@ def plot_forecast(
     # by category
     for color in CAT2COLOR:
         dff = forecast[forecast["Category"] == color[0]]
+        name = "L" if color[0] == 0 else f"Category {color[0]}"
         fig.add_trace(
             go.Scattermapbox(
                 lat=dff["Latitude"],
@@ -317,11 +354,12 @@ def plot_forecast(
                 mode="markers",
                 line=dict(width=2, color=color[1]),
                 marker=dict(size=10),
-                name=f"Category {color[0]}",
+                name=name,
                 hoverinfo="skip",
             )
         )
     # uncertainty
+    # unofficial 120hr
     x_u, y_u = u_zone.geometry[0].boundary.xy
     fig.add_trace(
         go.Scattermapbox(
@@ -334,6 +372,7 @@ def plot_forecast(
             legendgroup="unofficial",
         )
     )
+    # official 72hr
     x_o, y_o = o_zone.geometry[0].boundary.xy
     fig.add_trace(
         go.Scattermapbox(
@@ -351,7 +390,7 @@ def plot_forecast(
     lat_min = min(y_u)
     lon_max = max(x_u)
     lon_min = min(x_u)
-    max_bound = max(lon_max - lon_min, lat_max - lat_min) * 111
+    max_bound = max(lon_max - lon_min, (lat_max - lat_min) * 1.4) * 111
     zoom = 12.7 - np.log(max_bound)
     fig.update_layout(
         mapbox_style="open-street-map",
@@ -406,6 +445,19 @@ def calculate_distances(
 
 
 def plot_distances(report: dict, distances: pd.DataFrame) -> go.Figure():
+    """
+
+    Parameters
+    ----------
+    report: dict
+        dict of forecast report from check_trigger()
+    distances: pd.DataFrame
+        Calculated distances of
+
+    Returns
+    -------
+
+    """
     pub_time_split = report.get("publication_time").split("T")
     fig = go.Figure()
     distances = distances.sort_values("distance (km)", ascending=False)
@@ -605,9 +657,11 @@ def send_info_email(
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    # if no CSV supplied, set to Yasa (readiness and action activation)
-    yasa = os.getenv("YASA_MOD")
-    parser.add_argument("csv", nargs="?", type=str, default=yasa)
+    # if no CSV supplied, set to modified Yasa forecast
+    # (includes Categories L-5, results in readiness and action activation)
+    # yasa = os.getenv("YASA_MOD")
+    lola = os.getenv("LOLA")
+    parser.add_argument("csv", nargs="?", type=str, default=lola)
     parser.add_argument("--suppress-send", action="store_true")
     parser.add_argument("--test-email", action="store_true")
     return parser.parse_args()
