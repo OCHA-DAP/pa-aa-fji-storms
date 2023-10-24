@@ -242,7 +242,8 @@ def check_trigger(forecast: gpd.GeoDataFrame) -> dict:
                     ]
                 )
                 if ls.intersects(zone.geometry)[0]:
-                    readiness = True
+                    if leadtime <= 120:
+                        readiness = True
                     if leadtime <= 72:
                         action = True
     report = {
@@ -279,6 +280,7 @@ def plot_forecast(
     pub_time_split = report.get("publication_time").split("T")
     trigger_zone = load_buffer().to_crs(FJI_CRS)
     forecast = forecast.to_crs(3832)
+    forecast = forecast[forecast["leadtime"] <= 120]
     official = forecast[forecast["leadtime"] <= 72]
     unofficial = forecast[forecast["leadtime"] >= 72]
     # produce uncertainty cone
@@ -390,8 +392,47 @@ def plot_forecast(
     lat_min = min(y_u)
     lon_max = max(x_u)
     lon_min = min(x_u)
-    max_bound = max(lon_max - lon_min, (lat_max - lat_min) * 1.4) * 111
-    zoom = 12.7 - np.log(max_bound)
+
+    # possible solutions from
+    # https://stackoverflow.com/questions/63787612/plotly-automatic-zooming-for-mapbox-maps
+
+    # using log for zoom
+    # max_bound = max(lon_max - lon_min, (lat_max - lat_min) ** 1.2) * 111
+    # zoom = 12.7 - np.log(max_bound)
+
+    # using range for zoom
+    lon_zoom_range = np.array(
+        [
+            0.0007,
+            0.0014,
+            0.003,
+            0.006,
+            0.012,
+            0.024,
+            0.048,
+            0.096,
+            0.192,
+            0.3712,
+            0.768,
+            1.536,
+            3.072,
+            6.144,
+            11.8784,
+            23.7568,
+            47.5136,
+            98.304,
+            190.0544,
+            360.0,
+        ]
+    )
+    width_to_height = 1
+    margin = 1.8
+    height = (lat_max - lat_min) * margin * width_to_height
+    width = (lon_max - lon_min) * margin
+    lon_zoom = np.interp(width, lon_zoom_range, range(20, 0, -1))
+    lat_zoom = np.interp(height, lon_zoom_range, range(20, 0, -1))
+    zoom = round(min(lon_zoom, lat_zoom), 2)
+
     fig.update_layout(
         mapbox_style="open-street-map",
         mapbox_zoom=zoom,
@@ -402,9 +443,10 @@ def plot_forecast(
         f"<sup>Produced at {pub_time_split[1]} (UTC) "
         f"on {pub_time_split[0]}",
         legend=dict(xanchor="right", x=1, bgcolor="rgba(255, 255, 255, 0.3)"),
-        height=800,
+        height=850,
         width=800,
     )
+    fig.update_geos()
     pub_time_file_str = report.get("publication_time").replace(":", "")
     filepath_stem = OUTPUT_DIR / f"forecast_plot_{pub_time_file_str}"
     fig.write_image(f"{filepath_stem}.png", scale=4)
@@ -421,6 +463,7 @@ def calculate_distances(
     cols = ["ADM1_PCODE", "ADM1_NAME", "ADM2_PCODE", "ADM2_NAME", "geometry"]
     distances = adm2[cols].copy()
     forecast = forecast.to_crs(3832)
+    forecast = forecast[forecast["leadtime"] <= 120]
     track = LineString([(p.x, p.y) for p in forecast.geometry])
     distances["distance (km)"] = np.round(
         track.distance(adm2.geometry) / 1000
@@ -445,14 +488,14 @@ def calculate_distances(
 
 
 def plot_distances(report: dict, distances: pd.DataFrame) -> go.Figure():
-    """
+    """Plot distance of each admin2 to forecast
 
     Parameters
     ----------
     report: dict
         dict of forecast report from check_trigger()
     distances: pd.DataFrame
-        Calculated distances of
+        Calculated distances of each admin2 to forecast
 
     Returns
     -------
@@ -469,6 +512,7 @@ def plot_distances(report: dict, distances: pd.DataFrame) -> go.Figure():
     adm_order = distances["adm2_adm1"]
     for color in CAT2COLOR:
         dff = distances[distances["category"] == color[0]]
+        name = "L" if color[0] == 0 else color[0]
         fig.add_trace(
             go.Scatter(
                 y=dff["adm2_adm1"],
@@ -478,12 +522,12 @@ def plot_distances(report: dict, distances: pd.DataFrame) -> go.Figure():
                     type="data", array=dff["uncertainty (km)"], visible=True
                 ),
                 marker=dict(size=8, color=color[1]),
-                name=color[0],
+                name=name,
             )
         )
     fig.update_yaxes(categoryorder="array", categoryarray=adm_order)
     fig.update_xaxes(
-        rangemode="nonnegative",
+        rangemode="tozero",
         title="Minimum distance from best track forecast to Province (km)",
     )
     title = (
@@ -660,7 +704,7 @@ def parse_args() -> argparse.Namespace:
     # if no CSV supplied, set to modified Yasa forecast
     # (includes Categories L-5, results in readiness and action activation)
     # yasa = os.getenv("YASA_MOD")
-    test_csv = os.getenv("TEST_CSV")
+    test_csv = os.getenv("LOLA2")
     parser.add_argument("csv", nargs="?", type=str, default=test_csv)
     parser.add_argument("--suppress-send", action="store_true")
     parser.add_argument("--test-email", action="store_true")
