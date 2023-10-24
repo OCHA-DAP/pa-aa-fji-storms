@@ -660,8 +660,8 @@ def parse_args() -> argparse.Namespace:
     # if no CSV supplied, set to modified Yasa forecast
     # (includes Categories L-5, results in readiness and action activation)
     # yasa = os.getenv("YASA_MOD")
-    lola = os.getenv("LOLA")
-    parser.add_argument("csv", nargs="?", type=str, default=lola)
+    test_csv = os.getenv("TEST_CSV")
+    parser.add_argument("csv", nargs="?", type=str, default=test_csv)
     parser.add_argument("--suppress-send", action="store_true")
     parser.add_argument("--test-email", action="store_true")
     return parser.parse_args()
