@@ -567,8 +567,8 @@ def send_trigger_email(
         triggers.append("action")
     pub_time_split = report.get("publication_time").split("T")
 
-    to_list = [x.strip() for x in TRIGGER_TO.split(",") if x]
-    cc_list = [x.strip() for x in TRIGGER_CC.split(",") if x]
+    to_list = [x.strip() for x in TRIGGER_TO.split(";") if x]
+    cc_list = [x.strip() for x in TRIGGER_CC.split(";") if x]
 
     environment = Environment(loader=FileSystemLoader("src/email/"))
 
@@ -585,10 +585,7 @@ def send_trigger_email(
             EMAIL_ADDRESS.split("@")[1],
         )
         for mail_list, name in zip([to_list, cc_list], ["To", "Cc"]):
-            msg[name] = [
-                Address(x.split("@")[0], x.split("@")[0], x.split("@")[1])
-                for x in mail_list
-            ]
+            msg[name] = [Address(addr_spec=x) for x in mail_list]
 
         html_str = template.render(
             name=report.get("cyclone").split(" ")[0],
@@ -633,8 +630,8 @@ def send_info_email(
     environment = Environment(loader=FileSystemLoader("src/email/"))
     template = environment.get_template("informational.html")
 
-    to_list = [x.strip() for x in INFO_TO.split(",") if x]
-    cc_list = [x.strip() for x in INFO_CC.split(",") if x]
+    to_list = [x.strip() for x in INFO_TO.split(";") if x]
+    cc_list = [x.strip() for x in INFO_CC.split(";") if x]
 
     msg = EmailMessage()
     msg[
@@ -646,10 +643,7 @@ def send_info_email(
         EMAIL_ADDRESS.split("@")[1],
     )
     for mail_list, name in zip([to_list, cc_list], ["To", "Cc"]):
-        msg[name] = [
-            Address(x.split("@")[0], x.split("@")[0], x.split("@")[1])
-            for x in mail_list
-        ]
+        msg[name] = [Address(addr_spec=x) for x in mail_list]
 
     map_cid = make_msgid(domain="humdata.org")
     distances_cid = make_msgid(domain="humdata.org")
