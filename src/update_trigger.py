@@ -546,6 +546,7 @@ def plot_distances(report: dict, distances: pd.DataFrame) -> go.Figure():
             bgcolor="rgba(255, 255, 255, 0.3)",
             title="Category at<br>closest pass",
         ),
+        showlegend=True,
     )
     pub_time_file_str = report.get("publication_time").replace(":", "")
     filepath_stem = OUTPUT_DIR / f"distances_plot_{pub_time_file_str}"
@@ -584,8 +585,8 @@ def send_trigger_email(
             EMAIL_ADDRESS.split("@")[0],
             EMAIL_ADDRESS.split("@")[1],
         )
-        for mail_list, name in zip([to_list, cc_list], ["To", "Cc"]):
-            msg[name] = [Address(addr_spec=x) for x in mail_list]
+        for mail_list, list_name in zip([to_list, cc_list], ["To", "Cc"]):
+            msg[list_name] = [Address(addr_spec=x) for x in mail_list if x]
 
         html_str = template.render(
             name=report.get("cyclone").split(" ")[0],
@@ -642,8 +643,8 @@ def send_info_email(
         EMAIL_ADDRESS.split("@")[0],
         EMAIL_ADDRESS.split("@")[1],
     )
-    for mail_list, name in zip([to_list, cc_list], ["To", "Cc"]):
-        msg[name] = [Address(addr_spec=x) for x in mail_list]
+    for mail_list, list_name in zip([to_list, cc_list], ["To", "Cc"]):
+        msg[list_name] = [Address(addr_spec=x) for x in mail_list if x]
 
     map_cid = make_msgid(domain="humdata.org")
     distances_cid = make_msgid(domain="humdata.org")
@@ -698,7 +699,7 @@ def parse_args() -> argparse.Namespace:
     # if no CSV supplied, set to modified Yasa forecast
     # (includes Categories L-5, results in readiness and action activation)
     # yasa = os.getenv("YASA_MOD")
-    test_csv = os.getenv("LOLA2")
+    test_csv = os.getenv("TEST_CSV")
     parser.add_argument("csv", nargs="?", type=str, default=test_csv)
     parser.add_argument("--suppress-send", action="store_true")
     parser.add_argument("--test-email", action="store_true")
