@@ -164,7 +164,7 @@ def load_adm(level: int = 0) -> gpd.GeoDataFrame:
     gdf = gpd.read_file(
         f"zip://{zip_path.as_posix()}", layer=zip_path.stem
     ).set_crs(3832)
-    if level >= 2:
+    if level >= 1:
         gdf["ADM1_NAME"] = gdf["ADM1_NAME"].apply(
             lambda x: x.replace("  ", " ")
         )
@@ -458,36 +458,71 @@ def plot_forecast(
 def calculate_distances(
     report: dict, forecast: gpd.GeoDataFrame, save: bool = True
 ) -> pd.DataFrame:
+    """Calculates distances from TC forecast track to admin2 and admin3.
+    The value of the distance is the distance of a LineString of the TC track
+    to each admin area. For a track passing directly over an admin level, the
+    distance would be 0.
+    The uncertainty of the distance is the value of the uncertainty cone of
+    the forecast, at the forecasted point that is closest to the admin area.
+    This is a somewhat crude approximation for the uncertainty, but it's good
+    enough for now.
+
+    Parameters
+    ----------
+    report: dict
+        Dict of forecast report
+    forecast: gpd.GeoDataFrame
+        GeoDF of forecast
+    save: bool = True
+        If True, saves CSV of distances
+
+    Returns
+    -------
+    pd.DataFrame of distances to adm2
+    """
     pub_time_file_str = report.get("publication_time").replace(":", "")
-    adm2 = load_adm(level=2)
-    cols = ["ADM1_PCODE", "ADM1_NAME", "ADM2_PCODE", "ADM2_NAME", "geometry"]
-    distances = adm2[cols].copy()
     forecast = forecast.to_crs(3832)
     forecast = forecast[forecast["leadtime"] <= 120]
     track = LineString([(p.x, p.y) for p in forecast.geometry])
-    distances["distance (km)"] = np.round(
-        track.distance(adm2.geometry) / 1000
-    ).astype(int)
-    distances["uncertainty (km)"] = None
-    distances["category"] = None
-    # find closest point to use for uncertainty
-    for i, row in distances.iterrows():
-        forecast["distance"] = row.geometry.distance(forecast.geometry)
-        i_min = forecast["distance"].idxmin()
-        distances.loc[i, "uncertainty (km)"] = np.round(
-            forecast.loc[i_min, "Uncertainty"]
+    return_df = pd.DataFrame()
+    for level in [2, 3]:
+        adm = load_adm(level=level)
+        cols = [
+            "ADM1_PCODE",
+            "ADM1_NAME",
+            "ADM2_PCODE",
+            "ADM2_NAME",
+            "geometry",
+        ]
+        if level == 3:
+            cols.extend(["ADM3_PCODE", "ADM3_NAME"])
+        distances = adm[cols].copy()
+        distances["distance (km)"] = np.round(
+            track.distance(adm.geometry) / 1000
         ).astype(int)
-        distances.loc[i, "category"] = forecast.loc[i_min, "Category"]
-    distances = distances.drop(columns="geometry")
-    distances = distances.sort_values("distance (km)")
-    if save:
-        distances.to_csv(
-            OUTPUT_DIR / f"distances_{pub_time_file_str}.csv", index=False
-        )
-    return distances
+        distances["uncertainty (km)"] = None
+        distances["category"] = None
+        # find closest point to use for uncertainty
+        for i, row in distances.iterrows():
+            forecast["distance"] = row.geometry.distance(forecast.geometry)
+            i_min = forecast["distance"].idxmin()
+            distances.loc[i, "uncertainty (km)"] = np.round(
+                forecast.loc[i_min, "Uncertainty"]
+            ).astype(int)
+            distances.loc[i, "category"] = forecast.loc[i_min, "Category"]
+        distances = distances.drop(columns="geometry")
+        distances = distances.sort_values("distance (km)")
+        if save:
+            distances.to_csv(
+                OUTPUT_DIR / f"distances_adm{level}_{pub_time_file_str}.csv",
+                index=False,
+            )
+        if level == 2:
+            return_df = distances.copy()
+    return return_df
 
 
-def plot_distances(report: dict, distances: pd.DataFrame) -> go.Figure():
+def plot_distances(report: dict, distances: pd.DataFrame) -> go.Figure:
     """Plot distance of each admin2 to forecast
 
     Parameters
@@ -499,7 +534,7 @@ def plot_distances(report: dict, distances: pd.DataFrame) -> go.Figure():
 
     Returns
     -------
-
+    go.Figure
     """
     pub_time_split = report.get("publication_time").split("T")
     fig = go.Figure()
@@ -560,6 +595,25 @@ def send_trigger_email(
     save: bool = True,
     test_email: bool = False,
 ):
+    """If framework is triggered, sends relevant activation email.
+    Sends separate emails for readiness and action triggers.
+
+    Parameters
+    ----------
+    report: dict
+        Dict of forecast report
+    suppress_send: bool = False
+        If True, does not actually send email
+    save: bool = True
+        If True, saves email as .html, .msg, and .txt
+    test_email: bool = False
+        If True, sends email with "TEST" header to indicate that email is just
+        a test, and should not result in framework activation.
+
+    Returns
+    -------
+
+    """
     test_subject = "[TEST] " if test_email else ""
     triggers = []
     if report.get("readiness"):
@@ -624,6 +678,25 @@ def send_info_email(
     save: bool = True,
     test_email: bool = False,
 ):
+    """Sends email with info about forecast, whether framework is triggered or
+    not.
+
+    Parameters
+    ----------
+    report: dict
+        Dict of forecast report
+    suppress_send: bool = False
+        If True, does not actually send email
+    save: bool = True
+        If True, saves email as .html, .msg, and .txt
+    test_email: bool = False
+        If True, sends email with "TEST" header to indicate that email is just
+        a test.
+
+    Returns
+    -------
+
+    """
     test_subject = "[TEST] " if test_email else ""
     pub_time_split = report.get("publication_time").split("T")
     pub_time_file_str = report.get("publication_time").replace(":", "")
@@ -669,12 +742,13 @@ def send_info_email(
                 img.read(), "image", "png", cid=cid
             )
 
-    csv_name = f"distances_{pub_time_file_str}.csv"
-    with open(OUTPUT_DIR / csv_name, "rb") as f:
-        f_data = f.read()
-    msg.add_attachment(
-        f_data, maintype="text", subtype="csv", filename=csv_name
-    )
+    for adm_level in [2, 3]:
+        csv_name = f"distances_adm{adm_level}_{pub_time_file_str}.csv"
+        with open(OUTPUT_DIR / csv_name, "rb") as f:
+            f_data = f.read()
+        msg.add_attachment(
+            f_data, maintype="text", subtype="csv", filename=csv_name
+        )
 
     context = ssl.create_default_context()
     if not suppress_send:
@@ -691,7 +765,6 @@ def send_info_email(
             f.write(html_str)
         with open(OUTPUT_DIR / f"{file_stem}.msg", "wb") as f:
             f.write(bytes(msg))
-    pass
 
 
 def parse_args() -> argparse.Namespace:
