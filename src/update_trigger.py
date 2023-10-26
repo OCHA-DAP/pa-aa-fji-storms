@@ -4,12 +4,13 @@ import json
 import os
 import smtplib
 import ssl
-from datetime import datetime
+from datetime import datetime, timezone
 from email.headerregistry import Address
 from email.message import EmailMessage
 from email.utils import make_msgid
 from io import StringIO
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import geopandas as gpd
 import numpy as np
@@ -133,6 +134,28 @@ def datetime_to_season(date):
     return f"{eff_date.year}/{eff_date.year + 1}"
 
 
+def utc_to_fjt(utc_str: str) -> str:
+    utc = datetime.fromisoformat(utc_str)
+    utc = utc.replace(tzinfo=timezone.utc)
+    fjt = utc.astimezone(ZoneInfo("Pacific/Fiji"))
+    fjt_str = fjt.isoformat(timespec="minutes")
+    print(fjt_str)
+    return fjt_str
+
+
+def str_from_report(report: dict) -> dict:
+    utc_str = report.get("publication_time")
+    utc = datetime.fromisoformat(utc_str)
+    fjt = utc.astimezone(ZoneInfo("Pacific/Fiji"))
+    fjt_str = fjt.isoformat(timespec="minutes").split("+")[0]
+    fjt_split = fjt_str.split("T")
+    return {
+        "file_dt_str": f'{utc_str.replace(":", "").split("+")[0]}Z',
+        "fji_time": fjt_split[1],
+        "fji_date": fjt_split[0],
+    }
+
+
 def load_adm(level: int = 0) -> gpd.GeoDataFrame:
     """Loads adm from repo file structure
 
@@ -156,9 +179,7 @@ def load_adm(level: int = 0) -> gpd.GeoDataFrame:
         adm_name = "tikina"
     resource_name = f"fji_polbnda_adm{level}_{adm_name}.zip"
     zip_path = INPUT_DIR / resource_name
-    if zip_path.exists():
-        print(f"adm{level} already exists")
-    else:
+    if not zip_path.exists():
         print(f"adm{level} does not exist, downloading now")
         load_resource_from_hdx("cod-ab-fji", resource_name, zip_path)
     gdf = gpd.read_file(
@@ -182,10 +203,9 @@ def load_buffer() -> gpd.GeoDataFrame:
     buffer_dir = INPUT_DIR / buffer_name
     buffer_path = buffer_dir / f"{buffer_name}.shp"
     if buffer_path.exists():
-        print("buffer already exists")
         buffer = gpd.read_file(buffer_path)
     else:
-        print("processing buffer")
+        print("buffer does not exist, processing now...")
         adm0 = load_adm(level=0)
         buffer = adm0.simplify(10 * 1000).buffer(250 * 1000)
         if not buffer_dir.exists():
@@ -205,14 +225,11 @@ def check_trigger(forecast: gpd.GeoDataFrame) -> dict:
     Returns
     -------
     dict
-        Dict of cyclone name, forecast publication time, and boolean for
+        Dict of cyclone name, forecast publication time (UTC), and boolean for
         readiness and action triggers.
     """
-    print("Loading adm...")
     adm0 = load_adm(level=0)
-    print("Processing buffer...")
     buffer = load_buffer()
-    print("Checking trigger...")
     thresholds = [
         {"distance": 250, "category": 4},
         {"distance": 0, "category": 3},
@@ -220,6 +237,7 @@ def check_trigger(forecast: gpd.GeoDataFrame) -> dict:
     readiness, action = False, False
     cyclone = forecast.iloc[0]["Name Season"]
     base_time = forecast.iloc[0]["base_time"]
+    base_time = base_time.replace(tzinfo=timezone.utc)
     base_time_str = base_time.isoformat(timespec="minutes")
     forecast = forecast.set_index("leadtime")
     forecast[["prev_category", "prev_lat", "prev_lon"]] = forecast.shift()[
@@ -252,8 +270,11 @@ def check_trigger(forecast: gpd.GeoDataFrame) -> dict:
         "readiness": readiness,
         "action": action,
     }
-    pub_time_file_str = base_time_str.replace(":", "")
-    with open(OUTPUT_DIR / f"report_{pub_time_file_str}.json", "w") as outfile:
+    report_str = str_from_report(report)
+    with open(
+        OUTPUT_DIR / f"report_{report_str.get('file_dt_str')}.json",
+        "w",
+    ) as outfile:
         json.dump(report, outfile)
     return report
 
@@ -277,7 +298,7 @@ def plot_forecast(
     go.Figure
         Plotly figure of forecast
     """
-    pub_time_split = report.get("publication_time").split("T")
+    report_str = str_from_report(report)
     trigger_zone = load_buffer().to_crs(FJI_CRS)
     forecast = forecast.to_crs(3832)
     forecast = forecast[forecast["leadtime"] <= 120]
@@ -440,15 +461,16 @@ def plot_forecast(
         mapbox_center_lon=(lon_max + lon_min) / 2,
         margin={"r": 0, "t": 50, "l": 0, "b": 0},
         title=f"RSMC Nadi forecast for {report.get('cyclone')}<br>"
-        f"<sup>Produced at {pub_time_split[1]} (UTC) "
-        f"on {pub_time_split[0]}",
+        f"<sup>Produced at {report_str.get('fji_time')} on "
+        f"{report_str.get('fji_date')} (Fiji time)",
         legend=dict(xanchor="right", x=1, bgcolor="rgba(255, 255, 255, 0.3)"),
         height=850,
         width=800,
     )
     fig.update_geos()
-    pub_time_file_str = report.get("publication_time").replace(":", "")
-    filepath_stem = OUTPUT_DIR / f"forecast_plot_{pub_time_file_str}"
+    filepath_stem = (
+        OUTPUT_DIR / f"forecast_plot_{report_str.get('file_dt_str')}"
+    )
     fig.write_image(f"{filepath_stem}.png", scale=4)
     if save_html:
         fig.write_html(f"{filepath_stem}.html")
@@ -480,7 +502,7 @@ def calculate_distances(
     -------
     pd.DataFrame of distances to adm2
     """
-    pub_time_file_str = report.get("publication_time").replace(":", "")
+    report_str = str_from_report(report)
     forecast = forecast.to_crs(3832)
     forecast = forecast[forecast["leadtime"] <= 120]
     track = LineString([(p.x, p.y) for p in forecast.geometry])
@@ -514,7 +536,8 @@ def calculate_distances(
         distances = distances.sort_values("distance (km)")
         if save:
             distances.to_csv(
-                OUTPUT_DIR / f"distances_adm{level}_{pub_time_file_str}.csv",
+                OUTPUT_DIR
+                / f"distances_adm{level}_{report_str.get('file_dt_str')}.csv",
                 index=False,
             )
         if level == 2:
@@ -536,7 +559,7 @@ def plot_distances(report: dict, distances: pd.DataFrame) -> go.Figure:
     -------
     go.Figure
     """
-    pub_time_split = report.get("publication_time").split("T")
+    report_str = str_from_report(report)
     fig = go.Figure()
     distances = distances.sort_values("distance (km)", ascending=False)
     distances["adm2_adm1"] = distances.apply(
@@ -566,15 +589,17 @@ def plot_distances(report: dict, distances: pd.DataFrame) -> go.Figure:
         title="Minimum distance from best track forecast to Province (km)",
     )
     title = (
-        f"{report.get('cyclone').split(' ')[0]} "
-        f"{pub_time_split[1]} {pub_time_split[0]} "
-        "forecast distances<br>"
+        f"Cyclone {report.get('cyclone').split(' ')[0]} predicted closest "
+        "pass to provinces<br>"
+        "<sub>Based on forecast produced at "
+        f"{report_str.get('fji_time')} on {report_str.get('fji_date')} "
+        "(Fiji time)</sub><br>"
         "<sup>Error bars estimated based on uncertainty cone of forecast</sup>"
     )
     fig.update_layout(
         template="simple_white",
         title_text=title,
-        margin={"r": 0, "t": 50, "l": 0, "b": 0},
+        margin={"r": 0, "t": 100, "l": 0, "b": 0},
         legend=dict(
             xanchor="right",
             x=1,
@@ -583,8 +608,9 @@ def plot_distances(report: dict, distances: pd.DataFrame) -> go.Figure:
         ),
         showlegend=True,
     )
-    pub_time_file_str = report.get("publication_time").replace(":", "")
-    filepath_stem = OUTPUT_DIR / f"distances_plot_{pub_time_file_str}"
+    filepath_stem = (
+        OUTPUT_DIR / f"distances_plot_{report_str.get('file_dt_str')}"
+    )
     fig.write_image(f"{filepath_stem}.png", scale=4)
     return fig
 
@@ -620,7 +646,7 @@ def send_trigger_email(
         triggers.append("readiness")
     if report.get("action"):
         triggers.append("action")
-    pub_time_split = report.get("publication_time").split("T")
+    report_str = str_from_report(report)
 
     to_list = [x.strip() for x in TRIGGER_TO.split(";") if x]
     cc_list = [x.strip() for x in TRIGGER_CC.split(";") if x]
@@ -644,8 +670,8 @@ def send_trigger_email(
 
         html_str = template.render(
             name=report.get("cyclone").split(" ")[0],
-            pub_time=pub_time_split[1],
-            pub_date=pub_time_split[0],
+            pub_time=report_str.get("fji_time"),
+            pub_date=report_str.get("fji_date"),
             test_email=test_email,
         )
         text_str = html2text(html_str)
@@ -662,8 +688,9 @@ def send_trigger_email(
                     EMAIL_ADDRESS, to_list + cc_list, msg.as_string()
                 )
         if save:
-            pub_time_file_str = report.get("publication_time").replace(":", "")
-            name_stem = f"{trigger}_activation_email_{pub_time_file_str}"
+            name_stem = (
+                f"{trigger}_activation_email_{report_str.get('file_dt_str')}"
+            )
             with open(OUTPUT_DIR / f"{name_stem}.txt", "w") as f:
                 f.write(text_str)
             with open(OUTPUT_DIR / f"{name_stem}.html", "w") as f:
@@ -698,8 +725,7 @@ def send_info_email(
 
     """
     test_subject = "[TEST] " if test_email else ""
-    pub_time_split = report.get("publication_time").split("T")
-    pub_time_file_str = report.get("publication_time").replace(":", "")
+    report_str = str_from_report(report)
 
     environment = Environment(loader=FileSystemLoader("src/email/"))
     template = environment.get_template("informational.html")
@@ -723,8 +749,8 @@ def send_info_email(
     distances_cid = make_msgid(domain="humdata.org")
     html_str = template.render(
         name=report.get("cyclone").split(" ")[0],
-        pub_date=pub_time_split[0],
-        pub_time=pub_time_split[1],
+        pub_date=report_str.get("fji_date"),
+        pub_time=report_str.get("fji_time"),
         readiness="ACTIVATED" if report.get("readiness") else "NOT ACTIVATED",
         action="ACTIVATED" if report.get("action") else "NOT ACTIVATED",
         map_cid=map_cid[1:-1],
@@ -736,14 +762,18 @@ def send_info_email(
     msg.add_alternative(html_str, subtype="html")
 
     for plot, cid in zip(["forecast", "distances"], [map_cid, distances_cid]):
-        img_path = OUTPUT_DIR / f"{plot}_plot_{pub_time_file_str}.png"
+        img_path = (
+            OUTPUT_DIR / f"{plot}_plot_{report_str.get('file_dt_str')}.png"
+        )
         with open(img_path, "rb") as img:
             msg.get_payload()[1].add_related(
                 img.read(), "image", "png", cid=cid
             )
 
     for adm_level in [2, 3]:
-        csv_name = f"distances_adm{adm_level}_{pub_time_file_str}.csv"
+        csv_name = (
+            f"distances_adm{adm_level}_{report_str.get('file_dt_str')}.csv"
+        )
         with open(OUTPUT_DIR / csv_name, "rb") as f:
             f_data = f.read()
         msg.add_attachment(
@@ -758,7 +788,7 @@ def send_info_email(
             server.login(EMAIL_USERNAME, EMAIL_PASSWORD)
             server.sendmail(EMAIL_ADDRESS, to_list + cc_list, msg.as_string())
     if save:
-        file_stem = f"informational_email_{pub_time_file_str}"
+        file_stem = f"informational_email_{report_str.get('file_dt_str')}"
         with open(OUTPUT_DIR / f"{file_stem}.txt", "w") as f:
             f.write(text_str)
         with open(OUTPUT_DIR / f"{file_stem}.html", "w") as f:
@@ -796,7 +826,5 @@ if __name__ == "__main__":
     distances = calculate_distances(report, forecast)
     plot_distances(report, distances)
     send_info_email(
-        report,
-        suppress_send=args.suppress_send,
-        test_email=args.test_email,
+        report, suppress_send=args.suppress_send, test_email=args.test_email
     )
