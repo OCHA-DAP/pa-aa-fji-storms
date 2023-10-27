@@ -44,6 +44,8 @@ CAT2COLOR = (
     (1, "dodgerblue"),
     (0, "gray"),
 )
+TEMPLATES_DIR = Path("src/email/templates")
+STATIC_DIR = Path("src/email/static")
 
 
 def decode_forecast_csv(csv: str) -> StringIO:
@@ -583,9 +585,12 @@ def plot_distances(report: dict, distances: pd.DataFrame) -> go.Figure:
                 name=name,
             )
         )
+    max_dist = (
+        distances["distance (km)"] + distances["uncertainty (km)"]
+    ).max()
     fig.update_yaxes(categoryorder="array", categoryarray=adm_order)
     fig.update_xaxes(
-        rangemode="tozero",
+        range=(0, max_dist * 1.01),
         title="Minimum distance from best track forecast to Province (km)",
     )
     title = (
@@ -651,7 +656,7 @@ def send_trigger_email(
     to_list = [x.strip() for x in TRIGGER_TO.split(";") if x]
     cc_list = [x.strip() for x in TRIGGER_CC.split(";") if x]
 
-    environment = Environment(loader=FileSystemLoader("src/email/"))
+    environment = Environment(loader=FileSystemLoader(TEMPLATES_DIR))
 
     for trigger in triggers:
         template = environment.get_template(f"{trigger}.html")
@@ -668,15 +673,30 @@ def send_trigger_email(
         for mail_list, list_name in zip([to_list, cc_list], ["To", "Cc"]):
             msg[list_name] = [Address(addr_spec=x) for x in mail_list if x]
 
+        chd_banner_cid = make_msgid(domain="humdata.org")
+        ocha_logo_cid = make_msgid(domain="humdata.org")
+
         html_str = template.render(
             name=report.get("cyclone").split(" ")[0],
             pub_time=report_str.get("fji_time"),
             pub_date=report_str.get("fji_date"),
             test_email=test_email,
+            chd_banner_cid=chd_banner_cid[1:-1],
+            ocha_logo_cid=ocha_logo_cid[1:-1],
         )
         text_str = html2text(html_str)
         msg.set_content(text_str)
         msg.add_alternative(html_str, subtype="html")
+
+        for filename, cid in zip(
+            ["centre_banner.png", "ocha_logo_wide.png"],
+            [chd_banner_cid, ocha_logo_cid],
+        ):
+            img_path = STATIC_DIR / filename
+            with open(img_path, "rb") as img:
+                msg.get_payload()[1].add_related(
+                    img.read(), "image", "png", cid=cid
+                )
 
         context = ssl.create_default_context()
         if not suppress_send:
@@ -727,7 +747,7 @@ def send_info_email(
     test_subject = "[TEST] " if test_email else ""
     report_str = str_from_report(report)
 
-    environment = Environment(loader=FileSystemLoader("src/email/"))
+    environment = Environment(loader=FileSystemLoader(TEMPLATES_DIR))
     template = environment.get_template("informational.html")
 
     to_list = [x.strip() for x in INFO_TO.split(";") if x]
@@ -747,6 +767,9 @@ def send_info_email(
 
     map_cid = make_msgid(domain="humdata.org")
     distances_cid = make_msgid(domain="humdata.org")
+    chd_banner_cid = make_msgid(domain="humdata.org")
+    ocha_logo_cid = make_msgid(domain="humdata.org")
+
     html_str = template.render(
         name=report.get("cyclone").split(" ")[0],
         pub_date=report_str.get("fji_date"),
@@ -755,6 +778,8 @@ def send_info_email(
         action="ACTIVATED" if report.get("action") else "NOT ACTIVATED",
         map_cid=map_cid[1:-1],
         distances_cid=distances_cid[1:-1],
+        chd_banner_cid=chd_banner_cid[1:-1],
+        ocha_logo_cid=ocha_logo_cid[1:-1],
         test_email=test_email,
     )
     text_str = html2text(html_str)
@@ -765,6 +790,16 @@ def send_info_email(
         img_path = (
             OUTPUT_DIR / f"{plot}_plot_{report_str.get('file_dt_str')}.png"
         )
+        with open(img_path, "rb") as img:
+            msg.get_payload()[1].add_related(
+                img.read(), "image", "png", cid=cid
+            )
+
+    for filename, cid in zip(
+        ["centre_banner.png", "ocha_logo_wide.png"],
+        [chd_banner_cid, ocha_logo_cid],
+    ):
+        img_path = STATIC_DIR / filename
         with open(img_path, "rb") as img:
             msg.get_payload()[1].add_related(
                 img.read(), "image", "png", cid=cid
