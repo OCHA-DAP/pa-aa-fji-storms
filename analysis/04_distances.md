@@ -45,13 +45,10 @@ ecmwf = utils.load_ecmwf_besttrack_hindcasts()
 ecmwf = ecmwf[ecmwf["nameyear"].isin(triggers.index)]
 
 cod2 = utils.load_codab(level=2).to_crs(3832)
+cod3 = utils.load_codab(level=3).to_crs(3832)
 ```
 
-```python
-cod2
-```
-
-## Calculate distance
+## Calculate distance - admin2
 
 ```python
 # calculate distance at readiness, activation, actual
@@ -104,6 +101,83 @@ for cutoff in cutoffs:
 
     with pd.ExcelWriter(
         utils.PROC_PATH / f"trigger_adm2_within_{cutoff}km.xlsx"
+    ) as writer:
+        for nameyear in triggers.index:
+            dff = pd.DataFrame()
+            dff[[label for label in labels]] = hits_out[
+                [f"{nameyear}_{label}_distance" for label in labels]
+            ]
+            dff = dff.reset_index()
+            dff.to_excel(writer, sheet_name=nameyear, index=False)
+```
+
+## Calculate distance - admin3
+
+```python
+# calculate distance at readiness, activation, actual
+cols = [
+    "ADM1_PCODE",
+    "ADM1_NAME",
+    "ADM2_PCODE",
+    "ADM2_NAME",
+    "ADM3_PCODE",
+    "ADM3_NAME",
+    "geometry",
+]
+distances = cod3[cols].copy()
+
+cols = ["ec_5day_date", "ec_3day_date", "fms_actual_date"]
+labels = ["readiness", "activation", "actual"]
+for nameyear, row in triggers.iterrows():
+    for col, label in zip(cols, labels):
+        if label == "actual":
+            track = fms[fms["nameyear"] == nameyear]
+            track = track.sort_values("datetime")
+        else:
+            track = ecmwf[
+                (ecmwf["nameyear"] == nameyear)
+                & (ecmwf["forecast_time"] == row[col])
+            ]
+            track = track.sort_values("time")
+        track = track.to_crs(3832)
+        track = LineString([(p.x, p.y) for p in track.geometry])
+        distances[f"{nameyear}_{label}_distance"] = np.round(
+            track.distance(cod3.geometry) / 1000
+        ).astype(int)
+distances = distances.drop(columns="geometry")
+distances.to_csv(utils.PROC_PATH / "trigger_adm3_distances.csv", index=False)
+```
+
+```python
+distances
+```
+
+```python
+# calculate "hits" i.e. districts within 50 or 100 km
+cutoffs = [50, 100]
+
+for cutoff in cutoffs:
+    hits = distances.copy()
+    hits = hits.applymap(lambda x: x <= cutoff if isinstance(x, int) else x)
+
+    # make nicer spreadsheet output
+
+    cols = ["ADM3_PCODE", "ADM2_PCODE", "ADM1_PCODE"]
+    hits_out = hits.drop(columns=cols)
+    hits_out = hits[
+        [
+            "ADM1_NAME",
+            "ADM2_NAME",
+            *hits_out.columns.drop(["ADM1_NAME", "ADM2_NAME"]),
+        ]
+    ]
+    cols = ["ADM1_NAME", "ADM2_NAME", "ADM3_NAME"]
+    hits_out = hits_out.sort_values(cols)
+    hits_out = hits_out.set_index(cols)
+    display(hits_out)
+
+    with pd.ExcelWriter(
+        utils.PROC_PATH / f"trigger_adm3_within_{cutoff}km.xlsx"
     ) as writer:
         for nameyear in triggers.index:
             dff = pd.DataFrame()

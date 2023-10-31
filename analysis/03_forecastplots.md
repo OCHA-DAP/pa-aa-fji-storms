@@ -36,7 +36,8 @@ import numpy as np
 from shapely.geometry import LineString
 import shapely
 
-from src import utils, constants
+from src import utils
+from src.constants import FJI_CRS
 ```
 
 ## Load data
@@ -48,7 +49,7 @@ fms = utils.load_cyclonetracks()
 hindcasts = hindcasts.merge(fms[["nameyear", "Name Season"]], on="Name Season")
 trigger_zone = utils.load_buffer(250)
 
-trigger_zone = trigger_zone.to_crs(constants.FJI_CRS)
+trigger_zone = trigger_zone.to_crs(FJI_CRS)
 cod1 = utils.load_codab(level=1)
 cod2 = utils.load_codab(level=2)
 cod3 = utils.load_codab(level=3)
@@ -94,7 +95,7 @@ def gdf_buffers(gdf, distances):
 
     buffers = gpd.GeoDataFrame(
         data=distances, geometry=polys, crs=3832
-    ).to_crs(constants.FJI_CRS)
+    ).to_crs(FJI_CRS)
     buffers = buffers.rename(columns={0: "distance"})
     return buffers
 
@@ -134,7 +135,7 @@ for nameyear in housing["nameyear"].unique():
     cols = ["Destroyed", "Major Damage"]
     dff[cols] = dff[cols].fillna(0)
     dff.geometry = dff.geometry.simplify(100)
-    dff = dff.to_crs(constants.FJI_CRS)
+    dff = dff.to_crs(FJI_CRS)
     dff = dff.set_index(f"ADM{admn}_PCODE")
 
     # plot housing impact

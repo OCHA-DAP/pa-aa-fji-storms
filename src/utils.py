@@ -18,8 +18,8 @@ from ochanticipy.utils.hdx_api import load_resource_from_hdx
 from shapely.geometry import LineString
 from tqdm.auto import tqdm
 
-from src.check_trigger import datetime_to_season, load_fms_forecast
 from src.constants import FJI_CRS
+from src.update_trigger import datetime_to_season, process_fms_forecast
 
 load_dotenv()
 
@@ -92,7 +92,7 @@ def check_fms_forecast(
         print("Already checked, passing")
         return save_path
     readiness, activation = False, False
-    fcast = load_fms_forecast(forecast_path)
+    fcast = process_fms_forecast(forecast_path)
     cyclone = fcast.iloc[0]["Name Season"]
     base_time = str(fcast.iloc[0]["base_time"])
     fcast = fcast.set_index("leadtime")
@@ -181,7 +181,7 @@ def load_hindcasts() -> gpd.GeoDataFrame:
     for filename in filenames:
         if filename.startswith("."):
             continue
-        df_data = load_fms_forecast(FCAST_DIR / filename)
+        df_data = process_fms_forecast(FCAST_DIR / filename, save=False)
         df = pd.concat([df, df_data], ignore_index=True)
 
     gdf = gpd.GeoDataFrame(

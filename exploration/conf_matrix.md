@@ -38,7 +38,8 @@ from dotenv import load_dotenv
 import shapely
 from shapely.geometry import Point, LineString
 
-import utils
+from src import utils
+from src.constants import FJI_CRS
 ```
 
 ```python
@@ -350,6 +351,11 @@ for nameyear in nameyear_sel:
 
 ```python
 # create plots for simulation (with buffer)
+import src.constants
+import src.update_trigger
+
+import src.constants
+import src.check_trigger
 
 import src.constants
 import src.check_trigger
@@ -392,7 +398,6 @@ nameyear_sel = [
 # just produce one at a time
 
 nameyear = nameyear_sel[0]
-
 
 ec_f = ecmwf[ecmwf["nameyear"] == nameyear].sort_values("forecast_time").copy()
 fm_f = (

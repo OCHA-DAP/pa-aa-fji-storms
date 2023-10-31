@@ -48,6 +48,7 @@ import chart_studio.plotly as py
 import plotly.io as pio
 
 from src import utils
+from src.constants import FJI_CRS
 ```
 
 ```python
@@ -158,8 +159,6 @@ fig.show()
 
 ```python
 # load buffer (default 250 km)
-import src.constants
-import src.check_trigger
 
 buffer_distance = 250
 # utils.process_buffer(buffer_distance)
@@ -265,9 +264,6 @@ print(mean_fms_leadtime.days + mean_fms_leadtime.seconds / 3600 / 24)
 ## Plot tracks
 
 ```python
-import src.constants
-import src.check_trigger
-
 pio.renderers.default = "notebook"
 pio.renderers.default = "browser"
 # utils.process_buffer(200)
@@ -332,7 +328,7 @@ for name_season in df["Name Season"].unique():
 
 ## Plot timeline
 
-```python
+```python jupyter={"outputs_hidden": true}
 for name_season in df["Name Season"].unique():
     df_plot = df[df["Name Season"] == name_season]
 
