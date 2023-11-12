@@ -385,36 +385,64 @@ def plot_forecast(
         )
     # uncertainty
     # unofficial 120hr
-    x_u, y_u = u_zone.geometry[0].boundary.xy
-    fig.add_trace(
-        go.Scattermapbox(
-            lat=np.array(y_u),
-            lon=np.array(x_u),
-            mode="lines",
-            name="Uncertainty",
-            line=dict(width=1, color="white"),
-            hoverinfo="skip",
-            legendgroup="unofficial",
+    print(u_zone.geometry[0].geom_type)
+    if u_zone.geometry[0].geom_type == "Polygon":
+        x_u, y_u = u_zone.geometry[0].boundary.xy
+        x_u, y_u = [x_u], [y_u]
+    elif u_zone.geometry[0].geom_type == "MultiPolygon":
+        x_u, y_u = [], []
+        for g in u_zone.geometry[0].geoms:
+            x_p, y_p = g.boundary.xy
+            x_u.append(x_p)
+            y_u.append(y_p)
+    showlegend = True
+    for x, y in zip(x_u, y_u):
+        print("plotting u")
+        fig.add_trace(
+            go.Scattermapbox(
+                lat=np.array(y),
+                lon=np.array(x),
+                mode="lines",
+                name="Uncertainty",
+                line=dict(width=1, color="white"),
+                hoverinfo="skip",
+                legendgroup="unofficial",
+                showlegend=showlegend,
+            )
         )
-    )
+        showlegend = False
     # official 72hr
-    x_o, y_o = o_zone.geometry[0].boundary.xy
-    fig.add_trace(
-        go.Scattermapbox(
-            lat=np.array(y_o),
-            lon=np.array(x_o),
-            mode="lines",
-            name="Uncertainty",
-            line=dict(width=1, color="black"),
-            hoverinfo="skip",
-            legendgroup="official",
+    if o_zone.geometry[0].geom_type == "Polygon":
+        x_o, y_o = o_zone.geometry[0].boundary.xy
+        x_o, y_o = [x_o], [y_o]
+    elif o_zone.geometry[0].geom_type == "MultiPolygon":
+        x_o, y_o = [], []
+        for g in o_zone.geometry[0].geoms:
+            x_p, y_p = g.boundary.xy
+            x_o.append(x_p)
+            y_o.append(y_p)
+    showlegend = True
+    for x, y in zip(x_o, y_o):
+        fig.add_trace(
+            go.Scattermapbox(
+                lat=np.array(y),
+                lon=np.array(x),
+                mode="lines",
+                name="Uncertainty",
+                line=dict(width=1, color="black"),
+                hoverinfo="skip",
+                legendgroup="official",
+                showlegend=showlegend,
+            )
         )
-    )
+        showlegend = False
     # set map bounds based on uncertainty cone of unofficial forecast
-    lat_max = max(y_u)
-    lat_min = min(y_u)
-    lon_max = max(x_u)
-    lon_min = min(x_u)
+    y_u_flat = [item for sublist in y_u for item in sublist]
+    x_u_flat = [item for sublist in x_u for item in sublist]
+    lat_max = max(y_u_flat)
+    lat_min = min(y_u_flat)
+    lon_max = max(x_u_flat)
+    lon_min = min(x_u_flat)
 
     # possible solutions from
     # https://stackoverflow.com/questions/63787612/plotly-automatic-zooming-for-mapbox-maps
@@ -855,7 +883,9 @@ if __name__ == "__main__":
     report = check_trigger(forecast)
     print(report)
     send_trigger_email(
-        report, suppress_send=args.suppress_send, test_email=args.test_email
+        report,
+        suppress_send=args.suppress_send,
+        test_email=args.test_email,
     )
     plot_forecast(report, forecast, save_html=True)
     distances = calculate_distances(report, forecast)
