@@ -20,7 +20,7 @@ from dotenv import load_dotenv
 from html2text import html2text
 from jinja2 import Environment, FileSystemLoader
 from ochanticipy.utils.hdx_api import load_resource_from_hdx
-from shapely.geometry import LineString
+from shapely.geometry import LineString, Point
 
 load_dotenv()
 
@@ -136,16 +136,22 @@ def datetime_to_season(date):
     return f"{eff_date.year}/{eff_date.year + 1}"
 
 
-def utc_to_fjt(utc_str: str) -> str:
-    utc = datetime.fromisoformat(utc_str)
-    utc = utc.replace(tzinfo=timezone.utc)
-    fjt = utc.astimezone(ZoneInfo("Pacific/Fiji"))
-    fjt_str = fjt.isoformat(timespec="minutes")
-    print(fjt_str)
-    return fjt_str
-
-
 def str_from_report(report: dict) -> dict:
+    """Produce relevant
+
+    Parameters
+    ----------
+    report: dict
+        Dict of forecast report
+
+    Returns
+    -------
+    dict with {
+        "file_dt_str": UTC datetime formatted for filename,
+        "fji_time": Fiji time for plots,
+        "fji_date": Fiji date for plots,
+    }
+    """
     utc_str = report.get("publication_time")
     utc = datetime.fromisoformat(utc_str)
     fjt = utc.astimezone(ZoneInfo("Pacific/Fiji"))
@@ -252,8 +258,21 @@ def check_trigger(forecast: gpd.GeoDataFrame) -> dict:
             zone = adm0.to_crs(FJI_CRS)
         else:
             zone = buffer.to_crs(FJI_CRS)
-        for leadtime in forecast.index[:-1]:
+        for leadtime in forecast.index:
             row = forecast.loc[leadtime]
+            # first check if any points meet the trigger
+            # this is the most likely way for a trigger to happen
+            if row["Category"] >= cat:
+                pt = Point(row[["Longitude", "Latitude"]])
+                if pt.within(zone.geometry)[0]:
+                    if leadtime <= 120:
+                        readiness = True
+                    if leadtime <= 72:
+                        action = True
+            # then check if any lines between points meet the trigger
+            # this is unlikely, but still possible
+            # (particularly for Cat 3 cyclones that pass over a small island
+            # in Fiji)
             if row["Category"] >= cat and row["prev_category"] >= cat:
                 ls = LineString(
                     [
@@ -385,7 +404,6 @@ def plot_forecast(
         )
     # uncertainty
     # unofficial 120hr
-    print(u_zone.geometry[0].geom_type)
     if u_zone.geometry[0].geom_type == "Polygon":
         x_u, y_u = u_zone.geometry[0].boundary.xy
         x_u, y_u = [x_u], [y_u]
@@ -397,7 +415,6 @@ def plot_forecast(
             y_u.append(y_p)
     showlegend = True
     for x, y in zip(x_u, y_u):
-        print("plotting u")
         fig.add_trace(
             go.Scattermapbox(
                 lat=np.array(y),
@@ -862,13 +879,14 @@ def send_info_email(
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    # if no CSV supplied, set to modified Yasa forecast
+    # if no CSV supplied, set to TEST_CSV
     # (includes Categories L-5, results in readiness and action activation)
     # yasa = os.getenv("YASA_MOD")
     test_csv = os.getenv("TEST_CSV")
     parser.add_argument("csv", nargs="?", type=str, default=test_csv)
     parser.add_argument("--suppress-send", action="store_true")
     parser.add_argument("--test-email", action="store_true")
+    parser.add_argument("--csv-env-var-name")
     return parser.parse_args()
 
 
@@ -878,7 +896,11 @@ if __name__ == "__main__":
         os.mkdir(OUTPUT_DIR)
     if not INPUT_DIR.exists():
         os.mkdir(INPUT_DIR)
-    filepath = decode_forecast_csv(args.csv)
+    if args.csv_env_var_name is None:
+        csv_str = args.csv
+    else:
+        csv_str = os.getenv(args.csv_env_var_name)
+    filepath = decode_forecast_csv(csv_str)
     forecast = process_fms_forecast(path=filepath, save=True)
     report = check_trigger(forecast)
     print(report)
