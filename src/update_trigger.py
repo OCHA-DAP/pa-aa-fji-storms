@@ -887,9 +887,14 @@ if __name__ == "__main__":
         suppress_send=args.suppress_send,
         test_email=args.test_email,
     )
-    plot_forecast(report, forecast, save_html=True)
-    distances = calculate_distances(report, forecast)
-    plot_distances(report, distances)
-    send_info_email(
-        report, suppress_send=args.suppress_send, test_email=args.test_email
-    )
+    try:
+        plot_forecast(report, forecast, save_html=True)
+        distances = calculate_distances(report, forecast)
+        plot_distances(report, distances)
+        send_info_email(
+            report,
+            suppress_send=args.suppress_send,
+            test_email=args.test_email,
+        )
+    except Exception as e:
+        print(f"Info plots and email failed due to Exception: {e}")
