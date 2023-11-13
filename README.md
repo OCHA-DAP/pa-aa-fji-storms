@@ -1,6 +1,6 @@
 # Fiji Anticipatory Action: storms
 
-[![Generic badge](https://img.shields.io/badge/STATUS-UNDER%20DEVELOPMENT-%23007CE0)](https://shields.io/)
+[![Generic badge](https://img.shields.io/badge/STATUS-ENDORSED-%231EBFB3)](https://shields.io/)
 
 ## Background information
 
@@ -19,17 +19,35 @@ mechanism.
 The proposed trigger has two stages, based on FMS's forecasts:
 
 - Readiness: unofficial internal 120-hr forecast
-- Activation: official 72-hr forecast
+- Action: official 72-hr forecast
 
 The proposed trigger threshold is a TC that forecast to either:
 
 - Be at Category 4 or greater while within 250 km of any point in Fiji, _or_
 - Be at Category 3 or greater while making landfall in Fiji
 
+The anticipatory action framework was formally endorsed by the Emergency Relief Coordinator on Nov 13, 2023.
+
+## Monitoring
+
+The trigger is continuously monitored with the process:
+
+1. FMS produces a new 120-hr forecast of the cyclone track (typically every 6 hours).
+2. FMS emails a CSV of the 120-hr forecast to the Centre for Humanitarian Data.
+3. A Power Automate flow sends the forecast via a POST request to the `check-trigger.yml` GitHub Action on this repo.
+4. The `check-trigger.yml` runs the `src/update_trigger.py` script, which:
+    1. Processes the forecast, checking it against the trigger.
+    2. If either the _readiness_ or _action_ triggers have been met, send an email to activate the framework.
+    3. Produces basic plots of the forecast, and sends them in an informational email (regardless of whether the trigger has been met).
+
 ## Overview of analysis
 
-The repo currently only contains the analysis of the historical data,
-in `exploration`.
+Key analysis in `analysis/`:
+
+- `01_returnperiod.md`: Calculates return period of TCs by strength and distance to Fiji
+- `02_historicaltriggers.md`: Checks historical forecasts against trigger
+- `03_forecastplots.md`: Creates interactive plots of historical forecasts for simulation exercises
+- `04_distances.md`: Calculates distance of historical forecasts and actual tracks to administrative divisions
 
 ## Data description
 
@@ -80,18 +98,6 @@ Finally, install any code in `src` using the command:
 
 ```shell
 pip install -e .
-```
-
-To run the pipeline that downloads and processes the data, execute:
-
-```shell
-python src/main.py
-```
-
-To see runtime options, execute:
-
-```shell
-python src/main.py -h
 ```
 
 If you would like to instead receive the processed data from our team, please
