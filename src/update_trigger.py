@@ -340,6 +340,7 @@ def plot_forecast(
     forecast = forecast.to_crs(3832)
     forecast = forecast[forecast["leadtime"] <= 120]
 
+    # produce datetime strings in FJT for plot
     forecast["forecast_time_fjt"] = (
         forecast["forecast_time"]
         .dt.tz_localize("UTC")
@@ -357,9 +358,25 @@ def plot_forecast(
 
     official = forecast[forecast["leadtime"] <= 72]
     unofficial = forecast[forecast["leadtime"] >= 72]
+
+    # interpolate forecast to produce smooth uncertainty cone
+    cols = ["Latitude", "Longitude", "Uncertainty"]
+    interp_o = (
+        official.set_index("forecast_time")[cols]
+        .resample("15T")
+        .interpolate(method="linear")
+    )
+    interp_o = gpd.GeoDataFrame(
+        interp_o,
+        geometry=gpd.points_from_xy(
+            interp_o["Longitude"], interp_o["Latitude"]
+        ),
+    )
+    interp_o = interp_o.set_crs(FJI_CRS).to_crs(3832)
+
     # produce uncertainty cone
     circles = []
-    for _, row in official.iterrows():
+    for _, row in interp_o.iterrows():
         circles.append(row["geometry"].buffer(row["Uncertainty"] * 1000))
     o_zone = (
         gpd.GeoDataFrame(geometry=circles)
@@ -367,17 +384,10 @@ def plot_forecast(
         .set_crs(3832)
         .to_crs(FJI_CRS)
     )
-    circles = []
-    for _, row in forecast.iterrows():
-        circles.append(row["geometry"].buffer(row["Uncertainty"] * 1000))
-    u_zone = (
-        gpd.GeoDataFrame(geometry=circles)
-        .dissolve()
-        .set_crs(3832)
-        .to_crs(FJI_CRS)
-    )
+
     fig = go.Figure()
-    # trigger zone
+
+    # plot trigger zone
     x_b, y_b = trigger_zone.geometry[0].boundary.xy
     fig.add_trace(
         go.Scattermapbox(
@@ -391,35 +401,8 @@ def plot_forecast(
             hoverinfo="skip",
         )
     )
-    # uncertainty
-    # unofficial 120hr
-    if u_zone.geometry[0].geom_type == "Polygon":
-        x_u, y_u = u_zone.geometry[0].boundary.xy
-        x_u, y_u = [x_u], [y_u]
-    elif u_zone.geometry[0].geom_type == "MultiPolygon":
-        x_u, y_u = [], []
-        for g in u_zone.geometry[0].geoms:
-            x_p, y_p = g.boundary.xy
-            x_u.append(x_p)
-            y_u.append(y_p)
-    showlegend = True
-    for x, y in zip(x_u, y_u):
-        fig.add_trace(
-            go.Scattermapbox(
-                lat=np.array(y),
-                lon=np.array(x),
-                mode="lines",
-                name="Uncertainty",
-                line=dict(width=0),
-                fill="toself",
-                fillcolor="rgba(255, 255, 255, 0.2)",
-                hoverinfo="skip",
-                legendgroup="unofficial",
-                showlegend=showlegend,
-            )
-        )
-        showlegend = False
-    # official 72hr
+
+    # plot uncertainty cone official 72hr
     if o_zone.geometry[0].geom_type == "Polygon":
         x_o, y_o = o_zone.geometry[0].boundary.xy
         x_o, y_o = [x_o], [y_o]
@@ -439,14 +422,15 @@ def plot_forecast(
                 name="Uncertainty",
                 line=dict(width=0),
                 fill="toself",
-                fillcolor="rgba(0, 0, 0, 0.15)",
+                fillcolor="rgba(0, 0, 0, 0.1)",
                 hoverinfo="skip",
                 legendgroup="official",
                 showlegend=showlegend,
             )
         )
         showlegend = False
-    # official forecast
+
+    # plot official forecast line
     fig.add_trace(
         go.Scattermapbox(
             lat=official["Latitude"],
@@ -462,7 +446,7 @@ def plot_forecast(
         )
     )
 
-    # unofficial forecast
+    # plot unofficial forecast line
     fig.add_trace(
         go.Scattermapbox(
             lat=unofficial["Latitude"],
@@ -477,7 +461,7 @@ def plot_forecast(
             legendgrouptitle_text="Unofficial 120-hour forecast",
         )
     )
-    # by category
+    # plot forecast points by category
     for color in CAT2COLOR:
         dff = forecast[forecast["Category"] == color[0]]
         name = "L" if color[0] == 0 else f"Category {color[0]}"
@@ -492,7 +476,8 @@ def plot_forecast(
                 hoverinfo="skip",
             )
         )
-    # text for forecast datetime
+
+    # plot text for forecast datetime
     fig.add_trace(
         go.Scattermapbox(
             lat=forecast["Latitude"],
@@ -504,20 +489,14 @@ def plot_forecast(
         )
     )
 
-    # set map bounds based on uncertainty cone of unofficial forecast
-    y_u_flat = [item for sublist in y_u for item in sublist]
-    x_u_flat = [item for sublist in x_u for item in sublist]
-    lat_max = max(y_u_flat)
-    lat_min = min(y_u_flat)
-    lon_max = max(x_u_flat)
-    lon_min = min(x_u_flat)
+    # set map bounds with forecast points
+    lat_max = max(forecast["Latitude"])
+    lat_min = min(forecast["Latitude"])
+    lon_max = max(forecast["Longitude"])
+    lon_min = min(forecast["Longitude"])
 
     # possible solutions from
     # https://stackoverflow.com/questions/63787612/plotly-automatic-zooming-for-mapbox-maps
-
-    # using log for zoom
-    # max_bound = max(lon_max - lon_min, (lat_max - lat_min) ** 1.2) * 111
-    # zoom = 12.7 - np.log(max_bound)
 
     # using range for zoom
     lon_zoom_range = np.array(
