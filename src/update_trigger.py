@@ -338,6 +338,17 @@ def plot_forecast(
     trigger_zone = load_buffer().to_crs(FJI_CRS)
     forecast = forecast.to_crs(3832)
     forecast = forecast[forecast["leadtime"] <= 120]
+
+    forecast["formatted_datetime"] = forecast["forecast_time"].apply(
+        lambda x: x.strftime("<br><br>%H:%M")
+    )
+    first_dts = forecast.groupby(forecast["forecast_time"].dt.date)[
+        "forecast_time"
+    ].idxmin()
+    forecast.loc[
+        forecast.index.isin(first_dts), "formatted_datetime"
+    ] = forecast["forecast_time"].dt.strftime("%b %d<br><br>%H:%M")
+
     official = forecast[forecast["leadtime"] <= 72]
     unofficial = forecast[forecast["leadtime"] >= 72]
     # produce uncertainty cone
@@ -366,57 +377,14 @@ def plot_forecast(
         go.Scattermapbox(
             lat=np.array(y_b),
             lon=np.array(x_b),
+            fill="toself",
             mode="lines",
             name="Area within 250 km of Fiji",
-            line=dict(width=1),
+            line=dict(width=1, color="red"),
+            fillcolor="rgba(255, 0, 0, 0.1)",
             hoverinfo="skip",
         )
     )
-    # official forecast
-    fig.add_trace(
-        go.Scattermapbox(
-            lat=official["Latitude"],
-            lon=official["Longitude"],
-            mode="lines",
-            line=dict(width=2, color="black"),
-            name="Best Track",
-            customdata=official[["Category", "forecast_time"]],
-            hovertemplate="Category: %{customdata[0]}<br>"
-            "Datetime: %{customdata[1]}",
-            legendgroup="official",
-            legendgrouptitle_text="Official 72-hour forecast",
-        )
-    )
-    # unofficial forecast
-    fig.add_trace(
-        go.Scattermapbox(
-            lat=unofficial["Latitude"],
-            lon=unofficial["Longitude"],
-            mode="lines",
-            line=dict(width=2, color="white"),
-            name="Best Track",
-            customdata=unofficial[["Category", "forecast_time"]],
-            hovertemplate="Category: %{customdata[0]}<br>"
-            "Datetime: %{customdata[1]}",
-            legendgroup="unofficial",
-            legendgrouptitle_text="Unofficial 120-hour forecast",
-        )
-    )
-    # by category
-    for color in CAT2COLOR:
-        dff = forecast[forecast["Category"] == color[0]]
-        name = "L" if color[0] == 0 else f"Category {color[0]}"
-        fig.add_trace(
-            go.Scattermapbox(
-                lat=dff["Latitude"],
-                lon=dff["Longitude"],
-                mode="markers",
-                line=dict(width=2, color=color[1]),
-                marker=dict(size=10),
-                name=name,
-                hoverinfo="skip",
-            )
-        )
     # uncertainty
     # unofficial 120hr
     if u_zone.geometry[0].geom_type == "Polygon":
@@ -436,7 +404,9 @@ def plot_forecast(
                 lon=np.array(x),
                 mode="lines",
                 name="Uncertainty",
-                line=dict(width=1, color="white"),
+                line=dict(width=0),
+                fill="toself",
+                fillcolor="rgba(255, 255, 255, 0.2)",
                 hoverinfo="skip",
                 legendgroup="unofficial",
                 showlegend=showlegend,
@@ -461,13 +431,73 @@ def plot_forecast(
                 lon=np.array(x),
                 mode="lines",
                 name="Uncertainty",
-                line=dict(width=1, color="black"),
+                line=dict(width=0),
+                fill="toself",
+                fillcolor="rgba(0, 0, 0, 0.15)",
                 hoverinfo="skip",
                 legendgroup="official",
                 showlegend=showlegend,
             )
         )
         showlegend = False
+    # official forecast
+    fig.add_trace(
+        go.Scattermapbox(
+            lat=official["Latitude"],
+            lon=official["Longitude"],
+            mode="lines",
+            line=dict(width=1.5, color="black"),
+            name="Best Track",
+            customdata=official[["Category", "forecast_time"]],
+            hovertemplate="Category: %{customdata[0]}<br>"
+            "Datetime: %{customdata[1]}",
+            legendgroup="official",
+            legendgrouptitle_text="Official 72-hour forecast",
+        )
+    )
+
+    # unofficial forecast
+    fig.add_trace(
+        go.Scattermapbox(
+            lat=unofficial["Latitude"],
+            lon=unofficial["Longitude"],
+            mode="lines",
+            line=dict(width=1.5, color="white"),
+            name="Best Track",
+            customdata=unofficial[["Category", "forecast_time"]],
+            hovertemplate="Category: %{customdata[0]}<br>"
+            "Datetime: %{customdata[1]}",
+            legendgroup="unofficial",
+            legendgrouptitle_text="Unofficial 120-hour forecast",
+        )
+    )
+    # by category
+    for color in CAT2COLOR:
+        dff = forecast[forecast["Category"] == color[0]]
+        name = "L" if color[0] == 0 else f"Category {color[0]}"
+        fig.add_trace(
+            go.Scattermapbox(
+                lat=dff["Latitude"],
+                lon=dff["Longitude"],
+                mode="markers",
+                line=dict(width=2, color=color[1]),
+                marker=dict(size=10),
+                name=name,
+                hoverinfo="skip",
+            )
+        )
+    # text for forecast datetime
+    fig.add_trace(
+        go.Scattermapbox(
+            lat=forecast["Latitude"],
+            lon=forecast["Longitude"],
+            mode="text",
+            text=forecast["formatted_datetime"],
+            showlegend=False,
+            textfont={"size": 8, "color": "black"},
+        )
+    )
+
     # set map bounds based on uncertainty cone of unofficial forecast
     y_u_flat = [item for sublist in y_u for item in sublist]
     x_u_flat = [item for sublist in x_u for item in sublist]
