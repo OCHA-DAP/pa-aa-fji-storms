@@ -4,6 +4,7 @@ import json
 import os
 import smtplib
 import ssl
+import traceback
 from datetime import datetime, timezone
 from email.headerregistry import Address
 from email.message import EmailMessage
@@ -339,15 +340,20 @@ def plot_forecast(
     forecast = forecast.to_crs(3832)
     forecast = forecast[forecast["leadtime"] <= 120]
 
-    forecast["formatted_datetime"] = forecast["forecast_time"].apply(
+    forecast["forecast_time_fjt"] = (
+        forecast["forecast_time"]
+        .dt.tz_localize("UTC")
+        .apply(lambda x: x.astimezone(ZoneInfo("Pacific/Fiji")))
+    )
+    forecast["formatted_datetime"] = forecast["forecast_time_fjt"].apply(
         lambda x: x.strftime("<br><br>%H:%M")
     )
-    first_dts = forecast.groupby(forecast["forecast_time"].dt.date)[
-        "forecast_time"
+    first_dts = forecast.groupby(forecast["forecast_time_fjt"].dt.date)[
+        "forecast_time_fjt"
     ].idxmin()
     forecast.loc[
         forecast.index.isin(first_dts), "formatted_datetime"
-    ] = forecast["forecast_time"].dt.strftime("%b %d<br><br>%H:%M")
+    ] = forecast["forecast_time_fjt"].dt.strftime("%b %d<br><br>%H:%M")
 
     official = forecast[forecast["leadtime"] <= 72]
     unofficial = forecast[forecast["leadtime"] >= 72]
@@ -448,7 +454,7 @@ def plot_forecast(
             mode="lines",
             line=dict(width=1.5, color="black"),
             name="Best Track",
-            customdata=official[["Category", "forecast_time"]],
+            customdata=official[["Category", "forecast_time_fjt"]],
             hovertemplate="Category: %{customdata[0]}<br>"
             "Datetime: %{customdata[1]}",
             legendgroup="official",
@@ -464,7 +470,7 @@ def plot_forecast(
             mode="lines",
             line=dict(width=1.5, color="white"),
             name="Best Track",
-            customdata=unofficial[["Category", "forecast_time"]],
+            customdata=unofficial[["Category", "forecast_time_fjt"]],
             hovertemplate="Category: %{customdata[0]}<br>"
             "Datetime: %{customdata[1]}",
             legendgroup="unofficial",
@@ -965,3 +971,4 @@ if __name__ == "__main__":
         )
     except Exception as e:
         print(f"Info plots and email failed due to Exception: {e}")
+        traceback.print_exc()
