@@ -248,10 +248,18 @@ def check_trigger(forecast: gpd.GeoDataFrame) -> dict:
     base_time = base_time.replace(tzinfo=timezone.utc)
     base_time_str = base_time.isoformat(timespec="minutes")
     forecast = forecast.set_index("leadtime")
+    cols = ["forecast_time", "Latitude", "Longitude", "Category"]
+    full_report = forecast[cols].copy()
+    cols = []
+    for t in range(len(thresholds)):
+        for pl in ["pt", "ls"]:
+            for ra in ["readiness", "action"]:
+                cols.append(f"{ra}_{pl}_t{t}")
+    full_report[cols] = False
     forecast[["prev_category", "prev_lat", "prev_lon"]] = forecast.shift()[
         ["Category", "Latitude", "Longitude"]
     ]
-    for threshold in thresholds:
+    for t, threshold in enumerate(thresholds):
         cat = threshold.get("category")
         dist = threshold.get("distance")
         if dist == 0:
@@ -267,8 +275,10 @@ def check_trigger(forecast: gpd.GeoDataFrame) -> dict:
                 if pt.within(zone.geometry)[0]:
                     if leadtime <= 120:
                         readiness = True
+                        full_report.loc[leadtime, f"readiness_pt_t{t}"] = True
                     if leadtime <= 72:
                         action = True
+                        full_report.loc[leadtime, f"action_pt_t{t}"] = True
             # then check if any lines between points meet the trigger
             # this is unlikely, but still possible
             # (particularly for Cat 3 cyclones that pass over a small island
@@ -283,8 +293,10 @@ def check_trigger(forecast: gpd.GeoDataFrame) -> dict:
                 if ls.intersects(zone.geometry)[0]:
                     if leadtime <= 120:
                         readiness = True
+                        full_report.loc[leadtime, f"readiness_ls_t{t}"] = True
                     if leadtime <= 72:
                         action = True
+                        full_report.loc[leadtime, f"action_ls_t{t}"] = True
     report = {
         "cyclone": cyclone,
         "publication_time": base_time_str,
@@ -292,6 +304,9 @@ def check_trigger(forecast: gpd.GeoDataFrame) -> dict:
         "action": action,
     }
     report_str = str_from_report(report)
+    full_report.to_csv(
+        OUTPUT_DIR / f"full_report_{report_str.get('file_dt_str')}.csv"
+    )
     with open(
         OUTPUT_DIR / f"report_{report_str.get('file_dt_str')}.json",
         "w",
