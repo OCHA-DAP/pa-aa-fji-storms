@@ -24,28 +24,46 @@ from src.update_trigger import datetime_to_season, process_fms_forecast
 load_dotenv()
 
 AA_DATA_DIR = Path(os.environ["AA_DATA_DIR"])
-EXP_DIR = AA_DATA_DIR / "public/exploration/fji"
-FCAST_DIR = EXP_DIR / "rsmc/forecasts"
+EXP_DIR = AA_DATA_DIR / "public" / "exploration" / "fji"
+FCAST_DIR = EXP_DIR / "rsmc" / "forecasts"
 CYCLONETRACKS_PATH = (
-    EXP_DIR / "rsmc/RSMC TC Tracks Historical 1969_70 to 2022_23 Seasons.csv"
+    EXP_DIR
+    / "rsmc"
+    / "RSMC TC Tracks Historical 1969_70 to 2022_23 Seasons.csv"
 )
-IMPACT_PATH = EXP_DIR / "rsmc/FIJI_ DesInventar data 20230626.xlsx"
-RAW_DIR = Path(os.environ["AA_DATA_DIR"]) / "public/raw/fji"
-ADM0_PATH = RAW_DIR / "cod_ab/fji_polbnda_adm0_country"
-PROC_PATH = Path(os.environ["AA_DATA_DIR"]) / "public/processed/fji"
+IMPACT_PATH = EXP_DIR / "rsmc" / "FIJI_ DesInventar data 20230626.xlsx"
+RAW_DIR = AA_DATA_DIR / "public" / "raw" / "fji"
+ADM0_PATH = RAW_DIR / "cod_ab" / "fji_polbnda_adm0_country"
+PROC_PATH = AA_DATA_DIR / "public" / "processed" / "fji"
 CODAB_PATH = RAW_DIR / "cod_ab"
-NDMO_DIR = AA_DATA_DIR / "private/raw/fji/ndmo"
+NDMO_DIR = AA_DATA_DIR / "private" / "raw" / "fji" / "ndmo"
 ADM3 = "ADM3_PCODE"
 ADM2 = "ADM2_PCODE"
 ADM1 = "ADM1_PCODE"
-ECMWF_RAW = AA_DATA_DIR / "public/exploration/glb/ecmwf/cyclone_hindcasts"
+ECMWF_RAW = (
+    AA_DATA_DIR
+    / "public"
+    / "exploration"
+    / "glb"
+    / "ecmwf"
+    / "cyclone_hindcasts"
+)
 ECMWF_PROCESSED = (
-    AA_DATA_DIR / "public/exploration/fji/ecmwf/cyclone_hindcasts"
+    AA_DATA_DIR
+    / "public"
+    / "exploration"
+    / "fji"
+    / "ecmwf"
+    / "cyclone_hindcasts"
 )
 KNOTS_PER_MS = 1.94384
 CODAB_DATASET = "cod-ab-fji"
-CURRENT_FCAST_DIR = AA_DATA_DIR / "private/raw/fji/fms/forecast"
-PROC_FCAST_DIR = AA_DATA_DIR / "private/processed/fji/fms/forecast"
+CURRENT_FCAST_DIR = (
+    AA_DATA_DIR / "private" / "raw" / "fji" / "fms" / "forecast"
+)
+PROC_FCAST_DIR = (
+    AA_DATA_DIR / "private" / "processed" / "fji" / "fms" / "forecast"
+)
 MB_TOKEN = os.environ.get("MAPBOX_TOKEN")
 CS_KEY = os.environ.get("CHARTSTUDIO_APIKEY")
 MAPS_DIR = PROC_PATH / "historical_forecast_maps"

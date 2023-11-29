@@ -183,7 +183,7 @@ fig.update_yaxes(title_text=f"Category")
 
 # if plot doesn't initially show up, switch to renderer="svg"
 # then back to "notebook"
-fig.show(renderer="notebook")
+fig.show(renderer="svg")
 ```
 
 ## Calculate composite trigger return periods

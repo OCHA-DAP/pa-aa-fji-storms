@@ -352,5 +352,20 @@ for nameyear in housing["nameyear"].unique():
 ```
 
 ```python
+save_cols = []
 
+for col in hindcasts.columns:
+    if hindcasts[col].any():
+        save_cols.append(col)
+
+save_cols.remove("geometry")
+
+filename = "fms_historical_forecasts.csv"
+hindcasts[save_cols].rename(columns={"forecast_time": "time"}).to_csv(
+    utils.PROC_PATH / filename, index=False
+)
+```
+
+```python
+hindcasts["nameyear"].unique()
 ```
