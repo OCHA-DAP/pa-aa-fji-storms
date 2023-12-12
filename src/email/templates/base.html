@@ -54,7 +54,8 @@ margin-bottom: 24px;
 </div>
 <table width="100%" class="content" style="background-color:white;">
 <tr>
-<td style="padding:12px;"><style type="text/css">
+<td style="padding:12px;">
+<style type="text/css">
 h1, h2, h3 {
 font-family: Arvo, "Helvetica Neue", Helvetica, Arial, sans-serif;
 font-weight: normal
@@ -63,6 +64,14 @@ p {
 font-family: "Source Sans Pro", "Helvetica Neue", Helvetica, Arial, sans-serif
 }
 </style>
+{% if test_email %}
+  <div style="color:red">
+    <h1>THIS IS A TEST EMAIL - DO NOT TAKE ANY ACTION</h1>
+    <p>This is a test of the monitoring system for tropical cyclones in Fiji. The information in this email is not valid, and should not be used for the release of funds or any planning purposes. No action on your side is required.</p>
+    <p>If you have received this email, you are subscribed to the corresponding mailing list, and will receive this type of email (trigger alert, or informational email) during regular monitoring.</p>
+    <p>If you have any questions or feedback about this email, please contact the OCHA Centre for Humanitarian Data via Tristan Downing, focal point for Fiji Anticipatory Action at <a href="mailto:tristan.downing@un.org" class="email">tristan.downing@un.org</a>.</p>
+  </div>
+{% endif %}
 <table width="100%" align="left">
   <tr>
     <td align="left">
