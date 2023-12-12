@@ -29,9 +29,13 @@ def testrun_workflow():
         "Authorization": f"Bearer {GH_ACTIONS_TOKEN}",
         "X-GitHub-Api-Version": "2022-11-28",
     }
-    body = {"ref": "add-trigger", "inputs": {"csv": TEST_CSV}}
+    body = {
+        "ref": "add-trigger",
+        "inputs": {"csv": TEST_CSV, "flags": "--test-email"},
+    }
     response = requests.post(url=url, headers=headers, data=json.dumps(body))
     print(response.status_code)
+    print(response.content)
 
 
 if __name__ == "__main__":
