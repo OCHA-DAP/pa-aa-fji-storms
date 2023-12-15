@@ -695,6 +695,39 @@ def plot_distances(report: dict, distances: pd.DataFrame) -> go.Figure:
     return fig
 
 
+def segment_emails(
+    to_list: list[str],
+    cc_list: list[str],
+    recipient_limit: int = 50,
+    default_to: str = EMAIL_ADDRESS,
+):
+    """Segments TO and CC mailing lists if they exceed the limit.
+    Prioritizes sending first to TO list, then fills in remaining spots with
+    CC list. If all TO list fits in the first email, the second email will use
+    the default_to as TO, since TO cannot be blank.
+    Only works for combined list lengths up to two times the limit (i.e. will
+    combine into maximum two emails).
+    """
+    to_list_chunks, cc_list_chunks = [], []
+    if len(to_list) + len(cc_list) > recipient_limit:
+        print(f"Over 50 recipients: {len(to_list)=}; {len(cc_list)=}")
+        if len(to_list) > recipient_limit:
+            to_list_chunks.append(to_list[:recipient_limit])
+            to_list_chunks.append(to_list[recipient_limit:])
+            cc_list_chunks.append([])
+            cc_list_chunks.append(cc_list)
+        else:
+            to_list_chunks.append(to_list)
+            to_list_chunks.append([default_to])
+            new_lim = recipient_limit - len(to_list)
+            cc_list_chunks.append(cc_list[:new_lim])
+            cc_list_chunks.append(cc_list[new_lim:])
+    else:
+        to_list_chunks.append(to_list)
+        cc_list_chunks.append(cc_list)
+    return to_list_chunks, cc_list_chunks
+
+
 def send_trigger_email(
     report: dict,
     suppress_send: bool = False,
@@ -729,69 +762,81 @@ def send_trigger_email(
     report_str = str_from_report(report)
 
     to_list = [x.strip() for x in TRIGGER_TO.split(";") if x]
+    to_list = [x for x in to_list if x]
     cc_list = [x.strip() for x in TRIGGER_CC.split(";") if x]
+    cc_list = [x for x in cc_list if x]
+
+    to_list_chunks, cc_list_chunks = segment_emails(to_list, cc_list)
 
     environment = Environment(loader=FileSystemLoader(TEMPLATES_DIR))
 
     for trigger in triggers:
-        template = environment.get_template(f"{trigger}.html")
-        msg = EmailMessage()
-        msg["Subject"] = (
-            f"{test_subject}Anticipatory action Fiji – "
-            f"{trigger.capitalize()} trigger reached"
-        )
-        msg["From"] = Address(
-            "OCHA Centre for Humanitarian Data",
-            EMAIL_ADDRESS.split("@")[0],
-            EMAIL_ADDRESS.split("@")[1],
-        )
-        for mail_list, list_name in zip([to_list, cc_list], ["To", "Cc"]):
-            msg[list_name] = [Address(addr_spec=x) for x in mail_list if x]
-
-        chd_banner_cid = make_msgid(domain="humdata.org")
-        ocha_logo_cid = make_msgid(domain="humdata.org")
-
-        html_str = template.render(
-            name=report.get("cyclone").split(" ")[0],
-            pub_time=report_str.get("fji_time"),
-            pub_date=report_str.get("fji_date"),
-            test_email=test_email,
-            chd_banner_cid=chd_banner_cid[1:-1],
-            ocha_logo_cid=ocha_logo_cid[1:-1],
-        )
-        text_str = html2text(html_str)
-        msg.set_content(text_str)
-        msg.add_alternative(html_str, subtype="html")
-
-        for filename, cid in zip(
-            ["centre_banner.png", "ocha_logo_wide.png"],
-            [chd_banner_cid, ocha_logo_cid],
+        for to_list_chunk, cc_list_chunk in zip(
+            to_list_chunks, cc_list_chunks
         ):
-            img_path = STATIC_DIR / filename
-            with open(img_path, "rb") as img:
-                msg.get_payload()[1].add_related(
-                    img.read(), "image", "png", cid=cid
-                )
-
-        context = ssl.create_default_context()
-        if not suppress_send:
-            with smtplib.SMTP_SSL(
-                EMAIL_HOST, EMAIL_PORT, context=context
-            ) as server:
-                server.login(EMAIL_USERNAME, EMAIL_PASSWORD)
-                server.sendmail(
-                    EMAIL_ADDRESS, to_list + cc_list, msg.as_string()
-                )
-        if save:
-            name_stem = (
-                f"{trigger}_activation_email_{report_str.get('file_dt_str')}"
+            template = environment.get_template(f"{trigger}.html")
+            msg = EmailMessage()
+            msg["Subject"] = (
+                f"{test_subject}Anticipatory action Fiji – "
+                f"{trigger.capitalize()} trigger reached"
             )
-            with open(OUTPUT_DIR / f"{name_stem}.txt", "w") as f:
-                f.write(text_str)
-            with open(OUTPUT_DIR / f"{name_stem}.html", "w") as f:
-                f.write(html_str)
-            with open(OUTPUT_DIR / f"{name_stem}.msg", "wb") as f:
-                f.write(bytes(msg))
+            msg["From"] = Address(
+                "OCHA Centre for Humanitarian Data",
+                EMAIL_ADDRESS.split("@")[0],
+                EMAIL_ADDRESS.split("@")[1],
+            )
+            for mail_list, list_name in zip(
+                [to_list_chunk, cc_list_chunk], ["To", "Cc"]
+            ):
+                msg[list_name] = [Address(addr_spec=x) for x in mail_list if x]
+
+            chd_banner_cid = make_msgid(domain="humdata.org")
+            ocha_logo_cid = make_msgid(domain="humdata.org")
+
+            html_str = template.render(
+                name=report.get("cyclone").split(" ")[0],
+                pub_time=report_str.get("fji_time"),
+                pub_date=report_str.get("fji_date"),
+                test_email=test_email,
+                chd_banner_cid=chd_banner_cid[1:-1],
+                ocha_logo_cid=ocha_logo_cid[1:-1],
+            )
+            text_str = html2text(html_str)
+            msg.set_content(text_str)
+            msg.add_alternative(html_str, subtype="html")
+
+            for filename, cid in zip(
+                ["centre_banner.png", "ocha_logo_wide.png"],
+                [chd_banner_cid, ocha_logo_cid],
+            ):
+                img_path = STATIC_DIR / filename
+                with open(img_path, "rb") as img:
+                    msg.get_payload()[1].add_related(
+                        img.read(), "image", "png", cid=cid
+                    )
+
+            context = ssl.create_default_context()
+            if not suppress_send:
+                with smtplib.SMTP_SSL(
+                    EMAIL_HOST, EMAIL_PORT, context=context
+                ) as server:
+                    server.login(EMAIL_USERNAME, EMAIL_PASSWORD)
+                    server.sendmail(
+                        EMAIL_ADDRESS,
+                        to_list_chunk + cc_list_chunk,
+                        msg.as_string(),
+                    )
+            if save:
+                name_stem = (
+                    f"{trigger}_activation_email_"
+                    f"{report_str.get('file_dt_str')}"
+                )
+                with open(OUTPUT_DIR / f"{name_stem}.txt", "w") as f:
+                    f.write(text_str)
+                with open(OUTPUT_DIR / f"{name_stem}.html", "w") as f:
+                    f.write(html_str)
+                with open(OUTPUT_DIR / f"{name_stem}.msg", "wb") as f:
+                    f.write(bytes(msg))
 
 
 def send_info_email(
@@ -826,85 +871,100 @@ def send_info_email(
     template = environment.get_template("informational.html")
 
     to_list = [x.strip() for x in INFO_TO.split(";") if x]
+    to_list = [x for x in to_list if x]
     cc_list = [x.strip() for x in INFO_CC.split(";") if x]
+    cc_list = [x for x in cc_list if x]
 
-    msg = EmailMessage()
-    msg[
-        "Subject"
-    ] = f"{test_subject}Anticipatory action Fiji – Forecast information"
-    msg["From"] = Address(
-        "OCHA Centre for Humanitarian Data",
-        EMAIL_ADDRESS.split("@")[0],
-        EMAIL_ADDRESS.split("@")[1],
-    )
-    for mail_list, list_name in zip([to_list, cc_list], ["To", "Cc"]):
-        msg[list_name] = [Address(addr_spec=x) for x in mail_list if x]
+    to_list_chunks, cc_list_chunks = segment_emails(to_list, cc_list)
 
-    map_cid = make_msgid(domain="humdata.org")
-    distances_cid = make_msgid(domain="humdata.org")
-    chd_banner_cid = make_msgid(domain="humdata.org")
-    ocha_logo_cid = make_msgid(domain="humdata.org")
-
-    html_str = template.render(
-        name=report.get("cyclone").split(" ")[0],
-        pub_date=report_str.get("fji_date"),
-        pub_time=report_str.get("fji_time"),
-        readiness="ACTIVATED" if report.get("readiness") else "NOT ACTIVATED",
-        action="ACTIVATED" if report.get("action") else "NOT ACTIVATED",
-        map_cid=map_cid[1:-1],
-        distances_cid=distances_cid[1:-1],
-        chd_banner_cid=chd_banner_cid[1:-1],
-        ocha_logo_cid=ocha_logo_cid[1:-1],
-        test_email=test_email,
-    )
-    text_str = html2text(html_str)
-    msg.set_content(text_str)
-    msg.add_alternative(html_str, subtype="html")
-
-    for plot, cid in zip(["forecast", "distances"], [map_cid, distances_cid]):
-        img_path = (
-            OUTPUT_DIR / f"{plot}_plot_{report_str.get('file_dt_str')}.png"
+    for to_list_chunk, cc_list_chunk in zip(to_list_chunks, cc_list_chunks):
+        msg = EmailMessage()
+        msg[
+            "Subject"
+        ] = f"{test_subject}Anticipatory action Fiji – Forecast information"
+        msg["From"] = Address(
+            "OCHA Centre for Humanitarian Data",
+            EMAIL_ADDRESS.split("@")[0],
+            EMAIL_ADDRESS.split("@")[1],
         )
-        with open(img_path, "rb") as img:
-            msg.get_payload()[1].add_related(
-                img.read(), "image", "png", cid=cid
+        for mail_list, list_name in zip(
+            [to_list_chunk, cc_list_chunk], ["To", "Cc"]
+        ):
+            msg[list_name] = [Address(addr_spec=x) for x in mail_list if x]
+
+        map_cid = make_msgid(domain="humdata.org")
+        distances_cid = make_msgid(domain="humdata.org")
+        chd_banner_cid = make_msgid(domain="humdata.org")
+        ocha_logo_cid = make_msgid(domain="humdata.org")
+
+        html_str = template.render(
+            name=report.get("cyclone").split(" ")[0],
+            pub_date=report_str.get("fji_date"),
+            pub_time=report_str.get("fji_time"),
+            readiness="ACTIVATED"
+            if report.get("readiness")
+            else "NOT ACTIVATED",
+            action="ACTIVATED" if report.get("action") else "NOT ACTIVATED",
+            map_cid=map_cid[1:-1],
+            distances_cid=distances_cid[1:-1],
+            chd_banner_cid=chd_banner_cid[1:-1],
+            ocha_logo_cid=ocha_logo_cid[1:-1],
+            test_email=test_email,
+        )
+        text_str = html2text(html_str)
+        msg.set_content(text_str)
+        msg.add_alternative(html_str, subtype="html")
+
+        for plot, cid in zip(
+            ["forecast", "distances"], [map_cid, distances_cid]
+        ):
+            img_path = (
+                OUTPUT_DIR / f"{plot}_plot_{report_str.get('file_dt_str')}.png"
+            )
+            with open(img_path, "rb") as img:
+                msg.get_payload()[1].add_related(
+                    img.read(), "image", "png", cid=cid
+                )
+
+        for filename, cid in zip(
+            ["centre_banner.png", "ocha_logo_wide.png"],
+            [chd_banner_cid, ocha_logo_cid],
+        ):
+            img_path = STATIC_DIR / filename
+            with open(img_path, "rb") as img:
+                msg.get_payload()[1].add_related(
+                    img.read(), "image", "png", cid=cid
+                )
+
+        for adm_level in [2, 3]:
+            csv_name = (
+                f"distances_adm{adm_level}_{report_str.get('file_dt_str')}.csv"
+            )
+            with open(OUTPUT_DIR / csv_name, "rb") as f:
+                f_data = f.read()
+            msg.add_attachment(
+                f_data, maintype="text", subtype="csv", filename=csv_name
             )
 
-    for filename, cid in zip(
-        ["centre_banner.png", "ocha_logo_wide.png"],
-        [chd_banner_cid, ocha_logo_cid],
-    ):
-        img_path = STATIC_DIR / filename
-        with open(img_path, "rb") as img:
-            msg.get_payload()[1].add_related(
-                img.read(), "image", "png", cid=cid
-            )
-
-    for adm_level in [2, 3]:
-        csv_name = (
-            f"distances_adm{adm_level}_{report_str.get('file_dt_str')}.csv"
-        )
-        with open(OUTPUT_DIR / csv_name, "rb") as f:
-            f_data = f.read()
-        msg.add_attachment(
-            f_data, maintype="text", subtype="csv", filename=csv_name
-        )
-
-    context = ssl.create_default_context()
-    if not suppress_send:
-        with smtplib.SMTP_SSL(
-            EMAIL_HOST, EMAIL_PORT, context=context
-        ) as server:
-            server.login(EMAIL_USERNAME, EMAIL_PASSWORD)
-            server.sendmail(EMAIL_ADDRESS, to_list + cc_list, msg.as_string())
-    if save:
-        file_stem = f"informational_email_{report_str.get('file_dt_str')}"
-        with open(OUTPUT_DIR / f"{file_stem}.txt", "w") as f:
-            f.write(text_str)
-        with open(OUTPUT_DIR / f"{file_stem}.html", "w") as f:
-            f.write(html_str)
-        with open(OUTPUT_DIR / f"{file_stem}.msg", "wb") as f:
-            f.write(bytes(msg))
+        context = ssl.create_default_context()
+        if not suppress_send:
+            with smtplib.SMTP_SSL(
+                EMAIL_HOST, EMAIL_PORT, context=context
+            ) as server:
+                server.login(EMAIL_USERNAME, EMAIL_PASSWORD)
+                server.sendmail(
+                    EMAIL_ADDRESS,
+                    to_list_chunk + cc_list_chunk,
+                    msg.as_string(),
+                )
+        if save:
+            file_stem = f"informational_email_{report_str.get('file_dt_str')}"
+            with open(OUTPUT_DIR / f"{file_stem}.txt", "w") as f:
+                f.write(text_str)
+            with open(OUTPUT_DIR / f"{file_stem}.html", "w") as f:
+                f.write(html_str)
+            with open(OUTPUT_DIR / f"{file_stem}.msg", "wb") as f:
+                f.write(bytes(msg))
 
 
 def parse_args() -> argparse.Namespace:
