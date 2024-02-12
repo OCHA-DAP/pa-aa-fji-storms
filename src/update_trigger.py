@@ -768,6 +768,8 @@ def send_trigger_email(
 
     to_list_chunks, cc_list_chunks = segment_emails(to_list, cc_list)
 
+    cyclone_name = report.get("cyclone").split(" ")[0]
+
     environment = Environment(loader=FileSystemLoader(TEMPLATES_DIR))
 
     for trigger in triggers:
@@ -778,7 +780,8 @@ def send_trigger_email(
             msg = EmailMessage()
             msg["Subject"] = (
                 f"{test_subject}Anticipatory action Fiji – "
-                f"{trigger.capitalize()} trigger reached"
+                f"{trigger.capitalize()} trigger reached for "
+                f"Cyclone {cyclone_name}"
             )
             msg["From"] = Address(
                 "OCHA Centre for Humanitarian Data",
@@ -794,7 +797,7 @@ def send_trigger_email(
             ocha_logo_cid = make_msgid(domain="humdata.org")
 
             html_str = template.render(
-                name=report.get("cyclone").split(" ")[0],
+                name=cyclone_name,
                 pub_time=report_str.get("fji_time"),
                 pub_date=report_str.get("fji_date"),
                 test_email=test_email,
@@ -877,11 +880,14 @@ def send_info_email(
 
     to_list_chunks, cc_list_chunks = segment_emails(to_list, cc_list)
 
+    cyclone_name = report.get("cyclone").split(" ")[0]
+
     for to_list_chunk, cc_list_chunk in zip(to_list_chunks, cc_list_chunks):
         msg = EmailMessage()
-        msg[
-            "Subject"
-        ] = f"{test_subject}Anticipatory action Fiji – Forecast information"
+        msg["Subject"] = (
+            f"{test_subject}Anticipatory action Fiji – "
+            f"Cyclone {cyclone_name} forecast information"
+        )
         msg["From"] = Address(
             "OCHA Centre for Humanitarian Data",
             EMAIL_ADDRESS.split("@")[0],
@@ -898,7 +904,7 @@ def send_info_email(
         ocha_logo_cid = make_msgid(domain="humdata.org")
 
         html_str = template.render(
-            name=report.get("cyclone").split(" ")[0],
+            name=cyclone_name,
             pub_date=report_str.get("fji_date"),
             pub_time=report_str.get("fji_time"),
             readiness="ACTIVATED"
