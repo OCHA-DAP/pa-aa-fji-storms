@@ -50,6 +50,7 @@ MB_TOKEN = os.environ.get("MAPBOX_TOKEN")
 CS_KEY = os.environ.get("CHARTSTUDIO_APIKEY")
 MAPS_DIR = PROC_PATH / "historical_forecast_maps"
 STORM_DATA_DIR = Path(os.getenv("STORM_DATA_DIR"))
+CENSUS_RAW_DIR = AA_DATA_DIR / "public" / "raw" / "fji" / "census"
 
 
 def check_fms_forecast(
@@ -975,3 +976,17 @@ def load_buffer(distance: int = 250) -> gpd.GeoDataFrame:
     load_path = PROC_PATH / "buffer" / filename / f"{filename}.shp"
 
     return gpd.read_file(load_path)
+
+
+def load_raw_census() -> gpd.GeoDataFrame:
+    """
+    Load raw census data
+    Returns
+    -------
+    gdf: gpd.GeoDataFrame
+    """
+    filename = "Fiji_EnumerationZones-shp.zip"
+    zip_path = CENSUS_RAW_DIR / filename
+    gdf = gpd.read_file(f"zip://{zip_path}")
+    gdf = gdf.to_crs(FJI_CRS)
+    return gdf
