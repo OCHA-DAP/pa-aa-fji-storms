@@ -49,6 +49,8 @@ CAT2COLOR = (
 TEMPLATES_DIR = Path("src/email/templates")
 STATIC_DIR = Path("src/email/static")
 INFO_EMAIL_DISTANCE_THRESHOLD = 1000
+FJI_CENTROID_LAT = -17.45362
+FJI_CENTROID_LON = 178.52162
 
 
 def decode_forecast_csv(csv: str) -> StringIO:
@@ -493,9 +495,13 @@ def plot_forecast(
 
     # set map bounds with forecast points
     lat_max = max(forecast["Latitude"])
+    lat_max = max(lat_max, FJI_CENTROID_LAT)
     lat_min = min(forecast["Latitude"])
+    lat_min = min(lat_min, FJI_CENTROID_LAT)
     lon_max = max(forecast["Longitude"])
+    lon_max = max(lon_max, FJI_CENTROID_LON)
     lon_min = min(forecast["Longitude"])
+    lon_min = min(lon_min, FJI_CENTROID_LON)
 
     # possible solutions from
     # https://stackoverflow.com/questions/63787612/plotly-automatic-zooming-for-mapbox-maps
@@ -526,7 +532,7 @@ def plot_forecast(
         ]
     )
     width_to_height = 1
-    margin = 1.8
+    margin = 1.7
     height = (lat_max - lat_min) * margin * width_to_height
     width = (lon_max - lon_min) * margin
     lon_zoom = np.interp(width, lon_zoom_range, range(20, 0, -1))
