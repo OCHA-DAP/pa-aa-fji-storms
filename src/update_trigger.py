@@ -874,6 +874,13 @@ def send_info_email(
 
     """
     test_subject = "[TEST] " if test_email else ""
+    if report.get("action"):
+        activation_subject = "(ACTION TRIGGER ACTIVATED)"
+    elif report.get("readiness"):
+        activation_subject = "(READINESS TRIGGER ACTIVATED)"
+    else:
+        activation_subject = "(NOT ACTIVATED)"
+
     report_str = str_from_report(report)
 
     environment = Environment(loader=FileSystemLoader(TEMPLATES_DIR))
@@ -896,7 +903,7 @@ def send_info_email(
         msg = EmailMessage()
         msg["Subject"] = (
             f"{test_subject}Anticipatory action Fiji – "
-            f"Cyclone {cyclone_name} forecast information"
+            f"Cyclone {cyclone_name} forecast information {activation_subject}"
         )
         msg["From"] = Address(
             "OCHA Centre for Humanitarian Data",
