@@ -37,6 +37,7 @@ TRIGGER_TO = os.getenv("TRIGGER_TO")
 TRIGGER_CC = os.getenv("TRIGGER_CC")
 INFO_TO = os.getenv("INFO_TO")
 INFO_CC = os.getenv("INFO_CC")
+INFO_ALWAYS_TO = os.getenv("INFO_ALWAYS_TO")
 CAT2COLOR = (
     (5, "rebeccapurple"),
     (4, "crimson"),
@@ -47,6 +48,7 @@ CAT2COLOR = (
 )
 TEMPLATES_DIR = Path("src/email/templates")
 STATIC_DIR = Path("src/email/static")
+INFO_EMAIL_DISTANCE_THRESHOLD = 1000
 
 
 def decode_forecast_csv(csv: str) -> StringIO:
@@ -844,6 +846,7 @@ def send_trigger_email(
 
 def send_info_email(
     report: dict,
+    min_distance: float = 0,
     suppress_send: bool = False,
     save: bool = True,
     test_email: bool = False,
@@ -855,6 +858,9 @@ def send_info_email(
     ----------
     report: dict
         Dict of forecast report
+    min_distance: float = 0
+        If min_distance is above INFO_EMAIL_DISTANCE_THRESHOLD,
+        email only sends to INFO_ALWAYS_TO
     suppress_send: bool = False
         If True, does not actually send email
     save: bool = True
@@ -873,10 +879,14 @@ def send_info_email(
     environment = Environment(loader=FileSystemLoader(TEMPLATES_DIR))
     template = environment.get_template("informational.html")
 
-    to_list = [x.strip() for x in INFO_TO.split(";") if x]
-    to_list = [x for x in to_list if x]
-    cc_list = [x.strip() for x in INFO_CC.split(";") if x]
-    cc_list = [x for x in cc_list if x]
+    if min_distance > INFO_EMAIL_DISTANCE_THRESHOLD:
+        to_list = [x.strip() for x in INFO_ALWAYS_TO.split(";") if x]
+        cc_list = []
+    else:
+        to_list = [x.strip() for x in INFO_TO.split(";") if x]
+        to_list = [x for x in to_list if x]
+        cc_list = [x.strip() for x in INFO_CC.split(";") if x]
+        cc_list = [x for x in cc_list if x]
 
     to_list_chunks, cc_list_chunks = segment_emails(to_list, cc_list)
 
@@ -1008,9 +1018,12 @@ if __name__ == "__main__":
     try:
         plot_forecast(report, forecast, save_html=True)
         distances = calculate_distances(report, forecast)
+        min_distance = distances["distance (km)"].min()
+        print(f"Minimum distance: {min_distance} km")
         plot_distances(report, distances)
         send_info_email(
             report,
+            min_distance=min_distance,
             suppress_send=args.suppress_send,
             test_email=args.test_email,
         )
