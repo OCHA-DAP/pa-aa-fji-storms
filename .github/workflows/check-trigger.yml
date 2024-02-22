@@ -39,6 +39,7 @@ jobs:
           TRIGGER_CC: ${{ vars.TRIGGER_CC }}
           INFO_TO: ${{ vars.INFO_TO }}
           INFO_CC: ${{ vars.INFO_CC }}
+          INFO_ALWAYS_TO: ${{ vars.INFO_ALWAYS_TO }}
       - uses: actions/upload-artifact@v3
         with:
           name: inputs
