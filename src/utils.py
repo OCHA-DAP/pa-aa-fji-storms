@@ -24,6 +24,7 @@ from src.update_trigger import datetime_to_season, process_fms_forecast
 load_dotenv()
 
 AA_DATA_DIR = Path(os.environ["AA_DATA_DIR"])
+AA_DATA_DIR_NEW = Path(os.environ["AA_DATA_DIR_NEW"])
 EXP_DIR = AA_DATA_DIR / "public" / "exploration" / "fji"
 FCAST_DIR = EXP_DIR / "rsmc" / "forecasts"
 CYCLONETRACKS_PATH = (
@@ -41,7 +42,7 @@ ADM3 = "ADM3_PCODE"
 ADM2 = "ADM2_PCODE"
 ADM1 = "ADM1_PCODE"
 ECMWF_RAW = (
-    AA_DATA_DIR
+    AA_DATA_DIR_NEW
     / "public"
     / "exploration"
     / "glb"
