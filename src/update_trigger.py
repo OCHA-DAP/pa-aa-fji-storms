@@ -23,6 +23,8 @@ from jinja2 import Environment, FileSystemLoader
 from ochanticipy.utils.hdx_api import load_resource_from_hdx
 from shapely.geometry import LineString, Point
 
+from src.email_utils import SIMEX_LIST, get_distribution_list
+
 load_dotenv()
 
 FJI_CRS = "+proj=longlat +ellps=WGS84 +lon_wrap=180 +datum=WGS84 +no_defs"
@@ -33,10 +35,10 @@ EMAIL_USERNAME = os.getenv("CHD_DS_EMAIL_USERNAME")
 EMAIL_ADDRESS = os.getenv("CHD_DS_EMAIL_ADDRESS")
 INPUT_DIR = Path("inputs")
 OUTPUT_DIR = Path("outputs")
-TRIGGER_TO = os.getenv("TRIGGER_TO")
-TRIGGER_CC = os.getenv("TRIGGER_CC")
-INFO_TO = os.getenv("INFO_TO")
-INFO_CC = os.getenv("INFO_CC")
+# TRIGGER_TO = os.getenv("TRIGGER_TO")
+# TRIGGER_CC = os.getenv("TRIGGER_CC")
+# INFO_TO = os.getenv("INFO_TO")
+# INFO_CC = os.getenv("INFO_CC")
 INFO_ALWAYS_TO = os.getenv("INFO_ALWAYS_TO")
 CAT2COLOR = (
     (5, "rebeccapurple"),
@@ -704,8 +706,8 @@ def plot_distances(report: dict, distances: pd.DataFrame) -> go.Figure:
 
 
 def segment_emails(
-    to_list: list[str],
-    cc_list: list[str],
+    to_list: pd.DataFrame,
+    cc_list: pd.DataFrame,
     recipient_limit: int = 50,
     default_to: str = EMAIL_ADDRESS,
 ):
@@ -717,19 +719,27 @@ def segment_emails(
     combine into maximum two emails).
     """
     to_list_chunks, cc_list_chunks = [], []
+    default_to_df = pd.DataFrame(
+        [
+            {
+                "email": default_to,
+                "name": "OCHA Centre for Humanitarian Data",
+            }
+        ]
+    )
     if len(to_list) + len(cc_list) > recipient_limit:
         print(f"Over 50 recipients: {len(to_list)=}; {len(cc_list)=}")
         if len(to_list) > recipient_limit:
-            to_list_chunks.append(to_list[:recipient_limit])
-            to_list_chunks.append(to_list[recipient_limit:])
-            cc_list_chunks.append([])
+            to_list_chunks.append(to_list.iloc[:recipient_limit])
+            to_list_chunks.append(to_list.iloc[recipient_limit:])
+            cc_list_chunks.append(pd.DataFrame(columns=["email", "name"]))
             cc_list_chunks.append(cc_list)
         else:
             to_list_chunks.append(to_list)
-            to_list_chunks.append([default_to])
+            to_list_chunks.append(default_to_df)
             new_lim = recipient_limit - len(to_list)
-            cc_list_chunks.append(cc_list[:new_lim])
-            cc_list_chunks.append(cc_list[new_lim:])
+            cc_list_chunks.append(cc_list.iloc[:new_lim])
+            cc_list_chunks.append(cc_list.iloc[new_lim:])
     else:
         to_list_chunks.append(to_list)
         cc_list_chunks.append(cc_list)
@@ -762,6 +772,7 @@ def send_trigger_email(
 
     """
     test_subject = "[TEST] " if test_email else ""
+    test_subject = "[SIMEX] " + test_subject if SIMEX_LIST else test_subject
     triggers = []
     if report.get("readiness"):
         triggers.append("readiness")
@@ -769,10 +780,9 @@ def send_trigger_email(
         triggers.append("action")
     report_str = str_from_report(report)
 
-    to_list = [x.strip() for x in TRIGGER_TO.split(";") if x]
-    to_list = [x for x in to_list if x]
-    cc_list = [x.strip() for x in TRIGGER_CC.split(";") if x]
-    cc_list = [x for x in cc_list if x]
+    distribution_list = get_distribution_list()
+    to_list = distribution_list[distribution_list["info"] == "to"]
+    cc_list = distribution_list[distribution_list["info"] == "cc"]
 
     to_list_chunks, cc_list_chunks = segment_emails(to_list, cc_list)
 
@@ -799,7 +809,14 @@ def send_trigger_email(
             for mail_list, list_name in zip(
                 [to_list_chunk, cc_list_chunk], ["To", "Cc"]
             ):
-                msg[list_name] = [Address(addr_spec=x) for x in mail_list if x]
+                msg[list_name] = [
+                    Address(
+                        row["name"],
+                        row["email"].split("@")[0],
+                        row["email"].split("@")[1],
+                    )
+                    for _, row in mail_list.iterrows()
+                ]
 
             chd_banner_cid = make_msgid(domain="humdata.org")
             ocha_logo_cid = make_msgid(domain="humdata.org")
@@ -834,7 +851,8 @@ def send_trigger_email(
                     server.login(EMAIL_USERNAME, EMAIL_PASSWORD)
                     server.sendmail(
                         EMAIL_ADDRESS,
-                        to_list_chunk + cc_list_chunk,
+                        to_list_chunk["email"].tolist()
+                        + cc_list_chunk["email"].tolist(),
                         msg.as_string(),
                     )
             if save:
@@ -880,6 +898,7 @@ def send_info_email(
 
     """
     test_subject = "[TEST] " if test_email else ""
+    test_subject = "[SIMEX] " + test_subject if SIMEX_LIST else test_subject
     if report.get("action"):
         activation_subject = "(ACTION TRIGGER ACTIVATED)"
     elif report.get("readiness"):
@@ -892,14 +911,19 @@ def send_info_email(
     environment = Environment(loader=FileSystemLoader(TEMPLATES_DIR))
     template = environment.get_template("informational.html")
 
+    distribution_list = get_distribution_list()
+    to_list = distribution_list[distribution_list["info"] == "to"]
+    cc_list = distribution_list[distribution_list["info"] == "cc"]
+
     if min_distance > INFO_EMAIL_DISTANCE_THRESHOLD:
-        to_list = [x.strip() for x in INFO_ALWAYS_TO.split(";") if x]
-        cc_list = []
-    else:
-        to_list = [x.strip() for x in INFO_TO.split(";") if x]
-        to_list = [x for x in to_list if x]
-        cc_list = [x.strip() for x in INFO_CC.split(";") if x]
-        cc_list = [x for x in cc_list if x]
+        to_list = pd.DataFrame(
+            [
+                {"email": x.strip(), "name": "INFO_ALWAYS_TO"}
+                for x in INFO_ALWAYS_TO.split(";")
+                if x
+            ]
+        )
+        cc_list = pd.DataFrame(columns=["email", "name"])
 
     to_list_chunks, cc_list_chunks = segment_emails(to_list, cc_list)
 
@@ -919,7 +943,14 @@ def send_info_email(
         for mail_list, list_name in zip(
             [to_list_chunk, cc_list_chunk], ["To", "Cc"]
         ):
-            msg[list_name] = [Address(addr_spec=x) for x in mail_list if x]
+            msg[list_name] = [
+                Address(
+                    row["name"],
+                    row["email"].split("@")[0],
+                    row["email"].split("@")[1],
+                )
+                for _, row in mail_list.iterrows()
+            ]
 
         map_cid = make_msgid(domain="humdata.org")
         distances_cid = make_msgid(domain="humdata.org")
@@ -983,7 +1014,8 @@ def send_info_email(
                 server.login(EMAIL_USERNAME, EMAIL_PASSWORD)
                 server.sendmail(
                     EMAIL_ADDRESS,
-                    to_list_chunk + cc_list_chunk,
+                    to_list_chunk["email"].tolist()
+                    + cc_list_chunk["email"].tolist(),
                     msg.as_string(),
                 )
         if save:
