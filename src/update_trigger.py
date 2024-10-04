@@ -24,6 +24,7 @@ from ochanticipy.utils.hdx_api import load_resource_from_hdx
 from shapely.geometry import LineString, Point
 
 from src.email_utils import SIMEX_LIST, get_distribution_list
+from src.simex_utils import load_simex_inject
 
 load_dotenv()
 
@@ -820,12 +821,12 @@ def send_trigger_email(
 
             chd_banner_cid = make_msgid(domain="humdata.org")
             ocha_logo_cid = make_msgid(domain="humdata.org")
-
             html_str = template.render(
                 name=cyclone_name,
                 pub_time=report_str.get("fji_time"),
                 pub_date=report_str.get("fji_date"),
                 test_email=test_email,
+                simex=SIMEX_LIST,
                 chd_banner_cid=chd_banner_cid[1:-1],
                 ocha_logo_cid=ocha_logo_cid[1:-1],
             )
@@ -970,6 +971,7 @@ def send_info_email(
             chd_banner_cid=chd_banner_cid[1:-1],
             ocha_logo_cid=ocha_logo_cid[1:-1],
             test_email=test_email,
+            simex=SIMEX_LIST,
         )
         text_str = html2text(html_str)
         msg.set_content(text_str)
@@ -1038,6 +1040,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--suppress-send", action="store_true")
     parser.add_argument("--test-email", action="store_true")
     parser.add_argument("--csv-env-var-name")
+    parser.add_argument("--simex-inject")
     return parser.parse_args()
 
 
@@ -1048,7 +1051,10 @@ if __name__ == "__main__":
     if not INPUT_DIR.exists():
         os.mkdir(INPUT_DIR)
     if args.csv_env_var_name is None:
-        csv_str = args.csv
+        if args.simex_inject is None:
+            csv_str = args.csv
+        else:
+            csv_str = load_simex_inject(args.simex_inject)
     else:
         csv_str = os.getenv(args.csv_env_var_name)
     filepath = decode_forecast_csv(csv_str)
