@@ -45,6 +45,31 @@ blob.upload_csv_to_blob(blob_name, df_test)
 df_test
 ```
 
+## Actual list
+
+```python
+blob_name = f"{blob.PROJECT_PREFIX}/raw/"
+```
+
+```python
+df_actual = pd.DataFrame(
+    columns=["email", "name", "trigger", "info"],
+    data=[
+        ["tristan.downing@un.org", "TEST_NAME", "to", "to"],
+        ["downing.tristan@gmail.com", "TEST_NAME", "to", "to"],
+    ],
+)
+print("invalid emails: ")
+display(df_actual[~df_actual["email"].apply(is_valid_email)])
+df_actual
+```
+
+```python
+blob_name = f"{blob.PROJECT_PREFIX}/email/distribution_list.csv"
+blob.upload_csv_to_blob(blob_name, df_actual)
+df_actual
+```
+
 ## SimEx list
 
 ```python
@@ -127,35 +152,6 @@ df_simex
 blob_name = f"{blob.PROJECT_PREFIX}/email/simex_distribution_list.csv"
 blob.upload_csv_to_blob(blob_name, df_simex)
 df_simex
-```
-
-```python
-df_simex["trigger"].value_counts()
-```
-
-```python
-df_simex["info"].value_counts()
-```
-
-## Actual list
-
-```python
-df_actual = pd.DataFrame(
-    columns=["email", "name", "trigger", "info"],
-    data=[
-        ["tristan.downing@un.org", "TEST_NAME", "to", "to"],
-        ["downing.tristan@gmail.com", "TEST_NAME", "to", "to"],
-    ],
-)
-print("invalid emails: ")
-display(df_actual[~df_actual["email"].apply(is_valid_email)])
-df_actual
-```
-
-```python
-blob_name = f"{blob.PROJECT_PREFIX}/email/distribution_list.csv"
-blob.upload_csv_to_blob(blob_name, df_actual)
-df_actual
 ```
 
 ```python
