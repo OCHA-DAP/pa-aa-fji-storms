@@ -6,6 +6,9 @@ on:
       csv:
         description: 'Base64 string CSV file of forecast'
         default: ""
+      flags:
+        description: 'Flags passed to Python script'
+        default: ""
 
 jobs:
   build:
