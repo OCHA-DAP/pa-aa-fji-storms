@@ -23,6 +23,7 @@ from jinja2 import Environment, FileSystemLoader
 from ochanticipy.utils.hdx_api import load_resource_from_hdx
 from shapely.geometry import LineString, Point
 
+from src import blob
 from src.email_utils import SIMEX_LIST, get_distribution_list
 from src.simex_utils import load_simex_inject
 
@@ -77,7 +78,7 @@ def decode_forecast_csv(csv: str) -> StringIO:
 
 
 def process_fms_forecast(
-    path: Path | StringIO, save: bool = True
+    path: Path | StringIO, save_local: bool = True, save_blob: bool = True
 ) -> gpd.GeoDataFrame:
     """Loads FMS raw forecast in default CSV export format from FMS cyclone
     forecast software.
@@ -86,8 +87,10 @@ def process_fms_forecast(
     path: Path | StringIO
         Path to raw forecast CSV. Path can be a StringIO
         (so CSV can be passed as an encoded string from Power Automate)
-    save: bool = True
+    save_local: bool = True
         If True, saves forecast as CSV
+    save_blob: bool = True
+        If True, saves forecast to blob
 
     Returns
     -------
@@ -126,10 +129,16 @@ def process_fms_forecast(
     base_time_file_str = base_time.isoformat(timespec="minutes").replace(
         ":", ""
     )
-    if save:
+    if save_local:
         df_data.to_csv(
             OUTPUT_DIR / f"forecast_{base_time_file_str}.csv", index=False
         )
+    if save_blob:
+        blob_name = (
+            f"{blob.PROJECT_PREFIX}/raw/fms/2024_2025/forecast_"
+            f"{base_time_file_str}.parquet"
+        )
+        blob.upload_blob_data(blob_name, df_data)
     gdf = gpd.GeoDataFrame(
         df_data,
         geometry=gpd.points_from_xy(df_data["Longitude"], df_data["Latitude"]),
@@ -782,8 +791,8 @@ def send_trigger_email(
     report_str = str_from_report(report)
 
     distribution_list = get_distribution_list()
-    to_list = distribution_list[distribution_list["info"] == "to"]
-    cc_list = distribution_list[distribution_list["info"] == "cc"]
+    to_list = distribution_list[distribution_list["trigger"] == "to"]
+    cc_list = distribution_list[distribution_list["trigger"] == "cc"]
 
     to_list_chunks, cc_list_chunks = segment_emails(to_list, cc_list)
 
@@ -1058,7 +1067,7 @@ if __name__ == "__main__":
     else:
         csv_str = os.getenv(args.csv_env_var_name)
     filepath = decode_forecast_csv(csv_str)
-    forecast = process_fms_forecast(path=filepath, save=True)
+    forecast = process_fms_forecast(path=filepath, save_local=True)
     report = check_trigger(forecast)
     print(report)
     send_trigger_email(

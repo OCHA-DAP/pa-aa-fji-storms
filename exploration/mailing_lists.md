@@ -35,9 +35,8 @@ df_test = pd.DataFrame(
     columns=["email", "name", "trigger", "info"],
     data=[
         ["tristan.downing@un.org", "TEST_NAME", "to", "to"],
-        ["downing.tristan@gmail.com", "TEST_NAME", "to", None],
-    ]
-    * 51,
+        # ["downing.tristan@gmail.com", "TEST_NAME", "to", None],
+    ],
 )
 print("invalid emails: ")
 display(df_test[~df_test["email"].apply(is_valid_email)])
