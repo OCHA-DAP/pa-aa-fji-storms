@@ -362,8 +362,13 @@ def plot_forecast(
         .dt.tz_localize("UTC")
         .apply(lambda x: x.astimezone(ZoneInfo("Pacific/Fiji")))
     )
-    forecast["formatted_datetime"] = forecast["forecast_time_fjt"].apply(
-        lambda x: x.strftime("<br><br>%H:%M")
+    forecast["formatted_datetime"] = (
+        forecast["forecast_time_fjt"].apply(
+            lambda x: x.strftime("<br><br>%H:%M")
+        )
+        + "<br>("
+        + forecast["leadtime"].astype(str)
+        + " hrs)"
     )
     first_dts = forecast.groupby(forecast["forecast_time_fjt"].dt.date)[
         "forecast_time_fjt"
