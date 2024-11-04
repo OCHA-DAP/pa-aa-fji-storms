@@ -45,6 +45,7 @@ jobs:
           INFO_ALWAYS_TO: ${{ vars.INFO_ALWAYS_TO }}
           DEV_BLOB_SAS: ${{ secrets.DEV_BLOB_SAS }}
           PROD_BLOB_SAS: ${{ secrets.PROD_BLOB_SAS }}
+          TEST_LIST: ${{ vars.TEST_LIST }}
       - uses: actions/upload-artifact@v4
         with:
           name: inputs
