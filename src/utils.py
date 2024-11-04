@@ -201,7 +201,7 @@ def load_hindcasts() -> gpd.GeoDataFrame:
     for filename in filenames:
         if filename.startswith("."):
             continue
-        df_data = process_fms_forecast(FCAST_DIR / filename, save=False)
+        df_data = process_fms_forecast(FCAST_DIR / filename, save_local=False)
         df = pd.concat([df, df_data], ignore_index=True)
 
     gdf = gpd.GeoDataFrame(
