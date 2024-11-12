@@ -621,21 +621,47 @@ def calculate_distances(
         if level == 3:
             cols.extend(["ADM3_PCODE", "ADM3_NAME"])
         distances = adm[cols].copy()
-        distances["distance (km)"] = np.round(
+        distances["distance_km"] = np.round(
             track.distance(adm.geometry) / 1000
         ).astype(int)
-        distances["uncertainty (km)"] = None
+        distances["uncertainty_km"] = None
         distances["category"] = None
         # find closest point to use for uncertainty
         for i, row in distances.iterrows():
             forecast["distance"] = row.geometry.distance(forecast.geometry)
             i_min = forecast["distance"].idxmin()
-            distances.loc[i, "uncertainty (km)"] = np.round(
+            distances.loc[i, "uncertainty_km"] = np.round(
                 forecast.loc[i_min, "Uncertainty"]
             ).astype(int)
             distances.loc[i, "category"] = forecast.loc[i_min, "Category"]
+        # interpolate forecast to 30min
+        cols = ["Latitude", "Longitude", "leadtime"]
+        forecast_interp = forecast.set_index("forecast_time")[cols]
+        forecast_interp = (
+            forecast_interp.resample("30T").interpolate().reset_index()
+        )
+        forecast_interp = gpd.GeoDataFrame(
+            forecast_interp,
+            geometry=gpd.points_from_xy(
+                forecast_interp["Longitude"], forecast_interp["Latitude"]
+            ),
+            crs=4326,
+        )
+        forecast_interp = forecast_interp.to_crs(3832)
+        for i, row in distances.iterrows():
+            forecast_interp["distance"] = row.geometry.distance(
+                forecast_interp.geometry
+            )
+            i_min = forecast_interp["distance"].idxmin()
+            distances.loc[i, "hours_to_closest"] = forecast_interp.loc[
+                i_min, "leadtime"
+            ]
+            distances.loc[i, "time_closest"] = (
+                forecast_interp.loc[i_min, "forecast_time"].isoformat() + "Z"
+            )
+
         distances = distances.drop(columns="geometry")
-        distances = distances.sort_values("distance (km)")
+        distances = distances.sort_values("distance_km")
         if save:
             distances.to_csv(
                 OUTPUT_DIR
@@ -663,7 +689,7 @@ def plot_distances(report: dict, distances: pd.DataFrame) -> go.Figure:
     """
     report_str = str_from_report(report)
     fig = go.Figure()
-    distances = distances.sort_values("distance (km)", ascending=False)
+    distances = distances.sort_values("distance_km", ascending=False)
     distances["adm2_adm1"] = distances.apply(
         lambda row: f"{row['ADM2_NAME']} "
         f"({row['ADM1_NAME'].removesuffix(' Division')})",
@@ -676,18 +702,16 @@ def plot_distances(report: dict, distances: pd.DataFrame) -> go.Figure:
         fig.add_trace(
             go.Scatter(
                 y=dff["adm2_adm1"],
-                x=dff["distance (km)"],
+                x=dff["distance_km"],
                 mode="markers",
                 error_x=dict(
-                    type="data", array=dff["uncertainty (km)"], visible=True
+                    type="data", array=dff["uncertainty_km"], visible=True
                 ),
                 marker=dict(size=8, color=color[1]),
                 name=name,
             )
         )
-    max_dist = (
-        distances["distance (km)"] + distances["uncertainty (km)"]
-    ).max()
+    max_dist = (distances["distance_km"] + distances["uncertainty_km"]).max()
     fig.update_yaxes(categoryorder="array", categoryarray=adm_order)
     fig.update_xaxes(
         range=(0, max_dist * 1.01),
@@ -886,6 +910,7 @@ def send_trigger_email(
 def send_info_email(
     report: dict,
     min_distance: float = 0,
+    min_hours: float = 0,
     suppress_send: bool = False,
     save: bool = True,
     test_email: bool = False,
@@ -900,6 +925,8 @@ def send_info_email(
     min_distance: float = 0
         If min_distance is above INFO_EMAIL_DISTANCE_THRESHOLD,
         email only sends to INFO_ALWAYS_TO
+    min_hours: float = 0
+        Hours to closest pass
     suppress_send: bool = False
         If True, does not actually send email
     save: bool = True
@@ -976,6 +1003,8 @@ def send_info_email(
             name=cyclone_name,
             pub_date=report_str.get("fji_date"),
             pub_time=report_str.get("fji_time"),
+            min_distance=min_distance,
+            min_hours=min_hours,
             readiness="ACTIVATED"
             if report.get("readiness")
             else "NOT ACTIVATED",
@@ -1083,12 +1112,19 @@ if __name__ == "__main__":
     try:
         plot_forecast(report, forecast, save_html=True)
         distances = calculate_distances(report, forecast)
-        min_distance = distances["distance (km)"].min()
-        print(f"Minimum distance: {min_distance} km")
+        min_distance = distances["distance_km"].min()
+        min_row = distances.loc[
+            distances[distances["distance_km"] == min_distance][
+                "hours_to_closest"
+            ].idxmin()
+        ]
+        print("Min distance row:")
+        print(min_row)
         plot_distances(report, distances)
         send_info_email(
             report,
-            min_distance=min_distance,
+            min_distance=min_row["distance_km"],
+            min_hours=min_row["hours_to_closest"],
             suppress_send=args.suppress_send,
             test_email=args.test_email,
         )

@@ -48,10 +48,6 @@ df_test
 ## Actual list
 
 ```python
-blob_name = f"{blob.PROJECT_PREFIX}/raw/"
-```
-
-```python
 df_actual = pd.DataFrame(
     columns=["email", "name", "trigger", "info"],
     data=[
