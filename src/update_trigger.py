@@ -364,7 +364,7 @@ def plot_forecast(
     )
     forecast["formatted_datetime"] = (
         forecast["forecast_time_fjt"].apply(
-            lambda x: x.strftime("<br><br>%H:%M")
+            lambda x: x.strftime("<br><br><br>%H:%M")
         )
         + "<br>("
         + forecast["leadtime"].astype(str)
@@ -373,9 +373,12 @@ def plot_forecast(
     first_dts = forecast.groupby(forecast["forecast_time_fjt"].dt.date)[
         "forecast_time_fjt"
     ].idxmin()
-    forecast.loc[
-        forecast.index.isin(first_dts), "formatted_datetime"
-    ] = forecast["forecast_time_fjt"].dt.strftime("%b %d<br><br>%H:%M")
+    forecast.loc[forecast.index.isin(first_dts), "formatted_datetime"] = (
+        forecast["forecast_time_fjt"].dt.strftime("<br>%b %d<br><br>%H:%M")
+        + "<br>("
+        + forecast["leadtime"].astype(str)
+        + " hrs)"
+    )
 
     official = forecast[forecast["leadtime"] <= 72]
     unofficial = forecast[forecast["leadtime"] >= 72]
