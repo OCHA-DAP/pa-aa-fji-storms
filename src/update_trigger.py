@@ -175,7 +175,7 @@ def str_from_report(report: dict) -> dict:
     fjt_str = fjt.isoformat(timespec="minutes").split("+")[0]
     fjt_split = fjt_str.split("T")
     return {
-        "file_dt_str": f'{utc_str.replace(":", "").split("+")[0]}Z',
+        "file_dt_str": fjt.isoformat(timespec="minutes").replace(":", ""),
         "fji_time": fjt_split[1],
         "fji_date": fjt_split[0],
     }
@@ -610,6 +610,11 @@ def calculate_distances(
     report_str = str_from_report(report)
     forecast = forecast.to_crs(3832)
     forecast = forecast[forecast["leadtime"] <= 120]
+    forecast["forecast_time_fjt"] = (
+        forecast["forecast_time"]
+        .dt.tz_localize("UTC")
+        .apply(lambda x: x.astimezone(ZoneInfo("Pacific/Fiji")))
+    )
     track = LineString([(p.x, p.y) for p in forecast.geometry])
     return_df = pd.DataFrame()
     for level in [2, 3]:
@@ -639,7 +644,7 @@ def calculate_distances(
             distances.loc[i, "category"] = forecast.loc[i_min, "Category"]
         # interpolate forecast to 30min
         cols = ["Latitude", "Longitude", "leadtime"]
-        forecast_interp = forecast.set_index("forecast_time")[cols]
+        forecast_interp = forecast.set_index("forecast_time_fjt")[cols]
         forecast_interp = (
             forecast_interp.resample("30T").interpolate().reset_index()
         )
@@ -659,9 +664,9 @@ def calculate_distances(
             distances.loc[i, "hours_to_closest"] = forecast_interp.loc[
                 i_min, "leadtime"
             ]
-            distances.loc[i, "time_closest"] = (
-                forecast_interp.loc[i_min, "forecast_time"].isoformat() + "Z"
-            )
+            distances.loc[i, "time_closest_fjt"] = forecast_interp.loc[
+                i_min, "forecast_time_fjt"
+            ].isoformat(timespec="minutes")
 
         distances = distances.drop(columns="geometry")
         distances = distances.sort_values("distance_km")
