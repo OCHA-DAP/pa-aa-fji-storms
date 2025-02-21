@@ -12,8 +12,8 @@ import rioxarray as rxr
 import xarray as xr
 from azure.storage.blob import ContainerClient, ContentSettings
 
-PROD_BLOB_SAS = os.getenv("PROD_BLOB_SAS")
-DEV_BLOB_SAS = os.getenv("DEV_BLOB_SAS")
+DSCI_AZ_BLOB_PROD_SAS_WRITE = os.getenv("DSCI_AZ_BLOB_PROD_SAS_WRITE")
+DSCI_AZ_BLOB_DEV_SAS_WRITE = os.getenv("DSCI_AZ_BLOB_DEV_SAS_WRITE")
 DEV_BLOB_NAME = "imb0chd0dev"
 
 PROJECT_PREFIX = "pa-aa-fji-storms"
@@ -22,7 +22,11 @@ PROJECT_PREFIX = "pa-aa-fji-storms"
 def get_container_client(
     container_name: str = "projects", stage: Literal["prod", "dev"] = "dev"
 ):
-    sas = DEV_BLOB_SAS if stage == "dev" else PROD_BLOB_SAS
+    sas = (
+        DSCI_AZ_BLOB_DEV_SAS_WRITE
+        if stage == "dev"
+        else DSCI_AZ_BLOB_PROD_SAS_WRITE
+    )
     container_url = (
         f"https://imb0chd0{stage}.blob.core.windows.net/"
         f"{container_name}?{sas}"
