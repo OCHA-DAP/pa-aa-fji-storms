@@ -30,11 +30,11 @@ from src.simex_utils import load_simex_inject
 load_dotenv()
 
 FJI_CRS = "+proj=longlat +ellps=WGS84 +lon_wrap=180 +datum=WGS84 +no_defs"
-DSCI_AWS_EMAIL_HOST = os.getenv("DSCI_AWS_EMAIL_HOST")
-DSCI_AWS_EMAIL_PORT = 465
-DSCI_AWS_EMAIL_PASSWORD = os.getenv("DSCI_AWS_EMAIL_PASSWORD")
-DSCI_AWS_EMAIL_USERNAME = os.getenv("DSCI_AWS_EMAIL_USERNAME")
-DSCI_AWS_EMAIL_ADDRESS = os.getenv("DSCI_AWS_EMAIL_ADDRESS")
+EMAIL_HOST = os.getenv("CHD_DS_HOST")
+EMAIL_PORT = int(os.getenv("CHD_DS_PORT"))
+EMAIL_PASSWORD = os.getenv("CHD_DS_EMAIL_PASSWORD")
+EMAIL_USERNAME = os.getenv("CHD_DS_EMAIL_USERNAME")
+EMAIL_ADDRESS = os.getenv("CHD_DS_EMAIL_ADDRESS")
 INPUT_DIR = Path("inputs")
 OUTPUT_DIR = Path("outputs")
 # TRIGGER_TO = os.getenv("TRIGGER_TO")
@@ -756,7 +756,7 @@ def segment_emails(
     to_list: pd.DataFrame,
     cc_list: pd.DataFrame,
     recipient_limit: int = 50,
-    default_to: str = DSCI_AWS_EMAIL_ADDRESS,
+    default_to: str = EMAIL_ADDRESS,
 ):
     """Segments TO and CC mailing lists if they exceed the limit.
     Prioritizes sending first to TO list, then fills in remaining spots with
@@ -850,8 +850,8 @@ def send_trigger_email(
             )
             msg["From"] = Address(
                 "OCHA Centre for Humanitarian Data",
-                DSCI_AWS_EMAIL_ADDRESS.split("@")[0],
-                DSCI_AWS_EMAIL_ADDRESS.split("@")[1],
+                EMAIL_ADDRESS.split("@")[0],
+                EMAIL_ADDRESS.split("@")[1],
             )
             for mail_list, list_name in zip(
                 [to_list_chunk, cc_list_chunk], ["To", "Cc"]
@@ -893,13 +893,11 @@ def send_trigger_email(
             context = ssl.create_default_context()
             if not suppress_send:
                 with smtplib.SMTP_SSL(
-                    DSCI_AWS_EMAIL_HOST, DSCI_AWS_EMAIL_PORT, context=context
+                    EMAIL_HOST, EMAIL_PORT, context=context
                 ) as server:
-                    server.login(
-                        DSCI_AWS_EMAIL_USERNAME, DSCI_AWS_EMAIL_PASSWORD
-                    )
+                    server.login(EMAIL_USERNAME, EMAIL_PASSWORD)
                     server.sendmail(
-                        DSCI_AWS_EMAIL_ADDRESS,
+                        EMAIL_ADDRESS,
                         to_list_chunk["email"].tolist()
                         + cc_list_chunk["email"].tolist(),
                         msg.as_string(),
@@ -989,8 +987,8 @@ def send_info_email(
         )
         msg["From"] = Address(
             "OCHA Centre for Humanitarian Data",
-            DSCI_AWS_EMAIL_ADDRESS.split("@")[0],
-            DSCI_AWS_EMAIL_ADDRESS.split("@")[1],
+            EMAIL_ADDRESS.split("@")[0],
+            EMAIL_ADDRESS.split("@")[1],
         )
         for mail_list, list_name in zip(
             [to_list_chunk, cc_list_chunk], ["To", "Cc"]
@@ -1064,11 +1062,11 @@ def send_info_email(
         context = ssl.create_default_context()
         if not suppress_send:
             with smtplib.SMTP_SSL(
-                DSCI_AWS_EMAIL_HOST, DSCI_AWS_EMAIL_PORT, context=context
+                EMAIL_HOST, EMAIL_PORT, context=context
             ) as server:
-                server.login(DSCI_AWS_EMAIL_USERNAME, DSCI_AWS_EMAIL_PASSWORD)
+                server.login(EMAIL_USERNAME, EMAIL_PASSWORD)
                 server.sendmail(
-                    DSCI_AWS_EMAIL_ADDRESS,
+                    EMAIL_ADDRESS,
                     to_list_chunk["email"].tolist()
                     + cc_list_chunk["email"].tolist(),
                     msg.as_string(),
