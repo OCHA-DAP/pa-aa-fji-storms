@@ -6,7 +6,7 @@ jupyter:
       extension: .md
       format_name: markdown
       format_version: '1.3'
-      jupytext_version: 1.15.0
+      jupytext_version: 1.16.1
   kernelspec:
     display_name: pa-aa-fji-storms
     language: python
@@ -183,7 +183,7 @@ fig.update_yaxes(title_text=f"Category")
 
 # if plot doesn't initially show up, switch to renderer="svg"
 # then back to "notebook"
-fig.show(renderer="notebook")
+fig.show(renderer="svg")
 ```
 
 ## Calculate composite trigger return periods
@@ -355,5 +355,9 @@ triggers.to_csv(
 ```
 
 ```python
-
+# check return period based on max one activation per season
+triggers["season"] = (
+    triggers["min_distance_date"] - pd.DateOffset(months=8)
+).dt.year
+triggers.groupby(triggers["season"]).first().reset_index()
 ```

@@ -4,6 +4,7 @@ import json
 import os
 import smtplib
 import ssl
+import traceback
 from datetime import datetime, timezone
 from email.headerregistry import Address
 from email.message import EmailMessage
@@ -20,7 +21,11 @@ from dotenv import load_dotenv
 from html2text import html2text
 from jinja2 import Environment, FileSystemLoader
 from ochanticipy.utils.hdx_api import load_resource_from_hdx
-from shapely.geometry import LineString
+from shapely.geometry import LineString, Point
+
+from src import blob
+from src.email_utils import SIMEX_LIST, get_distribution_list
+from src.simex_utils import load_simex_inject
 
 load_dotenv()
 
@@ -32,10 +37,11 @@ EMAIL_USERNAME = os.getenv("CHD_DS_EMAIL_USERNAME")
 EMAIL_ADDRESS = os.getenv("CHD_DS_EMAIL_ADDRESS")
 INPUT_DIR = Path("inputs")
 OUTPUT_DIR = Path("outputs")
-TRIGGER_TO = os.getenv("TRIGGER_TO")
-TRIGGER_CC = os.getenv("TRIGGER_CC")
-INFO_TO = os.getenv("INFO_TO")
-INFO_CC = os.getenv("INFO_CC")
+# TRIGGER_TO = os.getenv("TRIGGER_TO")
+# TRIGGER_CC = os.getenv("TRIGGER_CC")
+# INFO_TO = os.getenv("INFO_TO")
+# INFO_CC = os.getenv("INFO_CC")
+INFO_ALWAYS_TO = os.getenv("INFO_ALWAYS_TO")
 CAT2COLOR = (
     (5, "rebeccapurple"),
     (4, "crimson"),
@@ -46,6 +52,9 @@ CAT2COLOR = (
 )
 TEMPLATES_DIR = Path("src/email/templates")
 STATIC_DIR = Path("src/email/static")
+INFO_EMAIL_DISTANCE_THRESHOLD = 1000
+FJI_CENTROID_LAT = -17.45362
+FJI_CENTROID_LON = 178.52162
 
 
 def decode_forecast_csv(csv: str) -> StringIO:
@@ -69,7 +78,7 @@ def decode_forecast_csv(csv: str) -> StringIO:
 
 
 def process_fms_forecast(
-    path: Path | StringIO, save: bool = True
+    path: Path | StringIO, save_local: bool = True, save_blob: bool = True
 ) -> gpd.GeoDataFrame:
     """Loads FMS raw forecast in default CSV export format from FMS cyclone
     forecast software.
@@ -78,8 +87,10 @@ def process_fms_forecast(
     path: Path | StringIO
         Path to raw forecast CSV. Path can be a StringIO
         (so CSV can be passed as an encoded string from Power Automate)
-    save: bool = True
+    save_local: bool = True
         If True, saves forecast as CSV
+    save_blob: bool = True
+        If True, saves forecast to blob
 
     Returns
     -------
@@ -118,10 +129,16 @@ def process_fms_forecast(
     base_time_file_str = base_time.isoformat(timespec="minutes").replace(
         ":", ""
     )
-    if save:
+    if save_local:
         df_data.to_csv(
             OUTPUT_DIR / f"forecast_{base_time_file_str}.csv", index=False
         )
+    if save_blob:
+        blob_name = (
+            f"{blob.PROJECT_PREFIX}/raw/fms/2024_2025/forecast_"
+            f"{base_time_file_str}.parquet"
+        )
+        blob.upload_blob_data(blob_name, df_data)
     gdf = gpd.GeoDataFrame(
         df_data,
         geometry=gpd.points_from_xy(df_data["Longitude"], df_data["Latitude"]),
@@ -136,23 +153,29 @@ def datetime_to_season(date):
     return f"{eff_date.year}/{eff_date.year + 1}"
 
 
-def utc_to_fjt(utc_str: str) -> str:
-    utc = datetime.fromisoformat(utc_str)
-    utc = utc.replace(tzinfo=timezone.utc)
-    fjt = utc.astimezone(ZoneInfo("Pacific/Fiji"))
-    fjt_str = fjt.isoformat(timespec="minutes")
-    print(fjt_str)
-    return fjt_str
-
-
 def str_from_report(report: dict) -> dict:
+    """Produce relevant
+
+    Parameters
+    ----------
+    report: dict
+        Dict of forecast report
+
+    Returns
+    -------
+    dict with {
+        "file_dt_str": UTC datetime formatted for filename,
+        "fji_time": Fiji time for plots,
+        "fji_date": Fiji date for plots,
+    }
+    """
     utc_str = report.get("publication_time")
     utc = datetime.fromisoformat(utc_str)
     fjt = utc.astimezone(ZoneInfo("Pacific/Fiji"))
     fjt_str = fjt.isoformat(timespec="minutes").split("+")[0]
     fjt_split = fjt_str.split("T")
     return {
-        "file_dt_str": f'{utc_str.replace(":", "").split("+")[0]}Z',
+        "file_dt_str": fjt.isoformat(timespec="minutes").replace(":", ""),
         "fji_time": fjt_split[1],
         "fji_date": fjt_split[0],
     }
@@ -242,18 +265,41 @@ def check_trigger(forecast: gpd.GeoDataFrame) -> dict:
     base_time = base_time.replace(tzinfo=timezone.utc)
     base_time_str = base_time.isoformat(timespec="minutes")
     forecast = forecast.set_index("leadtime")
+    cols = ["forecast_time", "Latitude", "Longitude", "Category"]
+    full_report = forecast[cols].copy()
+    cols = []
+    for t in range(len(thresholds)):
+        for pl in ["pt", "ls"]:
+            for ra in ["readiness", "action"]:
+                cols.append(f"{ra}_{pl}_t{t}")
+    full_report[cols] = False
     forecast[["prev_category", "prev_lat", "prev_lon"]] = forecast.shift()[
         ["Category", "Latitude", "Longitude"]
     ]
-    for threshold in thresholds:
+    for t, threshold in enumerate(thresholds):
         cat = threshold.get("category")
         dist = threshold.get("distance")
         if dist == 0:
             zone = adm0.to_crs(FJI_CRS)
         else:
             zone = buffer.to_crs(FJI_CRS)
-        for leadtime in forecast.index[:-1]:
+        for leadtime in forecast.index:
             row = forecast.loc[leadtime]
+            # first check if any points meet the trigger
+            # this is the most likely way for a trigger to happen
+            if row["Category"] >= cat:
+                pt = Point(row[["Longitude", "Latitude"]])
+                if pt.within(zone.geometry)[0]:
+                    if leadtime <= 120:
+                        readiness = True
+                        full_report.loc[leadtime, f"readiness_pt_t{t}"] = True
+                    if leadtime <= 72:
+                        action = True
+                        full_report.loc[leadtime, f"action_pt_t{t}"] = True
+            # then check if any lines between points meet the trigger
+            # this is unlikely, but still possible
+            # (particularly for Cat 3 cyclones that pass over a small island
+            # in Fiji)
             if row["Category"] >= cat and row["prev_category"] >= cat:
                 ls = LineString(
                     [
@@ -264,8 +310,10 @@ def check_trigger(forecast: gpd.GeoDataFrame) -> dict:
                 if ls.intersects(zone.geometry)[0]:
                     if leadtime <= 120:
                         readiness = True
+                        full_report.loc[leadtime, f"readiness_ls_t{t}"] = True
                     if leadtime <= 72:
                         action = True
+                        full_report.loc[leadtime, f"action_ls_t{t}"] = True
     report = {
         "cyclone": cyclone,
         "publication_time": base_time_str,
@@ -273,6 +321,9 @@ def check_trigger(forecast: gpd.GeoDataFrame) -> dict:
         "action": action,
     }
     report_str = str_from_report(report)
+    full_report.to_csv(
+        OUTPUT_DIR / f"full_report_{report_str.get('file_dt_str')}.csv"
+    )
     with open(
         OUTPUT_DIR / f"report_{report_str.get('file_dt_str')}.json",
         "w",
@@ -304,11 +355,52 @@ def plot_forecast(
     trigger_zone = load_buffer().to_crs(FJI_CRS)
     forecast = forecast.to_crs(3832)
     forecast = forecast[forecast["leadtime"] <= 120]
+
+    # produce datetime strings in FJT for plot
+    forecast["forecast_time_fjt"] = (
+        forecast["forecast_time"]
+        .dt.tz_localize("UTC")
+        .apply(lambda x: x.astimezone(ZoneInfo("Pacific/Fiji")))
+    )
+    forecast["formatted_datetime"] = (
+        forecast["forecast_time_fjt"].apply(
+            lambda x: x.strftime("<br><br><br>%H:%M")
+        )
+        + "<br>("
+        + forecast["leadtime"].astype(str)
+        + " hrs)"
+    )
+    first_dts = forecast.groupby(forecast["forecast_time_fjt"].dt.date)[
+        "forecast_time_fjt"
+    ].idxmin()
+    forecast.loc[forecast.index.isin(first_dts), "formatted_datetime"] = (
+        forecast["forecast_time_fjt"].dt.strftime("<br>%b %d<br><br>%H:%M")
+        + "<br>("
+        + forecast["leadtime"].astype(str)
+        + " hrs)"
+    )
+
     official = forecast[forecast["leadtime"] <= 72]
     unofficial = forecast[forecast["leadtime"] >= 72]
+
+    # interpolate forecast to produce smooth uncertainty cone
+    cols = ["Latitude", "Longitude", "Uncertainty"]
+    interp_o = (
+        official.set_index("forecast_time")[cols]
+        .resample("15T")
+        .interpolate(method="linear")
+    )
+    interp_o = gpd.GeoDataFrame(
+        interp_o,
+        geometry=gpd.points_from_xy(
+            interp_o["Longitude"], interp_o["Latitude"]
+        ),
+    )
+    interp_o = interp_o.set_crs(FJI_CRS).to_crs(3832)
+
     # produce uncertainty cone
     circles = []
-    for _, row in official.iterrows():
+    for _, row in interp_o.iterrows():
         circles.append(row["geometry"].buffer(row["Uncertainty"] * 1000))
     o_zone = (
         gpd.GeoDataFrame(geometry=circles)
@@ -316,59 +408,84 @@ def plot_forecast(
         .set_crs(3832)
         .to_crs(FJI_CRS)
     )
-    circles = []
-    for _, row in forecast.iterrows():
-        circles.append(row["geometry"].buffer(row["Uncertainty"] * 1000))
-    u_zone = (
-        gpd.GeoDataFrame(geometry=circles)
-        .dissolve()
-        .set_crs(3832)
-        .to_crs(FJI_CRS)
-    )
+
     fig = go.Figure()
-    # trigger zone
+
+    # plot trigger zone
     x_b, y_b = trigger_zone.geometry[0].boundary.xy
     fig.add_trace(
         go.Scattermapbox(
             lat=np.array(y_b),
             lon=np.array(x_b),
+            fill="toself",
             mode="lines",
             name="Area within 250 km of Fiji",
-            line=dict(width=1),
+            line=dict(width=1, color="red"),
+            fillcolor="rgba(255, 0, 0, 0.1)",
             hoverinfo="skip",
         )
     )
-    # official forecast
+
+    # plot uncertainty cone official 72hr
+    if o_zone.geometry[0].geom_type == "Polygon":
+        x_o, y_o = o_zone.geometry[0].boundary.xy
+        x_o, y_o = [x_o], [y_o]
+    elif o_zone.geometry[0].geom_type == "MultiPolygon":
+        x_o, y_o = [], []
+        for g in o_zone.geometry[0].geoms:
+            x_p, y_p = g.boundary.xy
+            x_o.append(x_p)
+            y_o.append(y_p)
+    showlegend = True
+    for x, y in zip(x_o, y_o):
+        fig.add_trace(
+            go.Scattermapbox(
+                lat=np.array(y),
+                lon=np.array(x),
+                mode="lines",
+                name="Uncertainty",
+                line=dict(width=0),
+                fill="toself",
+                fillcolor="rgba(0, 0, 0, 0.1)",
+                hoverinfo="skip",
+                legendgroup="official",
+                showlegend=showlegend,
+            )
+        )
+        showlegend = False
+
+    # plot official forecast line
     fig.add_trace(
         go.Scattermapbox(
             lat=official["Latitude"],
             lon=official["Longitude"],
             mode="lines",
-            line=dict(width=2, color="black"),
+            line=dict(width=1.5, color="black"),
             name="Best Track",
-            customdata=official[["Category", "forecast_time"]],
+            customdata=official[["Category", "forecast_time_fjt"]],
             hovertemplate="Category: %{customdata[0]}<br>"
             "Datetime: %{customdata[1]}",
             legendgroup="official",
             legendgrouptitle_text="Official 72-hour forecast",
         )
     )
-    # unofficial forecast
+
+    # plot unofficial forecast line
     fig.add_trace(
         go.Scattermapbox(
             lat=unofficial["Latitude"],
             lon=unofficial["Longitude"],
             mode="lines",
-            line=dict(width=2, color="white"),
+            line=dict(width=1.5, color="white"),
             name="Best Track",
-            customdata=unofficial[["Category", "forecast_time"]],
+            customdata=unofficial[["Category", "forecast_time_fjt"]],
             hovertemplate="Category: %{customdata[0]}<br>"
             "Datetime: %{customdata[1]}",
             legendgroup="unofficial",
             legendgrouptitle_text="Unofficial 120-hour forecast",
         )
     )
-    # by category
+    # plot forecast points by category
     for color in CAT2COLOR:
         dff = forecast[forecast["Category"] == color[0]]
         name = "L" if color[0] == 0 else f"Category {color[0]}"
@@ -383,45 +500,31 @@ def plot_forecast(
                 hoverinfo="skip",
             )
         )
-    # uncertainty
-    # unofficial 120hr
-    x_u, y_u = u_zone.geometry[0].boundary.xy
+
+    # plot text for forecast datetime
     fig.add_trace(
         go.Scattermapbox(
-            lat=np.array(y_u),
-            lon=np.array(x_u),
-            mode="lines",
-            name="Uncertainty",
-            line=dict(width=1, color="white"),
-            hoverinfo="skip",
-            legendgroup="unofficial",
+            lat=forecast["Latitude"],
+            lon=forecast["Longitude"],
+            mode="text",
+            text=forecast["formatted_datetime"],
+            showlegend=False,
+            textfont={"size": 8, "color": "black"},
         )
     )
-    # official 72hr
-    x_o, y_o = o_zone.geometry[0].boundary.xy
-    fig.add_trace(
-        go.Scattermapbox(
-            lat=np.array(y_o),
-            lon=np.array(x_o),
-            mode="lines",
-            name="Uncertainty",
-            line=dict(width=1, color="black"),
-            hoverinfo="skip",
-            legendgroup="official",
-        )
-    )
-    # set map bounds based on uncertainty cone of unofficial forecast
-    lat_max = max(y_u)
-    lat_min = min(y_u)
-    lon_max = max(x_u)
-    lon_min = min(x_u)
+
+    # set map bounds with forecast points
+    lat_max = max(forecast["Latitude"])
+    lat_max = max(lat_max, FJI_CENTROID_LAT)
+    lat_min = min(forecast["Latitude"])
+    lat_min = min(lat_min, FJI_CENTROID_LAT)
+    lon_max = max(forecast["Longitude"])
+    lon_max = max(lon_max, FJI_CENTROID_LON)
+    lon_min = min(forecast["Longitude"])
+    lon_min = min(lon_min, FJI_CENTROID_LON)
 
     # possible solutions from
     # https://stackoverflow.com/questions/63787612/plotly-automatic-zooming-for-mapbox-maps
-
-    # using log for zoom
-    # max_bound = max(lon_max - lon_min, (lat_max - lat_min) ** 1.2) * 111
-    # zoom = 12.7 - np.log(max_bound)
 
     # using range for zoom
     lon_zoom_range = np.array(
@@ -449,7 +552,7 @@ def plot_forecast(
         ]
     )
     width_to_height = 1
-    margin = 1.8
+    margin = 1.7
     height = (lat_max - lat_min) * margin * width_to_height
     width = (lon_max - lon_min) * margin
     lon_zoom = np.interp(width, lon_zoom_range, range(20, 0, -1))
@@ -507,6 +610,11 @@ def calculate_distances(
     report_str = str_from_report(report)
     forecast = forecast.to_crs(3832)
     forecast = forecast[forecast["leadtime"] <= 120]
+    forecast["forecast_time_fjt"] = (
+        forecast["forecast_time"]
+        .dt.tz_localize("UTC")
+        .apply(lambda x: x.astimezone(ZoneInfo("Pacific/Fiji")))
+    )
     track = LineString([(p.x, p.y) for p in forecast.geometry])
     return_df = pd.DataFrame()
     for level in [2, 3]:
@@ -521,21 +629,47 @@ def calculate_distances(
         if level == 3:
             cols.extend(["ADM3_PCODE", "ADM3_NAME"])
         distances = adm[cols].copy()
-        distances["distance (km)"] = np.round(
+        distances["distance_km"] = np.round(
             track.distance(adm.geometry) / 1000
         ).astype(int)
-        distances["uncertainty (km)"] = None
+        distances["uncertainty_km"] = None
         distances["category"] = None
         # find closest point to use for uncertainty
         for i, row in distances.iterrows():
             forecast["distance"] = row.geometry.distance(forecast.geometry)
             i_min = forecast["distance"].idxmin()
-            distances.loc[i, "uncertainty (km)"] = np.round(
+            distances.loc[i, "uncertainty_km"] = np.round(
                 forecast.loc[i_min, "Uncertainty"]
             ).astype(int)
             distances.loc[i, "category"] = forecast.loc[i_min, "Category"]
+        # interpolate forecast to 30min
+        cols = ["Latitude", "Longitude", "leadtime"]
+        forecast_interp = forecast.set_index("forecast_time_fjt")[cols]
+        forecast_interp = (
+            forecast_interp.resample("30T").interpolate().reset_index()
+        )
+        forecast_interp = gpd.GeoDataFrame(
+            forecast_interp,
+            geometry=gpd.points_from_xy(
+                forecast_interp["Longitude"], forecast_interp["Latitude"]
+            ),
+            crs=4326,
+        )
+        forecast_interp = forecast_interp.to_crs(3832)
+        for i, row in distances.iterrows():
+            forecast_interp["distance"] = row.geometry.distance(
+                forecast_interp.geometry
+            )
+            i_min = forecast_interp["distance"].idxmin()
+            distances.loc[i, "hours_to_closest"] = forecast_interp.loc[
+                i_min, "leadtime"
+            ]
+            distances.loc[i, "time_closest_fjt"] = forecast_interp.loc[
+                i_min, "forecast_time_fjt"
+            ].isoformat(timespec="minutes")
+
         distances = distances.drop(columns="geometry")
-        distances = distances.sort_values("distance (km)")
+        distances = distances.sort_values("distance_km")
         if save:
             distances.to_csv(
                 OUTPUT_DIR
@@ -563,7 +697,7 @@ def plot_distances(report: dict, distances: pd.DataFrame) -> go.Figure:
     """
     report_str = str_from_report(report)
     fig = go.Figure()
-    distances = distances.sort_values("distance (km)", ascending=False)
+    distances = distances.sort_values("distance_km", ascending=False)
     distances["adm2_adm1"] = distances.apply(
         lambda row: f"{row['ADM2_NAME']} "
         f"({row['ADM1_NAME'].removesuffix(' Division')})",
@@ -576,18 +710,16 @@ def plot_distances(report: dict, distances: pd.DataFrame) -> go.Figure:
         fig.add_trace(
             go.Scatter(
                 y=dff["adm2_adm1"],
-                x=dff["distance (km)"],
+                x=dff["distance_km"],
                 mode="markers",
                 error_x=dict(
-                    type="data", array=dff["uncertainty (km)"], visible=True
+                    type="data", array=dff["uncertainty_km"], visible=True
                 ),
                 marker=dict(size=8, color=color[1]),
                 name=name,
             )
         )
-    max_dist = (
-        distances["distance (km)"] + distances["uncertainty (km)"]
-    ).max()
+    max_dist = (distances["distance_km"] + distances["uncertainty_km"]).max()
     fig.update_yaxes(categoryorder="array", categoryarray=adm_order)
     fig.update_xaxes(
         range=(0, max_dist * 1.01),
@@ -620,6 +752,47 @@ def plot_distances(report: dict, distances: pd.DataFrame) -> go.Figure:
     return fig
 
 
+def segment_emails(
+    to_list: pd.DataFrame,
+    cc_list: pd.DataFrame,
+    recipient_limit: int = 50,
+    default_to: str = EMAIL_ADDRESS,
+):
+    """Segments TO and CC mailing lists if they exceed the limit.
+    Prioritizes sending first to TO list, then fills in remaining spots with
+    CC list. If all TO list fits in the first email, the second email will use
+    the default_to as TO, since TO cannot be blank.
+    Only works for combined list lengths up to two times the limit (i.e. will
+    combine into maximum two emails).
+    """
+    to_list_chunks, cc_list_chunks = [], []
+    default_to_df = pd.DataFrame(
+        [
+            {
+                "email": default_to,
+                "name": "OCHA Centre for Humanitarian Data",
+            }
+        ]
+    )
+    if len(to_list) + len(cc_list) > recipient_limit:
+        print(f"Over 50 recipients: {len(to_list)=}; {len(cc_list)=}")
+        if len(to_list) > recipient_limit:
+            to_list_chunks.append(to_list.iloc[:recipient_limit])
+            to_list_chunks.append(to_list.iloc[recipient_limit:])
+            cc_list_chunks.append(pd.DataFrame(columns=["email", "name"]))
+            cc_list_chunks.append(cc_list)
+        else:
+            to_list_chunks.append(to_list)
+            to_list_chunks.append(default_to_df)
+            new_lim = recipient_limit - len(to_list)
+            cc_list_chunks.append(cc_list.iloc[:new_lim])
+            cc_list_chunks.append(cc_list.iloc[new_lim:])
+    else:
+        to_list_chunks.append(to_list)
+        cc_list_chunks.append(cc_list)
+    return to_list_chunks, cc_list_chunks
+
+
 def send_trigger_email(
     report: dict,
     suppress_send: bool = False,
@@ -646,6 +819,7 @@ def send_trigger_email(
 
     """
     test_subject = "[TEST] " if test_email else ""
+    test_subject = "[SIMEX] " + test_subject if SIMEX_LIST else test_subject
     triggers = []
     if report.get("readiness"):
         triggers.append("readiness")
@@ -653,74 +827,98 @@ def send_trigger_email(
         triggers.append("action")
     report_str = str_from_report(report)
 
-    to_list = [x.strip() for x in TRIGGER_TO.split(";") if x]
-    cc_list = [x.strip() for x in TRIGGER_CC.split(";") if x]
+    distribution_list = get_distribution_list()
+    to_list = distribution_list[distribution_list["trigger"] == "to"]
+    cc_list = distribution_list[distribution_list["trigger"] == "cc"]
+
+    to_list_chunks, cc_list_chunks = segment_emails(to_list, cc_list)
+
+    cyclone_name = report.get("cyclone").split(" ")[0]
 
     environment = Environment(loader=FileSystemLoader(TEMPLATES_DIR))
 
     for trigger in triggers:
-        template = environment.get_template(f"{trigger}.html")
-        msg = EmailMessage()
-        msg["Subject"] = (
-            f"{test_subject}Anticipatory action Fiji – "
-            f"{trigger.capitalize()} trigger reached"
-        )
-        msg["From"] = Address(
-            "OCHA Centre for Humanitarian Data",
-            EMAIL_ADDRESS.split("@")[0],
-            EMAIL_ADDRESS.split("@")[1],
-        )
-        for mail_list, list_name in zip([to_list, cc_list], ["To", "Cc"]):
-            msg[list_name] = [Address(addr_spec=x) for x in mail_list if x]
-
-        chd_banner_cid = make_msgid(domain="humdata.org")
-        ocha_logo_cid = make_msgid(domain="humdata.org")
-
-        html_str = template.render(
-            name=report.get("cyclone").split(" ")[0],
-            pub_time=report_str.get("fji_time"),
-            pub_date=report_str.get("fji_date"),
-            test_email=test_email,
-            chd_banner_cid=chd_banner_cid[1:-1],
-            ocha_logo_cid=ocha_logo_cid[1:-1],
-        )
-        text_str = html2text(html_str)
-        msg.set_content(text_str)
-        msg.add_alternative(html_str, subtype="html")
-
-        for filename, cid in zip(
-            ["centre_banner.png", "ocha_logo_wide.png"],
-            [chd_banner_cid, ocha_logo_cid],
+        for to_list_chunk, cc_list_chunk in zip(
+            to_list_chunks, cc_list_chunks
         ):
-            img_path = STATIC_DIR / filename
-            with open(img_path, "rb") as img:
-                msg.get_payload()[1].add_related(
-                    img.read(), "image", "png", cid=cid
-                )
-
-        context = ssl.create_default_context()
-        if not suppress_send:
-            with smtplib.SMTP_SSL(
-                EMAIL_HOST, EMAIL_PORT, context=context
-            ) as server:
-                server.login(EMAIL_USERNAME, EMAIL_PASSWORD)
-                server.sendmail(
-                    EMAIL_ADDRESS, to_list + cc_list, msg.as_string()
-                )
-        if save:
-            name_stem = (
-                f"{trigger}_activation_email_{report_str.get('file_dt_str')}"
+            template = environment.get_template(f"{trigger}.html")
+            msg = EmailMessage()
+            msg["Subject"] = (
+                f"{test_subject}Anticipatory action Fiji – "
+                f"{trigger.capitalize()} trigger reached for "
+                f"Cyclone {cyclone_name}"
             )
-            with open(OUTPUT_DIR / f"{name_stem}.txt", "w") as f:
-                f.write(text_str)
-            with open(OUTPUT_DIR / f"{name_stem}.html", "w") as f:
-                f.write(html_str)
-            with open(OUTPUT_DIR / f"{name_stem}.msg", "wb") as f:
-                f.write(bytes(msg))
+            msg["From"] = Address(
+                "OCHA Centre for Humanitarian Data",
+                EMAIL_ADDRESS.split("@")[0],
+                EMAIL_ADDRESS.split("@")[1],
+            )
+            for mail_list, list_name in zip(
+                [to_list_chunk, cc_list_chunk], ["To", "Cc"]
+            ):
+                msg[list_name] = [
+                    Address(
+                        row["name"],
+                        row["email"].split("@")[0],
+                        row["email"].split("@")[1],
+                    )
+                    for _, row in mail_list.iterrows()
+                ]
+
+            chd_banner_cid = make_msgid(domain="humdata.org")
+            ocha_logo_cid = make_msgid(domain="humdata.org")
+            html_str = template.render(
+                name=cyclone_name,
+                pub_time=report_str.get("fji_time"),
+                pub_date=report_str.get("fji_date"),
+                test_email=test_email,
+                simex=SIMEX_LIST,
+                chd_banner_cid=chd_banner_cid[1:-1],
+                ocha_logo_cid=ocha_logo_cid[1:-1],
+            )
+            text_str = html2text(html_str)
+            msg.set_content(text_str)
+            msg.add_alternative(html_str, subtype="html")
+
+            for filename, cid in zip(
+                ["centre_banner.png", "ocha_logo_wide.png"],
+                [chd_banner_cid, ocha_logo_cid],
+            ):
+                img_path = STATIC_DIR / filename
+                with open(img_path, "rb") as img:
+                    msg.get_payload()[1].add_related(
+                        img.read(), "image", "png", cid=cid
+                    )
+
+            context = ssl.create_default_context()
+            if not suppress_send:
+                with smtplib.SMTP_SSL(
+                    EMAIL_HOST, EMAIL_PORT, context=context
+                ) as server:
+                    server.login(EMAIL_USERNAME, EMAIL_PASSWORD)
+                    server.sendmail(
+                        EMAIL_ADDRESS,
+                        to_list_chunk["email"].tolist()
+                        + cc_list_chunk["email"].tolist(),
+                        msg.as_string(),
+                    )
+            if save:
+                name_stem = (
+                    f"{trigger}_activation_email_"
+                    f"{report_str.get('file_dt_str')}"
+                )
+                with open(OUTPUT_DIR / f"{name_stem}.txt", "w") as f:
+                    f.write(text_str)
+                with open(OUTPUT_DIR / f"{name_stem}.html", "w") as f:
+                    f.write(html_str)
+                with open(OUTPUT_DIR / f"{name_stem}.msg", "wb") as f:
+                    f.write(bytes(msg))
 
 
 def send_info_email(
     report: dict,
+    min_distance: float = 0,
+    min_hours: float = 0,
     suppress_send: bool = False,
     save: bool = True,
     test_email: bool = False,
@@ -732,6 +930,11 @@ def send_info_email(
     ----------
     report: dict
         Dict of forecast report
+    min_distance: float = 0
+        If min_distance is above INFO_EMAIL_DISTANCE_THRESHOLD,
+        email only sends to INFO_ALWAYS_TO
+    min_hours: float = 0
+        Hours to closest pass
     suppress_send: bool = False
         If True, does not actually send email
     save: bool = True
@@ -745,102 +948,150 @@ def send_info_email(
 
     """
     test_subject = "[TEST] " if test_email else ""
+    test_subject = "[SIMEX] " + test_subject if SIMEX_LIST else test_subject
+    if report.get("action"):
+        activation_subject = "(ACTION TRIGGER ACTIVATED)"
+    elif report.get("readiness"):
+        activation_subject = "(READINESS TRIGGER ACTIVATED)"
+    else:
+        activation_subject = "(NOT ACTIVATED)"
+
     report_str = str_from_report(report)
 
     environment = Environment(loader=FileSystemLoader(TEMPLATES_DIR))
     template = environment.get_template("informational.html")
 
-    to_list = [x.strip() for x in INFO_TO.split(";") if x]
-    cc_list = [x.strip() for x in INFO_CC.split(";") if x]
+    distribution_list = get_distribution_list()
+    to_list = distribution_list[distribution_list["info"] == "to"]
+    cc_list = distribution_list[distribution_list["info"] == "cc"]
 
-    msg = EmailMessage()
-    msg[
-        "Subject"
-    ] = f"{test_subject}Anticipatory action Fiji – Forecast information"
-    msg["From"] = Address(
-        "OCHA Centre for Humanitarian Data",
-        EMAIL_ADDRESS.split("@")[0],
-        EMAIL_ADDRESS.split("@")[1],
-    )
-    for mail_list, list_name in zip([to_list, cc_list], ["To", "Cc"]):
-        msg[list_name] = [Address(addr_spec=x) for x in mail_list if x]
-
-    map_cid = make_msgid(domain="humdata.org")
-    distances_cid = make_msgid(domain="humdata.org")
-    chd_banner_cid = make_msgid(domain="humdata.org")
-    ocha_logo_cid = make_msgid(domain="humdata.org")
-
-    html_str = template.render(
-        name=report.get("cyclone").split(" ")[0],
-        pub_date=report_str.get("fji_date"),
-        pub_time=report_str.get("fji_time"),
-        readiness="ACTIVATED" if report.get("readiness") else "NOT ACTIVATED",
-        action="ACTIVATED" if report.get("action") else "NOT ACTIVATED",
-        map_cid=map_cid[1:-1],
-        distances_cid=distances_cid[1:-1],
-        chd_banner_cid=chd_banner_cid[1:-1],
-        ocha_logo_cid=ocha_logo_cid[1:-1],
-        test_email=test_email,
-    )
-    text_str = html2text(html_str)
-    msg.set_content(text_str)
-    msg.add_alternative(html_str, subtype="html")
-
-    for plot, cid in zip(["forecast", "distances"], [map_cid, distances_cid]):
-        img_path = (
-            OUTPUT_DIR / f"{plot}_plot_{report_str.get('file_dt_str')}.png"
+    if min_distance > INFO_EMAIL_DISTANCE_THRESHOLD:
+        to_list = pd.DataFrame(
+            [
+                {"email": x.strip(), "name": "INFO_ALWAYS_TO"}
+                for x in INFO_ALWAYS_TO.split(";")
+                if x
+            ]
         )
-        with open(img_path, "rb") as img:
-            msg.get_payload()[1].add_related(
-                img.read(), "image", "png", cid=cid
+        cc_list = pd.DataFrame(columns=["email", "name"])
+
+    to_list_chunks, cc_list_chunks = segment_emails(to_list, cc_list)
+
+    cyclone_name = report.get("cyclone").split(" ")[0]
+
+    for to_list_chunk, cc_list_chunk in zip(to_list_chunks, cc_list_chunks):
+        msg = EmailMessage()
+        msg["Subject"] = (
+            f"{test_subject}Anticipatory action Fiji – "
+            f"Cyclone {cyclone_name} forecast information {activation_subject}"
+        )
+        msg["From"] = Address(
+            "OCHA Centre for Humanitarian Data",
+            EMAIL_ADDRESS.split("@")[0],
+            EMAIL_ADDRESS.split("@")[1],
+        )
+        for mail_list, list_name in zip(
+            [to_list_chunk, cc_list_chunk], ["To", "Cc"]
+        ):
+            msg[list_name] = [
+                Address(
+                    row["name"],
+                    row["email"].split("@")[0],
+                    row["email"].split("@")[1],
+                )
+                for _, row in mail_list.iterrows()
+            ]
+
+        map_cid = make_msgid(domain="humdata.org")
+        distances_cid = make_msgid(domain="humdata.org")
+        chd_banner_cid = make_msgid(domain="humdata.org")
+        ocha_logo_cid = make_msgid(domain="humdata.org")
+
+        html_str = template.render(
+            name=cyclone_name,
+            pub_date=report_str.get("fji_date"),
+            pub_time=report_str.get("fji_time"),
+            min_distance=min_distance,
+            min_hours=min_hours,
+            readiness="ACTIVATED"
+            if report.get("readiness")
+            else "NOT ACTIVATED",
+            action="ACTIVATED" if report.get("action") else "NOT ACTIVATED",
+            map_cid=map_cid[1:-1],
+            distances_cid=distances_cid[1:-1],
+            chd_banner_cid=chd_banner_cid[1:-1],
+            ocha_logo_cid=ocha_logo_cid[1:-1],
+            test_email=test_email,
+            simex=SIMEX_LIST,
+        )
+        text_str = html2text(html_str)
+        msg.set_content(text_str)
+        msg.add_alternative(html_str, subtype="html")
+
+        for plot, cid in zip(
+            ["forecast", "distances"], [map_cid, distances_cid]
+        ):
+            img_path = (
+                OUTPUT_DIR / f"{plot}_plot_{report_str.get('file_dt_str')}.png"
+            )
+            with open(img_path, "rb") as img:
+                msg.get_payload()[1].add_related(
+                    img.read(), "image", "png", cid=cid
+                )
+
+        for filename, cid in zip(
+            ["centre_banner.png", "ocha_logo_wide.png"],
+            [chd_banner_cid, ocha_logo_cid],
+        ):
+            img_path = STATIC_DIR / filename
+            with open(img_path, "rb") as img:
+                msg.get_payload()[1].add_related(
+                    img.read(), "image", "png", cid=cid
+                )
+
+        for adm_level in [2, 3]:
+            csv_name = (
+                f"distances_adm{adm_level}_{report_str.get('file_dt_str')}.csv"
+            )
+            with open(OUTPUT_DIR / csv_name, "rb") as f:
+                f_data = f.read()
+            msg.add_attachment(
+                f_data, maintype="text", subtype="csv", filename=csv_name
             )
 
-    for filename, cid in zip(
-        ["centre_banner.png", "ocha_logo_wide.png"],
-        [chd_banner_cid, ocha_logo_cid],
-    ):
-        img_path = STATIC_DIR / filename
-        with open(img_path, "rb") as img:
-            msg.get_payload()[1].add_related(
-                img.read(), "image", "png", cid=cid
-            )
-
-    for adm_level in [2, 3]:
-        csv_name = (
-            f"distances_adm{adm_level}_{report_str.get('file_dt_str')}.csv"
-        )
-        with open(OUTPUT_DIR / csv_name, "rb") as f:
-            f_data = f.read()
-        msg.add_attachment(
-            f_data, maintype="text", subtype="csv", filename=csv_name
-        )
-
-    context = ssl.create_default_context()
-    if not suppress_send:
-        with smtplib.SMTP_SSL(
-            EMAIL_HOST, EMAIL_PORT, context=context
-        ) as server:
-            server.login(EMAIL_USERNAME, EMAIL_PASSWORD)
-            server.sendmail(EMAIL_ADDRESS, to_list + cc_list, msg.as_string())
-    if save:
-        file_stem = f"informational_email_{report_str.get('file_dt_str')}"
-        with open(OUTPUT_DIR / f"{file_stem}.txt", "w") as f:
-            f.write(text_str)
-        with open(OUTPUT_DIR / f"{file_stem}.html", "w") as f:
-            f.write(html_str)
-        with open(OUTPUT_DIR / f"{file_stem}.msg", "wb") as f:
-            f.write(bytes(msg))
+        context = ssl.create_default_context()
+        if not suppress_send:
+            with smtplib.SMTP_SSL(
+                EMAIL_HOST, EMAIL_PORT, context=context
+            ) as server:
+                server.login(EMAIL_USERNAME, EMAIL_PASSWORD)
+                server.sendmail(
+                    EMAIL_ADDRESS,
+                    to_list_chunk["email"].tolist()
+                    + cc_list_chunk["email"].tolist(),
+                    msg.as_string(),
+                )
+        if save:
+            file_stem = f"informational_email_{report_str.get('file_dt_str')}"
+            with open(OUTPUT_DIR / f"{file_stem}.txt", "w") as f:
+                f.write(text_str)
+            with open(OUTPUT_DIR / f"{file_stem}.html", "w") as f:
+                f.write(html_str)
+            with open(OUTPUT_DIR / f"{file_stem}.msg", "wb") as f:
+                f.write(bytes(msg))
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    # if no CSV supplied, set to modified Yasa forecast
+    # if no CSV supplied, set to TEST_CSV
     # (includes Categories L-5, results in readiness and action activation)
     # yasa = os.getenv("YASA_MOD")
     test_csv = os.getenv("TEST_CSV")
     parser.add_argument("csv", nargs="?", type=str, default=test_csv)
     parser.add_argument("--suppress-send", action="store_true")
     parser.add_argument("--test-email", action="store_true")
+    parser.add_argument("--csv-env-var-name")
+    parser.add_argument("--simex-inject")
     return parser.parse_args()
 
 
@@ -850,16 +1101,41 @@ if __name__ == "__main__":
         os.mkdir(OUTPUT_DIR)
     if not INPUT_DIR.exists():
         os.mkdir(INPUT_DIR)
-    filepath = decode_forecast_csv(args.csv)
-    forecast = process_fms_forecast(path=filepath, save=True)
+    if args.csv_env_var_name is None:
+        if args.simex_inject is None:
+            csv_str = args.csv
+        else:
+            csv_str = load_simex_inject(args.simex_inject)
+    else:
+        csv_str = os.getenv(args.csv_env_var_name)
+    filepath = decode_forecast_csv(csv_str)
+    forecast = process_fms_forecast(path=filepath, save_local=True)
     report = check_trigger(forecast)
     print(report)
     send_trigger_email(
-        report, suppress_send=args.suppress_send, test_email=args.test_email
+        report,
+        suppress_send=args.suppress_send,
+        test_email=args.test_email,
     )
-    plot_forecast(report, forecast, save_html=True)
-    distances = calculate_distances(report, forecast)
-    plot_distances(report, distances)
-    send_info_email(
-        report, suppress_send=args.suppress_send, test_email=args.test_email
-    )
+    try:
+        plot_forecast(report, forecast, save_html=True)
+        distances = calculate_distances(report, forecast)
+        min_distance = distances["distance_km"].min()
+        min_row = distances.loc[
+            distances[distances["distance_km"] == min_distance][
+                "hours_to_closest"
+            ].idxmin()
+        ]
+        print("Min distance row:")
+        print(min_row)
+        plot_distances(report, distances)
+        send_info_email(
+            report,
+            min_distance=min_row["distance_km"],
+            min_hours=min_row["hours_to_closest"],
+            suppress_send=args.suppress_send,
+            test_email=args.test_email,
+        )
+    except Exception as e:
+        print(f"Info plots and email failed due to Exception: {e}")
+        traceback.print_exc()

@@ -1,3 +1,4 @@
+azure-storage-blob==12.20.0
 geopandas==0.13.2
 google_api_python_client==2.98.0
 google_auth_oauthlib==1.1.0
