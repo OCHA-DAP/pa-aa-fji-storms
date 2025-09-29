@@ -4,41 +4,14 @@ project:
 
 
 book:
-  title: "Anticipatory Action - Nigeria Flooding"
+  title: "Anticipatory Action - Fiji Tropical Cyclones"
   author: "OCHA Centre for Humanitarian Data"
   sidebar:
     logo: quarto_assets/centre_banner_greenbg.png
   favicon: quarto_assets/favicon.ico
   chapters:
-    - index.qmd
-    - part: "Targeting"
-      chapters:
-        - exploration/2025/impact_comparison.ipynb
-        - exploration/2025/nhf_targeting.ipynb
-        - exploration/2025/adamawa_lgas.ipynb
-        - exploration/2025/benue_buffer_exposure.ipynb
-        - exploration/2025/flood_risk_exposure.ipynb
-    - part: "GloFAS processing"
-      chapters:
-          - exploration/2025/glofas_new_reanalysis.ipynb
-    - part: "Google processing"
-      chapters:
-          - exploration/2025/grrr_comparison.ipynb
-          - exploration/2025/grrr_explore.ipynb
-          - exploration/2025/grrr_inundation_history.ipynb
-    - part: "Floodscan processing"
-      chapters:
-          - exploration/2025/fs_pixels.ipynb
-          - exploration/2025/floodscan_verify.ipynb
-    - part: "Trigger setting"
-      chapters:
-          - exploration/2025/combined_gf_grrr_reanalysis.ipynb
-          - exploration/2025/gf_reforecast.ipynb
-          - exploration/2025/grrr_forecast.ipynb
-          - exploration/2025/plot_trigger_years.ipynb
+    - index.md
 
-
-#bibliography: references.bib
 
 format:
   html:
