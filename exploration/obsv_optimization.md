@@ -24,6 +24,7 @@ jupyter:
 
 ```python
 import ocha_stratus as stratus
+import ocha_lens as lens
 import duckdb
 import pandas as pd
 import geopandas as gpd
@@ -31,8 +32,10 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from dask.diagnostics import ProgressBar
 
-from src.datasources import ibtracs
+from src.datasources import ibtracs, codab
 from src import utils
+from src.constants import FJI_CRS
+from src.blob import PROJECT_PREFIX
 ```
 
 ```python
@@ -50,11 +53,37 @@ df_imerg["roll2_mean"] = df_imerg["mean"].rolling(2).sum()
 ```
 
 ```python
-gdf_buffer = utils.load_buffer()
+gdf_buffer = codab.load_buffer()
 ```
 
 ```python
-from src.datasources import ibtracs_backup
+query = """
+SELECT *
+FROM storms.observed_tracks
+WHERE basin = 'SP'
+"""
+df_ibtracs = pd.read_sql(query, stratus.get_engine(stage="dev"))
+```
+
+```python
+df_ibtracs
+```
+
+```python
+query = """
+SELECT *
+FROM storms.storms
+WHERE genesis_basin = 'SP'
+"""
+df_storms = pd.read_sql(query, stratus.get_engine(stage="dev"))
+```
+
+```python
+df_storms
+```
+
+```python
+# from src.datasources import ibtracs_backup
 ```
 
 ```python
@@ -62,28 +91,28 @@ from src.datasources import ibtracs_backup
 ```
 
 ```python
-ds = ibtracs_backup.load_ibtracs("temp/IBTrACS.SP.v04r01.nc")
+# ds = ibtracs_backup.load_ibtracs("temp/IBTrACS.SP.v04r01.nc")
 ```
 
 ```python
-df_best = ibtracs_backup.get_best_tracks(ds)
+# df_best = ibtracs_backup.get_best_tracks(ds)
 ```
 
 ```python
-df_prov = ibtracs_backup.get_provisional_tracks(ds)
+# df_prov = ibtracs_backup.get_provisional_tracks(ds)
 ```
 
 ```python
-df_storms = ibtracs_backup.get_storms(ds)
+# df_storms = ibtracs_backup.get_storms(ds)
 ```
 
 ```python
-df_ibtracs = pd.concat([df_best, df_prov], ignore_index=True)
+# df_ibtracs = pd.concat([df_best, df_prov], ignore_index=True)
 ```
 
 ```python
-blob_name = "pa-aa-fji-storms/processed/ibtracs/ibtracs_sp.parquet"
-stratus.upload_parquet_to_blob(df_ibtracs, blob_name)
+# blob_name = "pa-aa-fji-storms/processed/ibtracs/ibtracs_sp.parquet"
+# stratus.upload_parquet_to_blob(df_ibtracs, blob_name)
 ```
 
 ```python
@@ -107,10 +136,6 @@ df_emdat = con.execute(
 ```
 
 ```python
-df_emdat
-```
-
-```python
 HAROLD = "2020092S09155"
 YASA = "2020346S13168"
 WINSTON = "2016041S14170"
@@ -119,8 +144,8 @@ CERF_SIDS = [HAROLD, YASA, WINSTON]
 
 ```python
 sids = [
-    ["2003011S09182",   "Ami 2003"],
-    ["2004098S15173",  "Gale 2004"],
+    "2003011S09182",  # Ami 2003
+    "2004098S15173",  # Gale 2004
     "2006025S18147",  # Jim 2006
     "2007091S14175",  # Cliff 2007
     "2007337S12186",  # Daman 2007
@@ -170,7 +195,7 @@ gdf_ibtracs.plot()
 
 ```python
 gdf_ibtracs["in_buffer"] = gdf_ibtracs.within(
-    gdf_buffer.to_crs(utils.FJI_CRS).iloc[0].geometry
+    gdf_buffer.to_crs(FJI_CRS).iloc[0].geometry
 )
 ```
 
@@ -197,10 +222,6 @@ gdf_ibtracs_buf_recent = gdf_ibtracs_buf[
 ```
 
 ```python
-group
-```
-
-```python
 dicts = []
 for sid, group in gdf_ibtracs_buf_recent.groupby("sid"):
     start_date = group["valid_time"].min().date()
@@ -224,6 +245,14 @@ df_stats = pd.DataFrame(dicts)
 
 ```python
 df_storms
+```
+
+```python
+df_emdat
+```
+
+```python
+df_emdat[["sid", "Total Affected", "cerf"]]
 ```
 
 ```python
@@ -274,12 +303,6 @@ rain_threshs
 
 ```python
 df_stats
-```
-
-```python
-import inspect
-
-print(inspect.getsource(utils.knots2cat))
 ```
 
 ```python
@@ -423,5 +446,10 @@ plot_threshs(rain_threshs[cat], cat)
 ```
 
 ```python
+df_stats
+```
 
+```python
+blob_name = f"{PROJECT_PREFIX}/processed/storm_stats_buffer250.parquet"
+stratus.upload_parquet_to_blob(df_stats, blob_name)
 ```
