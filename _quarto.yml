@@ -6,6 +6,7 @@ project:
 book:
   title: "Anticipatory Action - Fiji Tropical Cyclones"
   author: "OCHA Centre for Humanitarian Data"
+  date: today
   sidebar:
     logo: quarto_assets/centre_banner_greenbg.png
   favicon: quarto_assets/favicon.ico

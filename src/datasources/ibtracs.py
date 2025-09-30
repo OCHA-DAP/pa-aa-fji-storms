@@ -1,5 +1,6 @@
 import logging
 import uuid
+from typing import Literal
 
 import geopandas as gpd
 import numpy as np
@@ -19,6 +20,11 @@ from ocha_lens.utils.validation import (
     check_coordinate_bounds,
     check_crs,
     check_quadrant_list,
+)
+from scipy.interpolate import (
+    Akima1DInterpolator,
+    CubicSpline,
+    PchipInterpolator,
 )
 from tqdm.auto import tqdm
 
@@ -264,3 +270,129 @@ def get_best_tracks_usa_only(ds: xr.Dataset) -> gpd.GeoDataFrame:
         logger.warning("Returning empty geodataframe of best tracks")
         return gdf
     return TRACK_SCHEMA.validate(gdf)
+
+
+def interpolate_track(
+    df: pd.DataFrame,
+    time_col: str = "valid_time",
+    lat_col: str = "latitude",
+    lon_col: str = "longitude",
+    freq: str = "30min",
+    method: Literal["pchip", "akima", "cubic", "linear"] = "pchip",
+    include_ends: bool = True,
+) -> pd.DataFrame:
+    """
+    Resample a (time, lat, lon, ...) track to a regular grid (default 30 min).
+    - Lat/lon use chosen spline method (default 'pchip').
+    - All other numeric columns are interpolated linearly.
+    - Assumes longitude already in [0, 360) and keeps it in [0, 360).
+    - No extrapolation beyond the observed time span.
+    - If only one point is available, return that point (same output schema).
+    """
+
+    # --- Prep ---
+    work = df.copy()
+    work[time_col] = pd.to_datetime(work[time_col], utc=True)
+    work = work.sort_values(time_col).drop_duplicates(
+        subset=[time_col], keep="first"
+    )
+    work = work.dropna(subset=[lat_col, lon_col])
+
+    n = len(work)
+    if n == 0:
+        # Nothing usable
+        return pd.DataFrame(columns=[time_col, lat_col, lon_col]).astype(
+            {time_col: "datetime64[ns, UTC]"}
+        )
+
+    # If exactly one point, return it in the same format (reset index, include numeric cols)
+    if n == 1:
+        row = work.iloc[0]
+        out = pd.DataFrame(
+            {
+                time_col: [row[time_col]],
+                lat_col: [float(row[lat_col])],
+                lon_col: [float(row[lon_col]) % 360.0],
+            }
+        )
+        # carry other numeric columns as-is
+        other_cols = work.select_dtypes(
+            include=[np.number]
+        ).columns.difference([lat_col, lon_col])
+        for col in other_cols:
+            out[col] = float(row[col])
+        return out.reset_index(drop=True)
+
+    # --- target time grid
+    tmin, tmax = work[time_col].min(), work[time_col].max()
+    start = tmin.floor(freq) if include_ends else tmin.ceil(freq)
+    end = tmax.ceil(freq) if include_ends else tmax.floor(freq)
+    target = pd.date_range(start, end, freq=freq, tz="UTC")
+    target = target[(target >= tmin) & (target <= tmax)]
+    if target.empty:
+        target = pd.DatetimeIndex([tmin, tmax])
+
+    # --- time axis
+    t0 = work[time_col].iloc[0]
+    x = (work[time_col] - t0).dt.total_seconds().to_numpy()
+    x_new = (pd.Series(target) - t0).dt.total_seconds().to_numpy()
+
+    # --- lat/lon interpolation ---
+    y_lat = work[lat_col].to_numpy(float)
+    y_lon = work[lon_col].to_numpy(float)
+
+    if method == "linear" or (method in ("akima", "cubic") and n < 3):
+        interp_lat = lambda xv: np.interp(xv, x, y_lat)
+        interp_lon = lambda xv: np.mod(np.interp(xv, x, y_lon), 360.0)
+    elif method == "pchip":
+        interp_lat = PchipInterpolator(x, y_lat)
+        interp_lon = lambda xv: np.mod(PchipInterpolator(x, y_lon)(xv), 360.0)
+    elif method == "akima":
+        interp_lat = Akima1DInterpolator(x, y_lat)
+        interp_lon = lambda xv: np.mod(
+            Akima1DInterpolator(x, y_lon)(xv), 360.0
+        )
+    elif method == "cubic":
+        interp_lat = CubicSpline(x, y_lat, bc_type="natural")
+        interp_lon = lambda xv: np.mod(
+            CubicSpline(x, y_lon, bc_type="natural")(xv), 360.0
+        )
+    else:
+        raise ValueError(f"Unknown method: {method}")
+
+    lat_new = interp_lat(x_new)
+    lon_new = interp_lon(x_new)
+
+    # --- other numeric columns (linear only) ---
+    other_cols = work.select_dtypes(include=[np.number]).columns.difference(
+        [lat_col, lon_col]
+    )
+    out = pd.DataFrame(index=target)
+    out[lat_col] = lat_new
+    out[lon_col] = lon_new
+    for col in other_cols:
+        y = work[col].to_numpy(float)
+        out[col] = np.interp(x_new, x, y)
+
+    out.index.name = time_col
+    out = out.reset_index()
+    return out
+
+
+def expand_quad_col(df, col):
+    if f"{col}_ne" in df:
+        print(f"already done for {col}")
+        return df
+    df_expanded = (
+        df[col]
+        .apply(pd.Series)
+        .rename(
+            columns={
+                0: f"{col}_ne",
+                1: f"{col}_nw",
+                2: f"{col}_se",
+                3: f"{col}_sw",
+            }
+        )
+    )
+    return df.join(df_expanded)
