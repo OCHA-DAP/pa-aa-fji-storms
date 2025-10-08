@@ -1,0 +1,2966 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.6.36">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>2&nbsp; Wind buffers - FMS approximation – Anticipatory Action - Fiji Tropical Cyclones</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script><script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../exploration/usa_radii_modelfit.html" rel="prev">
+<link href="../quarto_assets/favicon.ico" rel="icon">
+<script src="../site_libs/quarto-html/quarto.js"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-01c78b5cd655e4cd89133cf59d535862.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-7580570a2e354cd56757c689413fca0c.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<style>html{ scroll-behavior: smooth; }</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" integrity="sha512-c3Nl8+7g4LMSTdrm621y7kf9v3SDPnhxLNhcjFJbKECVnmZHTdo+IRO05sNLTH/D3vA6u1X32ehoLC7WFVdheg==" crossorigin="anonymous"></script>
+
+<script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
+
+
+<link rel="stylesheet" href="../quarto_assets/custom.css">
+</head>
+
+<body class="nav-sidebar floating">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../exploration/fms_buffers_regression.html">Archive</a></li><li class="breadcrumb-item"><a href="../exploration/fms_buffers_regression.html"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Wind buffers - FMS approximation</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header sidebar-header-stacked">
+      <a href="../index.html" class="sidebar-logo-link">
+      <img src="../quarto_assets/centre_banner_greenbg.png" alt="" class="sidebar-logo py-0 d-lg-inline d-none">
+      </a>
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../">Anticipatory Action - Fiji Tropical Cyclones</a>
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container">
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container">
+  <a href="../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Overview</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container">
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">Wind field calculation</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a>
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">
+          <li class="sidebar-item">
+  <div class="sidebar-item-container">
+  <a href="../exploration/usa_radii_modelfit.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">USA tracks radius model fit</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container">
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">Archive</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a>
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">
+          <li class="sidebar-item">
+  <div class="sidebar-item-container">
+  <a href="../exploration/fms_buffers_regression.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Wind buffers - FMS approximation</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../exploration/fms_buffers_regression.html">Archive</a></li><li class="breadcrumb-item"><a href="../exploration/fms_buffers_regression.html"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Wind buffers - FMS approximation</span></a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Wind buffers - FMS approximation</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+
+
+
+  </div>
+
+
+
+</header>
+
+
+<!-- markdownlint-disable MD013 -->
+<p>Estimating wind buffers of FMS tracks, using the JTWC wind radii, since FMS doesn’t provide wind radii.</p>
+<p>Trying first using regression.</p>
+<div id="0554062c-ff3c-4042-acce-a479f65d7e0c" class="cell" data-execution_count="1">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>load_ext jupyter_black</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>load_ext autoreload</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>autoreload <span class="dv">2</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-display">
+
+                <script type="application/javascript" id="jupyter_black">
+                (function() {
+                    if (window.IPython === undefined) {
+                        return
+                    }
+                    var msg = "WARNING: it looks like you might have loaded " +
+                        "jupyter_black in a non-lab notebook with " +
+                        "`is_lab=True`. Please double check, and if " +
+                        "loading with `%load_ext` please review the README!"
+                    console.log(msg)
+                    alert(msg)
+                })()
+                </script>
+
+</div>
+</div>
+<div id="32f766eb-cafe-48f1-8346-483ea59bc2f6" class="cell" data-execution_count="165">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> ocha_stratus <span class="im">as</span> stratus</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> geopandas <span class="im">as</span> gpd</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> statsmodels.api <span class="im">as</span> sm</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> src.constants <span class="im">import</span> <span class="op">*</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> src.blob <span class="im">import</span> PROJECT_PREFIX</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> src.datasources.ibtracs <span class="im">import</span> expand_quad_col</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<div id="ac622c9f-a27e-4c04-9adc-bbe3209808b8" class="cell" data-execution_count="3">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>query <span class="op">=</span> <span class="st">"""</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="st">SELECT *</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="st">FROM storms.ibtracs_storms</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="st">WHERE genesis_basin = 'SP'</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="st">"""</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> stratus.get_engine(stage<span class="op">=</span><span class="st">"dev"</span>).<span class="ex">connect</span>() <span class="im">as</span> conn:</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    df_storms <span class="op">=</span> pd.read_sql(query, conn)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<div id="8cbcb4f8-4b8e-40c4-a688-08b047c119f5" class="cell" data-execution_count="7">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>query <span class="op">=</span> <span class="st">"""</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="st">SELECT *</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="st">FROM storms.ibtracs_tracks_geo</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="st">WHERE basin = 'SP'</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="st">"""</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> stratus.get_engine(stage<span class="op">=</span><span class="st">"dev"</span>).<span class="ex">connect</span>() <span class="im">as</span> conn:</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    gdf_tracks <span class="op">=</span> gpd.read_postgis(query, conn, geom_col<span class="op">=</span><span class="st">"geometry"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<div id="b73965db-6468-4d50-ba02-cc4ce3d68e4d" class="cell" data-execution_count="78">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>gdf_tracks <span class="op">=</span> gdf_tracks.merge(df_storms)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<div id="05a6b00f-573e-4e90-bbad-a9bf8fe8da4f" class="cell" data-execution_count="12">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>blob_name <span class="op">=</span> (</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    <span class="ss">f"</span><span class="sc">{</span>PROJECT_PREFIX<span class="sc">}</span><span class="ss">/processed/ibtracs/ibtracs_with_usa_radii.parquet"</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>df_tracks_usa <span class="op">=</span> stratus.load_parquet_from_blob(blob_name)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<div id="24bcd9e4-e1a4-48f4-b58c-1a53012c75eb" class="cell" data-scrolled="true" data-execution_count="13">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>df_tracks_usa</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-display" data-execution_count="13">
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">sid</th>
+<th data-quarto-table-cell-role="th">provider</th>
+<th data-quarto-table-cell-role="th">valid_time</th>
+<th data-quarto-table-cell-role="th">basin</th>
+<th data-quarto-table-cell-role="th">nature</th>
+<th data-quarto-table-cell-role="th">usa_agency</th>
+<th data-quarto-table-cell-role="th">wind_speed</th>
+<th data-quarto-table-cell-role="th">gust_speed</th>
+<th data-quarto-table-cell-role="th">pressure</th>
+<th data-quarto-table-cell-role="th">max_wind_radius</th>
+<th data-quarto-table-cell-role="th">last_closed_isobar_radius</th>
+<th data-quarto-table-cell-role="th">last_closed_isobar_pressure</th>
+<th data-quarto-table-cell-role="th">quadrant_radius_34</th>
+<th data-quarto-table-cell-role="th">quadrant_radius_50</th>
+<th data-quarto-table-cell-role="th">quadrant_radius_64</th>
+<th data-quarto-table-cell-role="th">point_id</th>
+<th data-quarto-table-cell-role="th">storm_id</th>
+<th data-quarto-table-cell-role="th">longitude</th>
+<th data-quarto-table-cell-role="th">latitude</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">0</td>
+<td>1947017S10168</td>
+<td>bom</td>
+<td>1947-01-20 18:00:00</td>
+<td>SP</td>
+<td>TS</td>
+<td>jtwc_sh</td>
+<td>&lt;NA&gt;</td>
+<td>&lt;NA&gt;</td>
+<td>&lt;NA&gt;</td>
+<td>&lt;NA&gt;</td>
+<td>&lt;NA&gt;</td>
+<td>&lt;NA&gt;</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>1f6b08ed-76ce-40dc-802c-de7907891943</td>
+<td>None</td>
+<td>160.3</td>
+<td>-16.2</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">1</td>
+<td>1948011S16140</td>
+<td>bom</td>
+<td>1948-01-13 18:00:00</td>
+<td>SP</td>
+<td>TS</td>
+<td>jtwc_sh</td>
+<td>&lt;NA&gt;</td>
+<td>&lt;NA&gt;</td>
+<td>&lt;NA&gt;</td>
+<td>&lt;NA&gt;</td>
+<td>&lt;NA&gt;</td>
+<td>&lt;NA&gt;</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>8773d4fc-6b39-42ec-8567-f965b981366c</td>
+<td>None</td>
+<td>141.6</td>
+<td>-17.9</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2</td>
+<td>1948011S20157</td>
+<td>bom</td>
+<td>1948-01-10 12:00:00</td>
+<td>SP</td>
+<td>TS</td>
+<td>jtwc_sh</td>
+<td>&lt;NA&gt;</td>
+<td>&lt;NA&gt;</td>
+<td>&lt;NA&gt;</td>
+<td>&lt;NA&gt;</td>
+<td>&lt;NA&gt;</td>
+<td>&lt;NA&gt;</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>c633207a-11fb-4896-bae2-e9fdee29ee81</td>
+<td>None</td>
+<td>157.4</td>
+<td>-20.0</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">3</td>
+<td>1948011S20157</td>
+<td>bom</td>
+<td>1948-01-10 18:00:00</td>
+<td>SP</td>
+<td>TS</td>
+<td>jtwc_sh</td>
+<td>&lt;NA&gt;</td>
+<td>&lt;NA&gt;</td>
+<td>&lt;NA&gt;</td>
+<td>&lt;NA&gt;</td>
+<td>&lt;NA&gt;</td>
+<td>&lt;NA&gt;</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>dab7824b-3321-4bb1-83f7-fd0c77281e4e</td>
+<td>None</td>
+<td>157.8</td>
+<td>-20.0</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">4</td>
+<td>1948011S20157</td>
+<td>bom</td>
+<td>1948-01-11 00:00:00</td>
+<td>SP</td>
+<td>TS</td>
+<td>jtwc_sh</td>
+<td>&lt;NA&gt;</td>
+<td>&lt;NA&gt;</td>
+<td>&lt;NA&gt;</td>
+<td>&lt;NA&gt;</td>
+<td>&lt;NA&gt;</td>
+<td>&lt;NA&gt;</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>1d73d224-9fc5-4fc0-9044-603dfb1695c6</td>
+<td>None</td>
+<td>158.2</td>
+<td>-20.0</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">10827</td>
+<td>2025129S08138</td>
+<td>bom</td>
+<td>2025-05-11 12:00:00</td>
+<td>SP</td>
+<td>TS</td>
+<td>tcvitals</td>
+<td>35</td>
+<td>49</td>
+<td>1000</td>
+<td>22</td>
+<td>119</td>
+<td>1008</td>
+<td>[61.0, 59.0, 26.0, 26.0]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>4e01d3d8-e391-461e-a268-13633a400425</td>
+<td>None</td>
+<td>138.1</td>
+<td>-8.8</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">10828</td>
+<td>2025129S08138</td>
+<td>bom</td>
+<td>2025-05-11 18:00:00</td>
+<td>SP</td>
+<td>TS</td>
+<td>tcvitals</td>
+<td>35</td>
+<td>49</td>
+<td>1000</td>
+<td>26</td>
+<td>119</td>
+<td>1008</td>
+<td>[26.0, 59.0, 26.0, 17.0]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>92344e31-0339-4b86-bf42-a38e784b9bb8</td>
+<td>None</td>
+<td>137.9</td>
+<td>-8.6</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">10829</td>
+<td>2025129S08138</td>
+<td>bom</td>
+<td>2025-05-12 00:00:00</td>
+<td>SP</td>
+<td>TS</td>
+<td>tcvitals</td>
+<td>30</td>
+<td>45</td>
+<td>1002</td>
+<td>26</td>
+<td>119</td>
+<td>1010</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>776da658-9698-4301-b9c8-79c78ac33d0d</td>
+<td>None</td>
+<td>137.8</td>
+<td>-8.5</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">10830</td>
+<td>2025129S08138</td>
+<td>bom</td>
+<td>2025-05-12 06:00:00</td>
+<td>SP</td>
+<td>TS</td>
+<td>tcvitals</td>
+<td>30</td>
+<td>45</td>
+<td>1002</td>
+<td>26</td>
+<td>150</td>
+<td>1008</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>954e2a0e-fe97-4ef2-898b-f6e1c64a2ec9</td>
+<td>None</td>
+<td>137.6</td>
+<td>-8.3</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">10831</td>
+<td>2025129S08138</td>
+<td>bom</td>
+<td>2025-05-12 12:00:00</td>
+<td>SP</td>
+<td>TS</td>
+<td>tcvitals</td>
+<td>15</td>
+<td>34</td>
+<td>1004</td>
+<td>52</td>
+<td>119</td>
+<td>1010</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>bf1b2ba0-5d5c-443e-8c2b-8fdbfcae39a3</td>
+<td>None</td>
+<td>137.6</td>
+<td>-7.9</td>
+</tr>
+</tbody>
+</table>
+
+<p>10832 rows × 19 columns</p>
+</div>
+</div>
+</div>
+<div id="69092d17-21d9-4df1-b414-652018298382" class="cell" data-execution_count="16">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>buffer_speeds <span class="op">=</span> [<span class="dv">34</span>, <span class="dv">50</span>, <span class="dv">64</span>]</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> buffer_speed <span class="kw">in</span> buffer_speeds:</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    df_tracks_usa <span class="op">=</span> expand_quad_col(</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>        df_tracks_usa, <span class="ss">f"quadrant_radius_</span><span class="sc">{</span>buffer_speed<span class="sc">}</span><span class="ss">"</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>already done for quadrant_radius_34
+already done for quadrant_radius_50
+already done for quadrant_radius_64</code></pre>
+</div>
+</div>
+<div id="b8a43702-5b0f-4f0b-b3ef-0c3ff75fae89" class="cell" data-execution_count="80">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>gdf_tracks_best <span class="op">=</span> gdf_tracks[<span class="op">~</span>gdf_tracks[<span class="st">"provisional"</span>]]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<div id="d4627489-d08a-4a96-b970-afd74c98d6a9" class="cell" data-scrolled="true" data-execution_count="81">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>gdf_tracks_best</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-display" data-execution_count="81">
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">wind_speed</th>
+<th data-quarto-table-cell-role="th">pressure</th>
+<th data-quarto-table-cell-role="th">max_wind_radius</th>
+<th data-quarto-table-cell-role="th">last_closed_isobar_radius</th>
+<th data-quarto-table-cell-role="th">last_closed_isobar_pressure</th>
+<th data-quarto-table-cell-role="th">gust_speed</th>
+<th data-quarto-table-cell-role="th">sid</th>
+<th data-quarto-table-cell-role="th">provider</th>
+<th data-quarto-table-cell-role="th">basin</th>
+<th data-quarto-table-cell-role="th">nature</th>
+<th data-quarto-table-cell-role="th">...</th>
+<th data-quarto-table-cell-role="th">quadrant_radius_64</th>
+<th data-quarto-table-cell-role="th">point_id</th>
+<th data-quarto-table-cell-role="th">storm_id</th>
+<th data-quarto-table-cell-role="th">geometry</th>
+<th data-quarto-table-cell-role="th">atcf_id</th>
+<th data-quarto-table-cell-role="th">number</th>
+<th data-quarto-table-cell-role="th">season</th>
+<th data-quarto-table-cell-role="th">name</th>
+<th data-quarto-table-cell-role="th">genesis_basin</th>
+<th data-quarto-table-cell-role="th">provisional</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">120</td>
+<td>NaN</td>
+<td>994.0</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>1907018S13147</td>
+<td>bom</td>
+<td>SP</td>
+<td>NR</td>
+<td>...</td>
+<td>{NaN,NaN,NaN,NaN}</td>
+<td>dca3956d-b64f-4775-b43c-2d6636ae4e4a</td>
+<td>None</td>
+<td>POINT (146.5 -13)</td>
+<td>None</td>
+<td>4</td>
+<td>1907</td>
+<td>None</td>
+<td>SP</td>
+<td>False</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">121</td>
+<td>NaN</td>
+<td>993.0</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>1907018S13147</td>
+<td>bom</td>
+<td>SP</td>
+<td>TS</td>
+<td>...</td>
+<td>{NaN,NaN,NaN,NaN}</td>
+<td>c6d125e8-2707-4922-a14f-8d48faa6d155</td>
+<td>None</td>
+<td>POINT (145 -15)</td>
+<td>None</td>
+<td>4</td>
+<td>1907</td>
+<td>None</td>
+<td>SP</td>
+<td>False</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">122</td>
+<td>NaN</td>
+<td>993.0</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>1907018S13147</td>
+<td>bom</td>
+<td>SP</td>
+<td>TS</td>
+<td>...</td>
+<td>{NaN,NaN,NaN,NaN}</td>
+<td>302e2c59-3f41-4439-8ce0-b6063c6aaa16</td>
+<td>None</td>
+<td>POINT (143 -14)</td>
+<td>None</td>
+<td>4</td>
+<td>1907</td>
+<td>None</td>
+<td>SP</td>
+<td>False</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">123</td>
+<td>NaN</td>
+<td>993.0</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>1907018S13147</td>
+<td>bom</td>
+<td>SP</td>
+<td>TS</td>
+<td>...</td>
+<td>{NaN,NaN,NaN,NaN}</td>
+<td>029dda7b-7ab8-44ad-a268-e8655ea4a003</td>
+<td>None</td>
+<td>POINT (142 -13.5)</td>
+<td>None</td>
+<td>4</td>
+<td>1907</td>
+<td>None</td>
+<td>SP</td>
+<td>False</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">124</td>
+<td>NaN</td>
+<td>998.0</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>1907018S13147</td>
+<td>bom</td>
+<td>SP</td>
+<td>TS</td>
+<td>...</td>
+<td>{NaN,NaN,NaN,NaN}</td>
+<td>2929807f-457c-4858-80bc-107e1b4772ea</td>
+<td>None</td>
+<td>POINT (141.5 -15.6)</td>
+<td>None</td>
+<td>4</td>
+<td>1907</td>
+<td>None</td>
+<td>SP</td>
+<td>False</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">20850</td>
+<td>35.0</td>
+<td>1000.0</td>
+<td>NaN</td>
+<td>119.0</td>
+<td>1008.0</td>
+<td>49.0</td>
+<td>2025129S08138</td>
+<td>bom</td>
+<td>SP</td>
+<td>TS</td>
+<td>...</td>
+<td>{NaN,NaN,NaN,NaN}</td>
+<td>780bbeba-8179-46e5-bb1e-904cf7b36c05</td>
+<td>None</td>
+<td>POINT (138.1 -8.8)</td>
+<td>SH322025</td>
+<td>27</td>
+<td>2025</td>
+<td>None</td>
+<td>SP</td>
+<td>False</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">20851</td>
+<td>35.0</td>
+<td>1000.0</td>
+<td>NaN</td>
+<td>119.0</td>
+<td>1008.0</td>
+<td>49.0</td>
+<td>2025129S08138</td>
+<td>bom</td>
+<td>SP</td>
+<td>TS</td>
+<td>...</td>
+<td>{NaN,NaN,NaN,NaN}</td>
+<td>37cae45d-f8a7-491c-9d5d-edd06a2dc2ea</td>
+<td>None</td>
+<td>POINT (137.9 -8.6)</td>
+<td>SH322025</td>
+<td>27</td>
+<td>2025</td>
+<td>None</td>
+<td>SP</td>
+<td>False</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">20852</td>
+<td>30.0</td>
+<td>1002.0</td>
+<td>NaN</td>
+<td>119.0</td>
+<td>1010.0</td>
+<td>45.0</td>
+<td>2025129S08138</td>
+<td>bom</td>
+<td>SP</td>
+<td>TS</td>
+<td>...</td>
+<td>{NaN,NaN,NaN,NaN}</td>
+<td>d0521216-7f5c-45e9-bef4-00fc97285ee7</td>
+<td>None</td>
+<td>POINT (137.8 -8.5)</td>
+<td>SH322025</td>
+<td>27</td>
+<td>2025</td>
+<td>None</td>
+<td>SP</td>
+<td>False</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">20853</td>
+<td>30.0</td>
+<td>1002.0</td>
+<td>NaN</td>
+<td>150.0</td>
+<td>1008.0</td>
+<td>45.0</td>
+<td>2025129S08138</td>
+<td>bom</td>
+<td>SP</td>
+<td>TS</td>
+<td>...</td>
+<td>{NaN,NaN,NaN,NaN}</td>
+<td>c0997f20-6cbc-4e88-823c-b979a0282dac</td>
+<td>None</td>
+<td>POINT (137.6 -8.3)</td>
+<td>SH322025</td>
+<td>27</td>
+<td>2025</td>
+<td>None</td>
+<td>SP</td>
+<td>False</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">20854</td>
+<td>15.0</td>
+<td>1004.0</td>
+<td>NaN</td>
+<td>119.0</td>
+<td>1010.0</td>
+<td>34.0</td>
+<td>2025129S08138</td>
+<td>bom</td>
+<td>SP</td>
+<td>TS</td>
+<td>...</td>
+<td>{NaN,NaN,NaN,NaN}</td>
+<td>a34c6340-9e66-4a46-96bd-422a1068b485</td>
+<td>None</td>
+<td>POINT (137.6 -7.9)</td>
+<td>SH322025</td>
+<td>27</td>
+<td>2025</td>
+<td>None</td>
+<td>SP</td>
+<td>False</td>
+</tr>
+</tbody>
+</table>
+
+<p>20071 rows × 23 columns</p>
+</div>
+</div>
+</div>
+<div id="4fdfecfa-f3b8-480f-b3ed-513eb2af4dc7" class="cell" data-scrolled="true" data-execution_count="89">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="bu">sorted</span>(gdf_tracks_best[<span class="st">"season"</span>].unique())</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-display" data-execution_count="89">
+<pre><code>[1907,
+ 1908,
+ 1909,
+ 1910,
+ 1911,
+ 1912,
+ 1913,
+ 1914,
+ 1915,
+ 1916,
+ 1917,
+ 1918,
+ 1919,
+ 1920,
+ 1921,
+ 1922,
+ 1923,
+ 1924,
+ 1925,
+ 1926,
+ 1927,
+ 1928,
+ 1929,
+ 1930,
+ 1931,
+ 1932,
+ 1933,
+ 1934,
+ 1935,
+ 1936,
+ 1937,
+ 1938,
+ 1939,
+ 1940,
+ 1941,
+ 1942,
+ 1943,
+ 1944,
+ 1945,
+ 1946,
+ 1947,
+ 1948,
+ 1949,
+ 1950,
+ 1951,
+ 1952,
+ 1953,
+ 1954,
+ 1955,
+ 1956,
+ 1957,
+ 1958,
+ 1959,
+ 1960,
+ 1961,
+ 1962,
+ 1963,
+ 1964,
+ 1965,
+ 1966,
+ 1967,
+ 1968,
+ 1969,
+ 1970,
+ 1971,
+ 1972,
+ 1973,
+ 1974,
+ 1975,
+ 1976,
+ 1977,
+ 1978,
+ 1979,
+ 1980,
+ 1981,
+ 1982,
+ 1983,
+ 1984,
+ 1985,
+ 1986,
+ 1987,
+ 1988,
+ 1989,
+ 1990,
+ 1991,
+ 1992,
+ 1993,
+ 1994,
+ 1995,
+ 1996,
+ 1997,
+ 1998,
+ 1999,
+ 2000,
+ 2001,
+ 2002,
+ 2003,
+ 2004,
+ 2005,
+ 2006,
+ 2007,
+ 2008,
+ 2009,
+ 2010,
+ 2011,
+ 2012,
+ 2013,
+ 2014,
+ 2015,
+ 2016,
+ 2017,
+ 2018,
+ 2019,
+ 2020,
+ 2021,
+ 2022,
+ 2023,
+ 2024,
+ 2025]</code></pre>
+</div>
+</div>
+<div id="a8c771f3-a5bf-47a5-942f-4a53f6a3eda7" class="cell" data-execution_count="46">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>RADIUS_COL <span class="op">=</span> <span class="st">"quadrant_radius_</span><span class="sc">{speed}</span><span class="st">_</span><span class="sc">{quad}</span><span class="st">"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<div id="05489856-ba82-4b96-bd59-f08cb8ce42e3" class="cell" data-execution_count="47">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>quads <span class="op">=</span> [<span class="st">"ne"</span>, <span class="st">"nw"</span>, <span class="st">"se"</span>, <span class="st">"sw"</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<div id="d8f4034c-a03a-4709-90af-4e2eb9e71fde" class="cell" data-execution_count="82">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>df_tracks_merge <span class="op">=</span> gdf_tracks_best.merge(</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>    df_tracks_usa, on<span class="op">=</span>[<span class="st">"sid"</span>, <span class="st">"valid_time"</span>], suffixes<span class="op">=</span>(<span class="st">"_wmo"</span>, <span class="st">"_usa"</span>)</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<div id="be6a1818-e8c8-4c7e-a5a5-bf946f06c2d7" class="cell" data-execution_count="104">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>df_tracks_merge.columns</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-display" data-execution_count="104">
+<pre><code>Index(['wind_speed_wmo', 'pressure_wmo', 'max_wind_radius_wmo',
+       'last_closed_isobar_radius_wmo', 'last_closed_isobar_pressure_wmo',
+       'gust_speed_wmo', 'sid', 'provider_wmo', 'basin_wmo', 'nature_wmo',
+       'valid_time', 'quadrant_radius_34_wmo', 'quadrant_radius_50_wmo',
+       'quadrant_radius_64_wmo', 'point_id_wmo', 'storm_id_wmo', 'geometry',
+       'atcf_id', 'number', 'season', 'name', 'genesis_basin', 'provisional',
+       'provider_usa', 'basin_usa', 'nature_usa', 'usa_agency',
+       'wind_speed_usa', 'gust_speed_usa', 'pressure_usa',
+       'max_wind_radius_usa', 'last_closed_isobar_radius_usa',
+       'last_closed_isobar_pressure_usa', 'quadrant_radius_34_usa',
+       'quadrant_radius_50_usa', 'quadrant_radius_64_usa', 'point_id_usa',
+       'storm_id_usa', 'longitude', 'latitude', 'quadrant_radius_34_ne',
+       'quadrant_radius_34_nw', 'quadrant_radius_34_se',
+       'quadrant_radius_34_sw', 'quadrant_radius_50_ne',
+       'quadrant_radius_50_nw', 'quadrant_radius_50_se',
+       'quadrant_radius_50_sw', 'quadrant_radius_64_ne',
+       'quadrant_radius_64_nw', 'quadrant_radius_64_se',
+       'quadrant_radius_64_sw', 'wind_diff'],
+      dtype='object')</code></pre>
+</div>
+</div>
+<div id="ca97292a-7c75-449f-8a7e-c0b52b6b632c" class="cell" data-execution_count="118">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> speed <span class="kw">in</span> buffer_speeds:</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>    cols <span class="op">=</span> [RADIUS_COL.<span class="bu">format</span>(speed<span class="op">=</span>speed, quad<span class="op">=</span>x) <span class="cf">for</span> x <span class="kw">in</span> quads]</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>    df_tracks_merge[</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>        RADIUS_COL.<span class="bu">format</span>(speed<span class="op">=</span>speed, quad<span class="op">=</span><span class="st">"mean"</span>)</span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>    ] <span class="op">=</span> df_tracks_merge[cols].mean(axis<span class="op">=</span><span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<div id="3297f7b0-00d7-48bc-b621-4f7ad841a19e" class="cell" data-execution_count="119">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>df_tracks_merge</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-display" data-execution_count="119">
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">wind_speed_wmo</th>
+<th data-quarto-table-cell-role="th">pressure_wmo</th>
+<th data-quarto-table-cell-role="th">max_wind_radius_wmo</th>
+<th data-quarto-table-cell-role="th">last_closed_isobar_radius_wmo</th>
+<th data-quarto-table-cell-role="th">last_closed_isobar_pressure_wmo</th>
+<th data-quarto-table-cell-role="th">gust_speed_wmo</th>
+<th data-quarto-table-cell-role="th">sid</th>
+<th data-quarto-table-cell-role="th">provider_wmo</th>
+<th data-quarto-table-cell-role="th">basin_wmo</th>
+<th data-quarto-table-cell-role="th">nature_wmo</th>
+<th data-quarto-table-cell-role="th">...</th>
+<th data-quarto-table-cell-role="th">quadrant_radius_50_se</th>
+<th data-quarto-table-cell-role="th">quadrant_radius_50_sw</th>
+<th data-quarto-table-cell-role="th">quadrant_radius_64_ne</th>
+<th data-quarto-table-cell-role="th">quadrant_radius_64_nw</th>
+<th data-quarto-table-cell-role="th">quadrant_radius_64_se</th>
+<th data-quarto-table-cell-role="th">quadrant_radius_64_sw</th>
+<th data-quarto-table-cell-role="th">wind_diff</th>
+<th data-quarto-table-cell-role="th">quadrant_radius_34_mean</th>
+<th data-quarto-table-cell-role="th">quadrant_radius_50_mean</th>
+<th data-quarto-table-cell-role="th">quadrant_radius_64_mean</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">0</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>1947017S10168</td>
+<td>bom</td>
+<td>SP</td>
+<td>TS</td>
+<td>...</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>&lt;NA&gt;</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">1</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>1948011S16140</td>
+<td>bom</td>
+<td>SP</td>
+<td>TS</td>
+<td>...</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>&lt;NA&gt;</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>1948011S20157</td>
+<td>bom</td>
+<td>SP</td>
+<td>TS</td>
+<td>...</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>&lt;NA&gt;</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">3</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>1948011S20157</td>
+<td>bom</td>
+<td>SP</td>
+<td>TS</td>
+<td>...</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>&lt;NA&gt;</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">4</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>1948011S20157</td>
+<td>bom</td>
+<td>SP</td>
+<td>TS</td>
+<td>...</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>&lt;NA&gt;</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">10907</td>
+<td>35.0</td>
+<td>1000.0</td>
+<td>NaN</td>
+<td>119.0</td>
+<td>1008.0</td>
+<td>49.0</td>
+<td>2025129S08138</td>
+<td>bom</td>
+<td>SP</td>
+<td>TS</td>
+<td>...</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>0.0</td>
+<td>43.0</td>
+<td>NaN</td>
+<td>NaN</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">10908</td>
+<td>35.0</td>
+<td>1000.0</td>
+<td>NaN</td>
+<td>119.0</td>
+<td>1008.0</td>
+<td>49.0</td>
+<td>2025129S08138</td>
+<td>bom</td>
+<td>SP</td>
+<td>TS</td>
+<td>...</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>0.0</td>
+<td>32.0</td>
+<td>NaN</td>
+<td>NaN</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">10909</td>
+<td>30.0</td>
+<td>1002.0</td>
+<td>NaN</td>
+<td>119.0</td>
+<td>1010.0</td>
+<td>45.0</td>
+<td>2025129S08138</td>
+<td>bom</td>
+<td>SP</td>
+<td>TS</td>
+<td>...</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>0.0</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">10910</td>
+<td>30.0</td>
+<td>1002.0</td>
+<td>NaN</td>
+<td>150.0</td>
+<td>1008.0</td>
+<td>45.0</td>
+<td>2025129S08138</td>
+<td>bom</td>
+<td>SP</td>
+<td>TS</td>
+<td>...</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>0.0</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">10911</td>
+<td>15.0</td>
+<td>1004.0</td>
+<td>NaN</td>
+<td>119.0</td>
+<td>1010.0</td>
+<td>34.0</td>
+<td>2025129S08138</td>
+<td>bom</td>
+<td>SP</td>
+<td>TS</td>
+<td>...</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>0.0</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+</tr>
+</tbody>
+</table>
+
+<p>10912 rows × 56 columns</p>
+</div>
+</div>
+</div>
+<div id="419453ac-d8c6-4014-ba81-46604061da31" class="cell" data-execution_count="191">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> calc_r2(y_pred, y_true, k):</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>    n <span class="op">=</span> <span class="bu">len</span>(y_true)</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>    ss_res <span class="op">=</span> np.<span class="bu">sum</span>((y_true <span class="op">-</span> y_pred) <span class="op">**</span> <span class="dv">2</span>)</span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>    ss_tot <span class="op">=</span> np.<span class="bu">sum</span>((y_true <span class="op">-</span> np.mean(y_true)) <span class="op">**</span> <span class="dv">2</span>)</span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>    r2 <span class="op">=</span> <span class="dv">1</span> <span class="op">-</span> ss_res <span class="op">/</span> ss_tot</span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>    r2_adj <span class="op">=</span> <span class="dv">1</span> <span class="op">-</span> (<span class="dv">1</span> <span class="op">-</span> r2) <span class="op">*</span> (n <span class="op">-</span> <span class="dv">1</span>) <span class="op">/</span> (n <span class="op">-</span> k <span class="op">-</span> <span class="dv">1</span>)</span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> r2, r2_adj</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<div id="f9b69cd8-2276-489f-b52b-b99388ddb9db" class="cell" data-scrolled="true" data-execution_count="197">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>col_sets <span class="op">=</span> (</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>    (<span class="st">"wind"</span>, [<span class="st">"wind_speed_wmo"</span>]),</span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>    (<span class="st">"wind_pres"</span>, [<span class="st">"wind_speed_wmo"</span>, <span class="st">"pressure_wmo"</span>]),</span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>dicts <span class="op">=</span> []</span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>df_reg <span class="op">=</span> df_tracks_merge.dropna(subset<span class="op">=</span>[<span class="st">"wind_speed_wmo"</span>, <span class="st">"pressure_wmo"</span>])</span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>df_reg <span class="op">=</span> df_reg[df_reg[<span class="st">"wind_speed_wmo"</span>] <span class="op">&gt;=</span> <span class="dv">0</span>]</span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a>conversion_factor <span class="op">=</span> <span class="dv">1</span></span>
+<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> speed <span class="kw">in</span> buffer_speeds:</span>
+<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a>    cutoff_speed <span class="op">=</span> speed <span class="op">*</span> conversion_factor</span>
+<span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> quad <span class="kw">in</span> quads <span class="op">+</span> [<span class="st">"mean"</span>]:</span>
+<span id="cb22-12"><a href="#cb22-12" aria-hidden="true" tabindex="-1"></a>        target_col <span class="op">=</span> RADIUS_COL.<span class="bu">format</span>(speed<span class="op">=</span>speed, quad<span class="op">=</span>quad)</span>
+<span id="cb22-13"><a href="#cb22-13" aria-hidden="true" tabindex="-1"></a>        df_reg[target_col] <span class="op">=</span> df_reg[target_col].fillna(<span class="dv">0</span>)</span>
+<span id="cb22-14"><a href="#cb22-14" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> cutoff <span class="kw">in</span> [<span class="va">True</span>, <span class="va">False</span>]:</span>
+<span id="cb22-15"><a href="#cb22-15" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> cutoff:</span>
+<span id="cb22-16"><a href="#cb22-16" aria-hidden="true" tabindex="-1"></a>                df_model <span class="op">=</span> df_reg[df_reg[<span class="st">"wind_speed_wmo"</span>] <span class="op">&gt;=</span> cutoff_speed]</span>
+<span id="cb22-17"><a href="#cb22-17" aria-hidden="true" tabindex="-1"></a>            <span class="cf">else</span>:</span>
+<span id="cb22-18"><a href="#cb22-18" aria-hidden="true" tabindex="-1"></a>                df_model <span class="op">=</span> df_reg</span>
+<span id="cb22-19"><a href="#cb22-19" aria-hidden="true" tabindex="-1"></a>            <span class="cf">for</span> col_set <span class="kw">in</span> col_sets:</span>
+<span id="cb22-20"><a href="#cb22-20" aria-hidden="true" tabindex="-1"></a>                var_cols <span class="op">=</span> col_set[<span class="dv">1</span>]</span>
+<span id="cb22-21"><a href="#cb22-21" aria-hidden="true" tabindex="-1"></a>                X <span class="op">=</span> df_model[var_cols]</span>
+<span id="cb22-22"><a href="#cb22-22" aria-hidden="true" tabindex="-1"></a>                y <span class="op">=</span> df_model[target_col]</span>
+<span id="cb22-23"><a href="#cb22-23" aria-hidden="true" tabindex="-1"></a>                X <span class="op">=</span> sm.add_constant(X)</span>
+<span id="cb22-24"><a href="#cb22-24" aria-hidden="true" tabindex="-1"></a>                model <span class="op">=</span> sm.OLS(y, X).fit()</span>
+<span id="cb22-25"><a href="#cb22-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-26"><a href="#cb22-26" aria-hidden="true" tabindex="-1"></a>                X_pred <span class="op">=</span> df_reg[var_cols]</span>
+<span id="cb22-27"><a href="#cb22-27" aria-hidden="true" tabindex="-1"></a>                X_pred <span class="op">=</span> sm.add_constant(X_pred)</span>
+<span id="cb22-28"><a href="#cb22-28" aria-hidden="true" tabindex="-1"></a>                df_reg[<span class="st">"pred"</span>] <span class="op">=</span> model.predict(X_pred)</span>
+<span id="cb22-29"><a href="#cb22-29" aria-hidden="true" tabindex="-1"></a>                <span class="cf">if</span> cutoff:</span>
+<span id="cb22-30"><a href="#cb22-30" aria-hidden="true" tabindex="-1"></a>                    df_reg[<span class="st">"pred"</span>] <span class="op">=</span> df_reg.<span class="bu">apply</span>(</span>
+<span id="cb22-31"><a href="#cb22-31" aria-hidden="true" tabindex="-1"></a>                        <span class="kw">lambda</span> row: <span class="dv">0</span></span>
+<span id="cb22-32"><a href="#cb22-32" aria-hidden="true" tabindex="-1"></a>                        <span class="cf">if</span> row[<span class="st">"wind_speed_wmo"</span>] <span class="op">&lt;=</span> cutoff</span>
+<span id="cb22-33"><a href="#cb22-33" aria-hidden="true" tabindex="-1"></a>                        <span class="cf">else</span> row[<span class="st">"pred"</span>],</span>
+<span id="cb22-34"><a href="#cb22-34" aria-hidden="true" tabindex="-1"></a>                        axis<span class="op">=</span><span class="dv">1</span>,</span>
+<span id="cb22-35"><a href="#cb22-35" aria-hidden="true" tabindex="-1"></a>                    )</span>
+<span id="cb22-36"><a href="#cb22-36" aria-hidden="true" tabindex="-1"></a>                df_reg[<span class="st">"pred"</span>] <span class="op">=</span> df_reg[<span class="st">"pred"</span>].<span class="bu">apply</span>(</span>
+<span id="cb22-37"><a href="#cb22-37" aria-hidden="true" tabindex="-1"></a>                    <span class="kw">lambda</span> x: <span class="dv">0</span> <span class="cf">if</span> x <span class="op">&lt;</span> <span class="dv">0</span> <span class="cf">else</span> x</span>
+<span id="cb22-38"><a href="#cb22-38" aria-hidden="true" tabindex="-1"></a>                )</span>
+<span id="cb22-39"><a href="#cb22-39" aria-hidden="true" tabindex="-1"></a>                r2, r2_adj <span class="op">=</span> calc_r2(</span>
+<span id="cb22-40"><a href="#cb22-40" aria-hidden="true" tabindex="-1"></a>                    df_reg[<span class="st">"pred"</span>], df_reg[target_col], k<span class="op">=</span><span class="bu">len</span>(var_cols)</span>
+<span id="cb22-41"><a href="#cb22-41" aria-hidden="true" tabindex="-1"></a>                )</span>
+<span id="cb22-42"><a href="#cb22-42" aria-hidden="true" tabindex="-1"></a>                dicts.append(</span>
+<span id="cb22-43"><a href="#cb22-43" aria-hidden="true" tabindex="-1"></a>                    {</span>
+<span id="cb22-44"><a href="#cb22-44" aria-hidden="true" tabindex="-1"></a>                        <span class="st">"col_set"</span>: col_set[<span class="dv">0</span>],</span>
+<span id="cb22-45"><a href="#cb22-45" aria-hidden="true" tabindex="-1"></a>                        <span class="st">"cutoff"</span>: cutoff,</span>
+<span id="cb22-46"><a href="#cb22-46" aria-hidden="true" tabindex="-1"></a>                        <span class="st">"speed"</span>: speed,</span>
+<span id="cb22-47"><a href="#cb22-47" aria-hidden="true" tabindex="-1"></a>                        <span class="st">"quad"</span>: quad,</span>
+<span id="cb22-48"><a href="#cb22-48" aria-hidden="true" tabindex="-1"></a>                        <span class="st">"r2"</span>: r2,</span>
+<span id="cb22-49"><a href="#cb22-49" aria-hidden="true" tabindex="-1"></a>                        <span class="st">"r2_adj"</span>: r2_adj,</span>
+<span id="cb22-50"><a href="#cb22-50" aria-hidden="true" tabindex="-1"></a>                        <span class="st">"summary"</span>: model.summary(),</span>
+<span id="cb22-51"><a href="#cb22-51" aria-hidden="true" tabindex="-1"></a>                        <span class="st">"params"</span>: model.params,</span>
+<span id="cb22-52"><a href="#cb22-52" aria-hidden="true" tabindex="-1"></a>                    }</span>
+<span id="cb22-53"><a href="#cb22-53" aria-hidden="true" tabindex="-1"></a>                )</span>
+<span id="cb22-54"><a href="#cb22-54" aria-hidden="true" tabindex="-1"></a>        <span class="co"># for plot_col in ["wind_speed_wmo", "pressure_wmo"]:</span></span>
+<span id="cb22-55"><a href="#cb22-55" aria-hidden="true" tabindex="-1"></a>        <span class="co">#     df_reg.plot.scatter(</span></span>
+<span id="cb22-56"><a href="#cb22-56" aria-hidden="true" tabindex="-1"></a>        <span class="co">#         x=plot_col,</span></span>
+<span id="cb22-57"><a href="#cb22-57" aria-hidden="true" tabindex="-1"></a>        <span class="co">#         y=target_col,</span></span>
+<span id="cb22-58"><a href="#cb22-58" aria-hidden="true" tabindex="-1"></a>        <span class="co">#         alpha=0.1,</span></span>
+<span id="cb22-59"><a href="#cb22-59" aria-hidden="true" tabindex="-1"></a>        <span class="co">#     )</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<div id="41dafa7d-9c39-40de-90f4-c63d7abb6038" class="cell" data-execution_count="209">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>df_reg[[<span class="st">"wind_speed_wmo"</span>, <span class="st">"pressure_wmo"</span>]].corr()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-display" data-execution_count="209">
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">wind_speed_wmo</th>
+<th data-quarto-table-cell-role="th">pressure_wmo</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">wind_speed_wmo</td>
+<td>1.000000</td>
+<td>-0.967436</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">pressure_wmo</td>
+<td>-0.967436</td>
+<td>1.000000</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</div>
+</div>
+<div id="f07c2c49-cab2-4714-bc57-59fcb17936b0" class="cell" data-execution_count="198">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>df_r2 <span class="op">=</span> pd.DataFrame(dicts)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<div id="1ae80b7c-f612-4993-b187-6fd04e6c1794" class="cell" data-execution_count="199">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>df_r2[df_r2[<span class="st">"quad"</span>] <span class="op">==</span> <span class="st">"mean"</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-display" data-execution_count="199">
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">col_set</th>
+<th data-quarto-table-cell-role="th">cutoff</th>
+<th data-quarto-table-cell-role="th">speed</th>
+<th data-quarto-table-cell-role="th">quad</th>
+<th data-quarto-table-cell-role="th">r2</th>
+<th data-quarto-table-cell-role="th">r2_adj</th>
+<th data-quarto-table-cell-role="th">summary</th>
+<th data-quarto-table-cell-role="th">params</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">16</td>
+<td>wind</td>
+<td>True</td>
+<td>34</td>
+<td>mean</td>
+<td>0.124057</td>
+<td>0.123973</td>
+<td>OLS Regression ...</td>
+<td>const 0.330641 wind_speed_wmo 0...</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">17</td>
+<td>wind_pres</td>
+<td>True</td>
+<td>34</td>
+<td>mean</td>
+<td>0.130680</td>
+<td>0.130513</td>
+<td>OLS Regression ...</td>
+<td>const -482.626782 wind_speed_wmo ...</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">18</td>
+<td>wind</td>
+<td>False</td>
+<td>34</td>
+<td>mean</td>
+<td>0.134587</td>
+<td>0.134503</td>
+<td>OLS Regression ...</td>
+<td>const -9.683708 wind_speed_wmo 0...</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">19</td>
+<td>wind_pres</td>
+<td>False</td>
+<td>34</td>
+<td>mean</td>
+<td>0.136667</td>
+<td>0.136501</td>
+<td>OLS Regression ...</td>
+<td>const -450.050374 wind_speed_wmo ...</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">36</td>
+<td>wind</td>
+<td>True</td>
+<td>50</td>
+<td>mean</td>
+<td>0.216839</td>
+<td>0.216764</td>
+<td>OLS Regression ...</td>
+<td>const -9.616171 wind_speed_wmo 0...</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">37</td>
+<td>wind_pres</td>
+<td>True</td>
+<td>50</td>
+<td>mean</td>
+<td>0.247978</td>
+<td>0.247833</td>
+<td>OLS Regression ...</td>
+<td>const -829.599372 wind_speed_wmo ...</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">38</td>
+<td>wind</td>
+<td>False</td>
+<td>50</td>
+<td>mean</td>
+<td>0.223813</td>
+<td>0.223739</td>
+<td>OLS Regression ...</td>
+<td>const -11.52552 wind_speed_wmo ...</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">39</td>
+<td>wind_pres</td>
+<td>False</td>
+<td>50</td>
+<td>mean</td>
+<td>0.234731</td>
+<td>0.234584</td>
+<td>OLS Regression ...</td>
+<td>const -328.345480 wind_speed_wmo ...</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">56</td>
+<td>wind</td>
+<td>True</td>
+<td>64</td>
+<td>mean</td>
+<td>0.278334</td>
+<td>0.278264</td>
+<td>OLS Regression ...</td>
+<td>const -10.795898 wind_speed_wmo ...</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">57</td>
+<td>wind_pres</td>
+<td>True</td>
+<td>64</td>
+<td>mean</td>
+<td>0.326307</td>
+<td>0.326178</td>
+<td>OLS Regression ...</td>
+<td>const -628.360791 wind_speed_wmo ...</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">58</td>
+<td>wind</td>
+<td>False</td>
+<td>64</td>
+<td>mean</td>
+<td>0.258214</td>
+<td>0.258143</td>
+<td>OLS Regression ...</td>
+<td>const -6.618191 wind_speed_wmo 0...</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">59</td>
+<td>wind_pres</td>
+<td>False</td>
+<td>64</td>
+<td>mean</td>
+<td>0.262354</td>
+<td>0.262212</td>
+<td>OLS Regression ...</td>
+<td>const -73.380294 wind_speed_wmo ...</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</div>
+</div>
+<div id="3d43caa9-c47a-4f38-acda-b0d24640f49f" class="cell" data-scrolled="true" data-execution_count="205">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>df_r2[</span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>    (df_r2[<span class="st">"col_set"</span>] <span class="op">==</span> <span class="st">"wind_pres"</span>)</span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">&amp;</span> df_r2[<span class="st">"cutoff"</span>]</span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">&amp;</span> (df_r2[<span class="st">"quad"</span>] <span class="op">==</span> <span class="st">"mean"</span>)</span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>][<span class="st">"summary"</span>].<span class="bu">apply</span>(display)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-display">
+<table class="simpletable caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<caption>OLS Regression Results</caption>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Dep. Variable:</td>
+<td>quadrant_radius_34_mean</td>
+<td data-quarto-table-cell-role="th">R-squared:</td>
+<td>0.061</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Model:</td>
+<td>OLS</td>
+<td data-quarto-table-cell-role="th">Adj. R-squared:</td>
+<td>0.061</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Method:</td>
+<td>Least Squares</td>
+<td data-quarto-table-cell-role="th">F-statistic:</td>
+<td>224.0</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Date:</td>
+<td>Mon, 29 Sep 2025</td>
+<td data-quarto-table-cell-role="th">Prob (F-statistic):</td>
+<td>5.84e-95</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Time:</td>
+<td>17:01:08</td>
+<td data-quarto-table-cell-role="th">Log-Likelihood:</td>
+<td>-36349.</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">No. Observations:</td>
+<td>6859</td>
+<td data-quarto-table-cell-role="th">AIC:</td>
+<td>7.270e+04</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Df Residuals:</td>
+<td>6856</td>
+<td data-quarto-table-cell-role="th">BIC:</td>
+<td>7.272e+04</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Df Model:</td>
+<td>2</td>
+<td data-quarto-table-cell-role="th"></td>
+<td></td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Covariance Type:</td>
+<td>nonrobust</td>
+<td data-quarto-table-cell-role="th"></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+
+<table class="simpletable caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<tbody>
+<tr class="odd">
+<td></td>
+<td data-quarto-table-cell-role="th">coef</td>
+<td data-quarto-table-cell-role="th">std err</td>
+<td data-quarto-table-cell-role="th">t</td>
+<td data-quarto-table-cell-role="th">P&gt;|t|</td>
+<td data-quarto-table-cell-role="th">[0.025</td>
+<td data-quarto-table-cell-role="th">0.975]</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">const</td>
+<td>-482.6268</td>
+<td>127.422</td>
+<td>-3.788</td>
+<td>0.000</td>
+<td>-732.413</td>
+<td>-232.840</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">wind_speed_wmo</td>
+<td>1.0338</td>
+<td>0.116</td>
+<td>8.934</td>
+<td>0.000</td>
+<td>0.807</td>
+<td>1.261</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">pressure_wmo</td>
+<td>0.4695</td>
+<td>0.124</td>
+<td>3.791</td>
+<td>0.000</td>
+<td>0.227</td>
+<td>0.712</td>
+</tr>
+</tbody>
+</table>
+
+
+<table class="simpletable caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Omnibus:</td>
+<td>940.345</td>
+<td data-quarto-table-cell-role="th">Durbin-Watson:</td>
+<td>0.135</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Prob(Omnibus):</td>
+<td>0.000</td>
+<td data-quarto-table-cell-role="th">Jarque-Bera (JB):</td>
+<td>1370.908</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Skew:</td>
+<td>1.078</td>
+<td data-quarto-table-cell-role="th">Prob(JB):</td>
+<td>2.05e-298</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Kurtosis:</td>
+<td>3.391</td>
+<td data-quarto-table-cell-role="th">Cond. No.</td>
+<td>2.13e+05</td>
+</tr>
+</tbody>
+</table>
+<br><br>Notes:<br>[1] Standard Errors assume that the covariance matrix of the errors is correctly specified.<br>[2] The condition number is large, 2.13e+05. This might indicate that there are<br>strong multicollinearity or other numerical problems.
+</div>
+<div class="cell-output cell-output-display">
+<table class="simpletable caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<caption>OLS Regression Results</caption>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Dep. Variable:</td>
+<td>quadrant_radius_50_mean</td>
+<td data-quarto-table-cell-role="th">R-squared:</td>
+<td>0.098</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Model:</td>
+<td>OLS</td>
+<td data-quarto-table-cell-role="th">Adj. R-squared:</td>
+<td>0.098</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Method:</td>
+<td>Least Squares</td>
+<td data-quarto-table-cell-role="th">F-statistic:</td>
+<td>225.9</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Date:</td>
+<td>Mon, 29 Sep 2025</td>
+<td data-quarto-table-cell-role="th">Prob (F-statistic):</td>
+<td>7.26e-94</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Time:</td>
+<td>17:01:09</td>
+<td data-quarto-table-cell-role="th">Log-Likelihood:</td>
+<td>-19030.</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">No. Observations:</td>
+<td>4151</td>
+<td data-quarto-table-cell-role="th">AIC:</td>
+<td>3.807e+04</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Df Residuals:</td>
+<td>4148</td>
+<td data-quarto-table-cell-role="th">BIC:</td>
+<td>3.809e+04</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Df Model:</td>
+<td>2</td>
+<td data-quarto-table-cell-role="th"></td>
+<td></td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Covariance Type:</td>
+<td>nonrobust</td>
+<td data-quarto-table-cell-role="th"></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+
+<table class="simpletable caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<tbody>
+<tr class="odd">
+<td></td>
+<td data-quarto-table-cell-role="th">coef</td>
+<td data-quarto-table-cell-role="th">std err</td>
+<td data-quarto-table-cell-role="th">t</td>
+<td data-quarto-table-cell-role="th">P&gt;|t|</td>
+<td data-quarto-table-cell-role="th">[0.025</td>
+<td data-quarto-table-cell-role="th">0.975]</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">const</td>
+<td>-829.5994</td>
+<td>72.275</td>
+<td>-11.478</td>
+<td>0.000</td>
+<td>-971.296</td>
+<td>-687.902</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">wind_speed_wmo</td>
+<td>1.1480</td>
+<td>0.072</td>
+<td>16.049</td>
+<td>0.000</td>
+<td>1.008</td>
+<td>1.288</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">pressure_wmo</td>
+<td>0.7925</td>
+<td>0.070</td>
+<td>11.348</td>
+<td>0.000</td>
+<td>0.656</td>
+<td>0.929</td>
+</tr>
+</tbody>
+</table>
+
+
+<table class="simpletable caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Omnibus:</td>
+<td>832.942</td>
+<td data-quarto-table-cell-role="th">Durbin-Watson:</td>
+<td>0.191</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Prob(Omnibus):</td>
+<td>0.000</td>
+<td data-quarto-table-cell-role="th">Jarque-Bera (JB):</td>
+<td>1446.699</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Skew:</td>
+<td>1.307</td>
+<td data-quarto-table-cell-role="th">Prob(JB):</td>
+<td>0.00</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Kurtosis:</td>
+<td>4.236</td>
+<td data-quarto-table-cell-role="th">Cond. No.</td>
+<td>1.91e+05</td>
+</tr>
+</tbody>
+</table>
+<br><br>Notes:<br>[1] Standard Errors assume that the covariance matrix of the errors is correctly specified.<br>[2] The condition number is large, 1.91e+05. This might indicate that there are<br>strong multicollinearity or other numerical problems.
+</div>
+<div class="cell-output cell-output-display">
+<table class="simpletable caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<caption>OLS Regression Results</caption>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Dep. Variable:</td>
+<td>quadrant_radius_64_mean</td>
+<td data-quarto-table-cell-role="th">R-squared:</td>
+<td>0.138</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Model:</td>
+<td>OLS</td>
+<td data-quarto-table-cell-role="th">Adj. R-squared:</td>
+<td>0.137</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Method:</td>
+<td>Least Squares</td>
+<td data-quarto-table-cell-role="th">F-statistic:</td>
+<td>168.1</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Date:</td>
+<td>Mon, 29 Sep 2025</td>
+<td data-quarto-table-cell-role="th">Prob (F-statistic):</td>
+<td>1.80e-68</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Time:</td>
+<td>17:01:10</td>
+<td data-quarto-table-cell-role="th">Log-Likelihood:</td>
+<td>-8574.2</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">No. Observations:</td>
+<td>2107</td>
+<td data-quarto-table-cell-role="th">AIC:</td>
+<td>1.715e+04</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Df Residuals:</td>
+<td>2104</td>
+<td data-quarto-table-cell-role="th">BIC:</td>
+<td>1.717e+04</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Df Model:</td>
+<td>2</td>
+<td data-quarto-table-cell-role="th"></td>
+<td></td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Covariance Type:</td>
+<td>nonrobust</td>
+<td data-quarto-table-cell-role="th"></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+
+<table class="simpletable caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<tbody>
+<tr class="odd">
+<td></td>
+<td data-quarto-table-cell-role="th">coef</td>
+<td data-quarto-table-cell-role="th">std err</td>
+<td data-quarto-table-cell-role="th">t</td>
+<td data-quarto-table-cell-role="th">P&gt;|t|</td>
+<td data-quarto-table-cell-role="th">[0.025</td>
+<td data-quarto-table-cell-role="th">0.975]</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">const</td>
+<td>-628.3608</td>
+<td>46.989</td>
+<td>-13.372</td>
+<td>0.000</td>
+<td>-720.511</td>
+<td>-536.211</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">wind_speed_wmo</td>
+<td>0.8599</td>
+<td>0.050</td>
+<td>17.215</td>
+<td>0.000</td>
+<td>0.762</td>
+<td>0.958</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">pressure_wmo</td>
+<td>0.5955</td>
+<td>0.045</td>
+<td>13.151</td>
+<td>0.000</td>
+<td>0.507</td>
+<td>0.684</td>
+</tr>
+</tbody>
+</table>
+
+
+<table class="simpletable caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Omnibus:</td>
+<td>291.564</td>
+<td data-quarto-table-cell-role="th">Durbin-Watson:</td>
+<td>0.261</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Prob(Omnibus):</td>
+<td>0.000</td>
+<td data-quarto-table-cell-role="th">Jarque-Bera (JB):</td>
+<td>421.367</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Skew:</td>
+<td>1.041</td>
+<td data-quarto-table-cell-role="th">Prob(JB):</td>
+<td>3.17e-92</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Kurtosis:</td>
+<td>3.681</td>
+<td data-quarto-table-cell-role="th">Cond. No.</td>
+<td>1.46e+05</td>
+</tr>
+</tbody>
+</table>
+<br><br>Notes:<br>[1] Standard Errors assume that the covariance matrix of the errors is correctly specified.<br>[2] The condition number is large, 1.46e+05. This might indicate that there are<br>strong multicollinearity or other numerical problems.
+</div>
+<div class="cell-output cell-output-display" data-execution_count="205">
+<pre><code>17    None
+37    None
+57    None
+Name: summary, dtype: object</code></pre>
+</div>
+</div>
+<div id="5888ade7-9892-45ca-8fe2-106f27fb6427" class="cell" data-execution_count="188">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>df_r2.iloc[<span class="dv">3</span>][<span class="st">"summary"</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-display" data-execution_count="188">
+<table class="simpletable caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<caption>OLS Regression Results</caption>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Dep. Variable:</td>
+<td>quadrant_radius_34_ne</td>
+<td data-quarto-table-cell-role="th">R-squared:</td>
+<td>0.139</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Model:</td>
+<td>OLS</td>
+<td data-quarto-table-cell-role="th">Adj. R-squared:</td>
+<td>0.139</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Method:</td>
+<td>Least Squares</td>
+<td data-quarto-table-cell-role="th">F-statistic:</td>
+<td>838.2</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Date:</td>
+<td>Mon, 29 Sep 2025</td>
+<td data-quarto-table-cell-role="th">Prob (F-statistic):</td>
+<td>0.00</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Time:</td>
+<td>16:50:54</td>
+<td data-quarto-table-cell-role="th">Log-Likelihood:</td>
+<td>-53939.</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">No. Observations:</td>
+<td>10411</td>
+<td data-quarto-table-cell-role="th">AIC:</td>
+<td>1.079e+05</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Df Residuals:</td>
+<td>10408</td>
+<td data-quarto-table-cell-role="th">BIC:</td>
+<td>1.079e+05</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Df Model:</td>
+<td>2</td>
+<td data-quarto-table-cell-role="th"></td>
+<td></td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Covariance Type:</td>
+<td>nonrobust</td>
+<td data-quarto-table-cell-role="th"></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+
+<table class="simpletable caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<tbody>
+<tr class="odd">
+<td></td>
+<td data-quarto-table-cell-role="th">coef</td>
+<td data-quarto-table-cell-role="th">std err</td>
+<td data-quarto-table-cell-role="th">t</td>
+<td data-quarto-table-cell-role="th">P&gt;|t|</td>
+<td data-quarto-table-cell-role="th">[0.025</td>
+<td data-quarto-table-cell-role="th">0.975]</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">const</td>
+<td>-354.9920</td>
+<td>92.342</td>
+<td>-3.844</td>
+<td>0.000</td>
+<td>-536.000</td>
+<td>-173.984</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">wind_speed_wmo</td>
+<td>1.0720</td>
+<td>0.077</td>
+<td>13.916</td>
+<td>0.000</td>
+<td>0.921</td>
+<td>1.223</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">pressure_wmo</td>
+<td>0.3354</td>
+<td>0.090</td>
+<td>3.716</td>
+<td>0.000</td>
+<td>0.158</td>
+<td>0.512</td>
+</tr>
+</tbody>
+</table>
+
+
+<table class="simpletable caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Omnibus:</td>
+<td>3093.480</td>
+<td data-quarto-table-cell-role="th">Durbin-Watson:</td>
+<td>0.223</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Prob(Omnibus):</td>
+<td>0.000</td>
+<td data-quarto-table-cell-role="th">Jarque-Bera (JB):</td>
+<td>8622.195</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Skew:</td>
+<td>1.582</td>
+<td data-quarto-table-cell-role="th">Prob(JB):</td>
+<td>0.00</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Kurtosis:</td>
+<td>6.141</td>
+<td data-quarto-table-cell-role="th">Cond. No.</td>
+<td>2.16e+05</td>
+</tr>
+</tbody>
+</table>
+<br><br>Notes:<br>[1] Standard Errors assume that the covariance matrix of the errors is correctly specified.<br>[2] The condition number is large, 2.16e+05. This might indicate that there are<br>strong multicollinearity or other numerical problems.
+</div>
+</div>
+<div id="a8f2405d-f2e0-4b64-a57f-f939cd6579de" class="cell" data-execution_count="170">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>r2</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-display" data-execution_count="170">
+<pre><code>0.26235404579165633</code></pre>
+</div>
+</div>
+<div id="f1b09f4a-e7bf-4156-b8de-74b66b8b99f1" class="cell" data-execution_count="177">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>WINSTON_SID</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-display" data-execution_count="177">
+<pre><code>'2016041S14170'</code></pre>
+</div>
+</div>
+<div id="9c949fc8-6743-4e6c-9324-79b2ff222025" class="cell" data-execution_count="90">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>df_tracks_merge[<span class="st">"season"</span>].unique()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-display" data-execution_count="90">
+<pre><code>array([1947, 1948, 1949, 1950, 1952, 1954, 1955, 1956, 1960, 1961, 1962,
+       1963, 1964, 1966, 1967, 1968, 1969, 1970, 1971, 1972, 1973, 1974,
+       1975, 1976, 1977, 1978, 1979, 1980, 1981, 1982, 1983, 1984, 1985,
+       1986, 1987, 1988, 1989, 1990, 1991, 1992, 1993, 1994, 1995, 1996,
+       1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007,
+       2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018,
+       2019, 2020, 2021, 2022, 2024, 2023, 2025])</code></pre>
+</div>
+</div>
+<div id="ab7bb3e7-393e-4706-81e2-3eea783db471" class="cell" data-execution_count="91">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>df_tracks_merge[<span class="st">"wind_diff"</span>] <span class="op">=</span> (</span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>    df_tracks_merge[<span class="st">"wind_speed_wmo"</span>] <span class="op">-</span> df_tracks_merge[<span class="st">"wind_speed_usa"</span>]</span>
+<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<div id="1ae12c29-e94d-4d9d-bfc2-8491ad23c031" class="cell" data-execution_count="92">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>df_tracks_merge[<span class="st">"wind_diff"</span>].hist()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="fms_buffers_regression_files/figure-html/cell-31-output-1.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+<div id="ee80f7ae-a595-4681-bc0e-8e60f5a7f158" class="cell" data-execution_count="93">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>df_tracks_merge[df_tracks_merge[<span class="st">"wind_diff"</span>].<span class="bu">abs</span>() <span class="op">&gt;</span> <span class="dv">10</span>][</span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>    [<span class="st">"sid"</span>, <span class="st">"valid_time"</span>, <span class="st">"wind_speed_wmo"</span>, <span class="st">"wind_speed_usa"</span>, <span class="st">"wind_diff"</span>]</span>
+<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-display" data-execution_count="93">
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">sid</th>
+<th data-quarto-table-cell-role="th">valid_time</th>
+<th data-quarto-table-cell-role="th">wind_speed_wmo</th>
+<th data-quarto-table-cell-role="th">wind_speed_usa</th>
+<th data-quarto-table-cell-role="th">wind_diff</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">166</td>
+<td>1968094S08156</td>
+<td>1968-04-07 12:00:00</td>
+<td>55.0</td>
+<td>70</td>
+<td>-15.0</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">171</td>
+<td>1968094S08156</td>
+<td>1968-04-09 12:00:00</td>
+<td>60.0</td>
+<td>45</td>
+<td>15.0</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">172</td>
+<td>1968094S08156</td>
+<td>1968-04-09 18:00:00</td>
+<td>65.0</td>
+<td>40</td>
+<td>25.0</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">173</td>
+<td>1968094S08156</td>
+<td>1968-04-10 00:00:00</td>
+<td>70.0</td>
+<td>35</td>
+<td>35.0</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">174</td>
+<td>1968094S08156</td>
+<td>1968-04-10 06:00:00</td>
+<td>65.0</td>
+<td>30</td>
+<td>35.0</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">6367</td>
+<td>2007136S10158</td>
+<td>2007-05-20 18:00:00</td>
+<td>30.0</td>
+<td>15</td>
+<td>15.0</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">6368</td>
+<td>2007136S10158</td>
+<td>2007-05-21 00:00:00</td>
+<td>30.0</td>
+<td>15</td>
+<td>15.0</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">10394</td>
+<td>2023036S12163</td>
+<td>2023-02-08 12:00:00</td>
+<td>40.0</td>
+<td>51</td>
+<td>-11.0</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">10397</td>
+<td>2023036S12163</td>
+<td>2023-02-09 06:00:00</td>
+<td>50.0</td>
+<td>64</td>
+<td>-14.0</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">10731</td>
+<td>2023316S09167</td>
+<td>2023-11-16 00:00:00</td>
+<td>35.0</td>
+<td>-1</td>
+<td>36.0</td>
+</tr>
+</tbody>
+</table>
+
+<p>1409 rows × 5 columns</p>
+</div>
+</div>
+</div>
+<div id="49b06196-1541-4614-91eb-4f6b0b96b4c0" class="cell" data-execution_count="94">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb38"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>df_tracks_merge.set_index(<span class="st">"sid"</span>).loc[WINSTON_SID][</span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>    [<span class="st">"wind_speed_wmo"</span>, <span class="st">"wind_speed_usa"</span>]</span>
+<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-display" data-execution_count="94">
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">wind_speed_wmo</th>
+<th data-quarto-table-cell-role="th">wind_speed_usa</th>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">sid</th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2016041S14170</td>
+<td>25.0</td>
+<td>25</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">2016041S14170</td>
+<td>25.0</td>
+<td>25</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2016041S14170</td>
+<td>25.0</td>
+<td>25</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">2016041S14170</td>
+<td>30.0</td>
+<td>30</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2016041S14170</td>
+<td>35.0</td>
+<td>35</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">...</td>
+<td>...</td>
+<td>...</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2016041S14170</td>
+<td>40.0</td>
+<td>40</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">2016041S14170</td>
+<td>40.0</td>
+<td>40</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2016041S14170</td>
+<td>40.0</td>
+<td>40</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">2016041S14170</td>
+<td>40.0</td>
+<td>40</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2016041S14170</td>
+<td>40.0</td>
+<td>40</td>
+</tr>
+</tbody>
+</table>
+
+<p>64 rows × 2 columns</p>
+</div>
+</div>
+</div>
+
+
+
+</main> <!-- /main -->
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // For each code cell, group all output nodes into a single wrapper
+  // Quarto uses several output classes; target them all
+  const OUTPUT_SELECTOR =
+    '.cell-output, .cell-output-display, .cell-output-stdout, .cell-output-stderr, .cell-output-error';
+
+  document.querySelectorAll('.cell').forEach(cell => {
+    // Collect direct (or nested) output nodes within the cell
+    const outs = cell.querySelectorAll(OUTPUT_SELECTOR);
+    if (!outs.length) return;
+
+    // Skip if we've already wrapped this cell
+    if (cell.querySelector(':scope > .q-output-wrapper')) return;
+
+    // Create a wrapper and insert it before the first output
+    const wrapper = document.createElement('div');
+    wrapper.className = 'q-output-wrapper';
+
+    const firstOut = outs[0];
+    firstOut.parentNode.insertBefore(wrapper, firstOut);
+
+    // Move all outputs into the wrapper (preserves order)
+    outs.forEach(out => wrapper.appendChild(out));
+  });
+});
+</script>
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {
+        return true;
+      }
+    }
+    return false;
+  }
+  const onCopySuccess = function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button,
+        { trigger: "manual",
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  }
+  const getTextToCopy = function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+    text: getTextToCopy
+  });
+  clipboard.on('success', onCopySuccess);
+  if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+    const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+      text: getTextToCopy,
+      container: window.document.getElementById('quarto-embedded-source-code-modal')
+    });
+    clipboardModal.on('success', onCopySuccess);
+  }
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp('/' + window.location.host + '/');
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config);
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined;
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            }
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          }
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../exploration/usa_radii_modelfit.html" class="pagination-link" aria-label="USA tracks radius model fit">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">USA tracks radius model fit</span></span>
+      </a>
+  </div>
+  <div class="nav-page nav-page-next">
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+<script src="../site_libs/quarto-html/zenscroll-min.js"></script>
+</body></html>

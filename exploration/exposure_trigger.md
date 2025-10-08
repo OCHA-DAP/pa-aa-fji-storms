@@ -33,7 +33,9 @@ from src.blob import PROJECT_PREFIX
 ```
 
 ```python
-blob_name = f"{PROJECT_PREFIX}/processed/ibtracs/wind_buffers_exposure.parquet"
+blob_name = (
+    f"{PROJECT_PREFIX}/processed/ibtracs/fms_wind_buffers_exposure.parquet"
+)
 df_exp_raw = stratus.load_parquet_from_blob(blob_name)
 ```
 
@@ -59,7 +61,7 @@ df_stats = df_stats_raw.merge(df_exp, how="outer")
 ```
 
 ```python
-# take only from 2001 since this is the only season with full data
+# take only from 2001 since this is the only season with full EM-DAT data
 min_season = 2001
 max_season = 2025
 num_seasons = max_season - min_season + 1
@@ -87,6 +89,15 @@ actual_rp = (num_seasons + 1) / target_years
 ```
 
 ```python
+target_years
+```
+
+```python
+# just check what historical CERF RP is
+(2025 - 2007 + 1 + 1) / 3
+```
+
+```python
 for x in df_stats["Total Affected"].sort_values().to_list():
     n_trig_seasons = df_stats[df_stats["Total Affected"] >= x][
         "season"
@@ -95,6 +106,10 @@ for x in df_stats["Total Affected"].sort_values().to_list():
         break
 
 impact_thresh = x
+```
+
+```python
+impact_thresh
 ```
 
 ```python
@@ -159,6 +174,10 @@ df_stats
 ```
 
 ```python
+df_reg = df_stats.dropna().copy()
+```
+
+```python
 def calc_reg(target_col, var_cols):
     X = df_reg[var_cols]
     y = df_reg[target_col]
@@ -219,14 +238,6 @@ for var_col in var_cols:
 df_threshs = pd.DataFrame(dicts)
 
 df_stats["exp_64_trig"] = df_stats["exp_64"] > 0
-```
-
-```python
-df_stats[["Total Affected", var_col]].corr().iloc[0, -1]
-```
-
-```python
-p.corr(pp)
 ```
 
 ```python
@@ -294,7 +305,7 @@ def highlight_true(val):
 ```
 
 ```python
-df_stats.columns
+df_stats
 ```
 
 ```python
@@ -406,6 +417,10 @@ def plot_indicators(xcol, ycol, show_bubbles: bool = True):
 ```
 
 ```python
+df_stats.sort_values("season")
+```
+
+```python
 fig, ax = plot_indicators("exp_34", "roll2_mean")
 ax.set_xlabel("Population exposed to ≥ 34 knot wind [FMS, WorldPop]")
 ax.set_ylabel("Total 2-day rainfall, average over whole country (mm) [IMERG]")
@@ -413,8 +428,38 @@ ax.xaxis.set_major_formatter(StrMethodFormatter("{x:,.0f}"))
 ```
 
 ```python
+fig, ax = plot_indicators("exp_50", "roll2_mean")
+ax.set_xlabel("Population exposed to ≥ 50 knot wind [FMS, WorldPop]")
+ax.set_ylabel("Total 2-day rainfall, average over whole country (mm) [IMERG]")
+ax.xaxis.set_major_formatter(StrMethodFormatter("{x:,.0f}"))
+```
+
+```python
+fig, ax = plot_indicators("exp_64", "roll2_mean")
+ax.set_xlabel("Population exposed to ≥ 64 knot wind [FMS, WorldPop]")
+ax.set_ylabel("Total 2-day rainfall, average over whole country (mm) [IMERG]")
+ax.xaxis.set_major_formatter(StrMethodFormatter("{x:,.0f}"))
+```
+
+```python
 fig, ax = plot_indicators("exp_34", "Total Affected", show_bubbles=False)
 ax.set_xlabel("Population exposed to ≥ 34 knot wind [FMS, WorldPop]")
+ax.set_ylabel("Total population affected [EM-DAT]")
+ax.xaxis.set_major_formatter(StrMethodFormatter("{x:,.0f}"))
+ax.yaxis.set_major_formatter(StrMethodFormatter("{x:,.0f}"))
+```
+
+```python
+fig, ax = plot_indicators("exp_64", "Total Affected", show_bubbles=False)
+ax.set_xlabel("Population exposed to ≥ 64 knot wind [FMS, WorldPop]")
+ax.set_ylabel("Total population affected [EM-DAT]")
+ax.xaxis.set_major_formatter(StrMethodFormatter("{x:,.0f}"))
+ax.yaxis.set_major_formatter(StrMethodFormatter("{x:,.0f}"))
+```
+
+```python
+fig, ax = plot_indicators("wind", "Total Affected", show_bubbles=False)
+ax.set_xlabel("Max. wind speed while within 250 km [FMS]")
 ax.set_ylabel("Total population affected [EM-DAT]")
 ax.xaxis.set_major_formatter(StrMethodFormatter("{x:,.0f}"))
 ax.yaxis.set_major_formatter(StrMethodFormatter("{x:,.0f}"))
@@ -471,6 +516,70 @@ df_results = df_results.sort_values("sum_total_affected", ascending=False)
 ```
 
 ```python
+df_results_simple = df_results[~df_results["wind_col"].str.contains("_only")]
+```
+
+```python
+df_results_simple_or = df_results_simple[df_results_simple["cond"] == "or"]
+```
+
+```python
+for impact in df_results_simple_or["sum_total_affected"].unique():
+    print(impact)
+    display(
+        df_results_simple_or[
+            df_results_simple_or["sum_total_affected"] == impact
+        ]
+    )
+```
+
+```python
+fig, ax = plot_indicators("exp_50", "roll2_mean")
+ax.set_xlabel("Population exposed to ≥ 34 knot wind [FMS, WorldPop]")
+ax.set_ylabel("Total 2-day rainfall, average over whole country (mm) [IMERG]")
+ax.axhline(188.198907)
+ax.axvline(4669.0)
+ax.xaxis.set_major_formatter(StrMethodFormatter("{x:,.0f}"))
+```
+
+```python
+fig, ax = plot_indicators("exp_64", "roll2_mean")
+ax.set_xlabel("Population exposed to ≥ 34 knot wind [FMS, WorldPop]")
+ax.set_ylabel("Total 2-day rainfall, average over whole country (mm) [IMERG]")
+ax.axhline(126.13058)
+ax.axvline(32286.0)
+ax.xaxis.set_major_formatter(StrMethodFormatter("{x:,.0f}"))
+```
+
+```python
+fig, ax = plot_indicators("exp_50", "roll2_mean")
+ax.set_xlabel("Population exposed to ≥ 34 knot wind [FMS, WorldPop]")
+ax.set_ylabel("Total 2-day rainfall, average over whole country (mm) [IMERG]")
+ax.axhline(126.13058)
+ax.axvline(811126.0)
+ax.xaxis.set_major_formatter(StrMethodFormatter("{x:,.0f}"))
+```
+
+```python
+fig, ax = plot_indicators("exp_34", "roll2_mean")
+ax.set_xlabel("Population exposed to ≥ 34 knot wind [FMS, WorldPop]")
+ax.set_ylabel("Total 2-day rainfall, average over whole country (mm) [IMERG]")
+ax.axhline(126.13058)
+ax.axvline(700802.0)
+ax.xaxis.set_major_formatter(StrMethodFormatter("{x:,.0f}"))
+```
+
+```python
+for impact in df_results["sum_total_affected"].unique():
+    print(impact)
+    display(df_results[df_results["sum_total_affected"] == impact])
+```
+
+```python
+df_results.iloc[:20]
+```
+
+```python
 df_results_best = df_results[
     df_results["sum_total_affected"] == df_results["sum_total_affected"].max()
 ]
@@ -481,5 +590,9 @@ df_results_best["rain_thresh"].unique()
 ```
 
 ```python
-df_results
+df_results_best
+```
+
+```python
+
 ```

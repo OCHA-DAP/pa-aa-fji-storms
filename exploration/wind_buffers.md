@@ -42,7 +42,7 @@ from tqdm.auto import tqdm
 
 from src.datasources import ibtracs, codab
 from src.datasources.ibtracs import interpolate_track, expand_quad_col
-from src.constants import FJI_CRS
+from src.constants import *
 from src.blob import PROJECT_PREFIX
 ```
 
@@ -317,10 +317,6 @@ ne_col, se_col, sw_col, nw_col = [
     f"quadrant_radius_{buffer_speed}_{x}" for x in ["ne", "se", "sw", "nw"]
 ]
 n_points = 360
-```
-
-```python
-NM_TO_M = 1.852 * 1000
 ```
 
 ```python

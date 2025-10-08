@@ -35,7 +35,7 @@ from src.blob import PROJECT_PREFIX
 from src.datasources.ibtracs import expand_quad_col
 ```
 
-## Processing data
+## Processing IBTrACS data
 
 Just extracting USA values from IBTrACS - can all be skipped if file is already saved to blob
 
@@ -60,19 +60,11 @@ quad_cols = [f"usa_r{x}" for x in speeds]
 ```
 
 ```python
-ds
-```
-
-```python
 other_cols = ["sid", "usa_lat", "usa_lon", "usa_wind"]
 ```
 
 ```python
 var_cols = other_cols + quad_cols
-```
-
-```python
-var_cols
 ```
 
 ```python
@@ -107,6 +99,8 @@ blob_name = f"{PROJECT_PREFIX}/processed/ibtracs/usa_only_wind_radii.parquet"
 stratus.upload_parquet_to_blob(df_usa, blob_name)
 ```
 
+## Load and process data
+
 ```python
 df_usa = stratus.load_parquet_from_blob(blob_name)
 ```
@@ -125,10 +119,6 @@ df_usa = df_usa.merge(df_storms)
 ```
 
 ```python
-df_usa
-```
-
-```python
 buffer_speeds = [34, 50, 64]
 for buffer_speed in buffer_speeds:
     df_usa = expand_quad_col(df_usa, f"usa_r{buffer_speed}")
@@ -137,6 +127,8 @@ for buffer_speed in buffer_speeds:
 ```python
 quads = ["ne", "nw", "se", "sw"]
 ```
+
+Let's see which quadrant tends to be the highest, and check where we have historical values for it.
 
 ```python
 df_usa[[f"usa_r34_{x}" for x in quads]].mean()
@@ -149,6 +141,8 @@ df_usa.groupby("season")["usa_r34_nw"].count().plot()
 ```python
 df_usa[df_usa["season"] >= 1980].groupby("season")["usa_r34_nw"].count()
 ```
+
+Looks like JTWC started fully recording this in the 2003 season, so we can filter from only then onwards.
 
 ```python
 min_season = 2003
@@ -165,9 +159,13 @@ radius_cols = [
 ]
 ```
 
+Since we now know that we're only including years where (presumably) JTWC would record the wind radius if it exists, we can assume that if it's missing, it should be zero.
+
 ```python
 df_usa_recent[radius_cols] = df_usa_recent[radius_cols].fillna(0)
 ```
+
+We can calculate the mean radius. We won't bother with trying to model the individual quadrants just for simplicity.
 
 ```python
 for speed in buffer_speeds:
@@ -179,6 +177,8 @@ for speed in buffer_speeds:
 df_usa_recent
 ```
 
+Let's see how things look for each buffer speed.
+
 ```python
 for speed in buffer_speeds:
     df_usa_recent.plot.scatter(
@@ -188,12 +188,21 @@ for speed in buffer_speeds:
     )
 ```
 
-```python
-mean_quad_cols = [f"usa_r{speed}_mean" for speed in buffer_speeds]
-```
+It's interesting, it looks like for many points there is no buffer defined despite the wind speed being high enough. We can filter these out when fitting the regression.
+
+## Regression
+
+### Compare various methods
+
+Here we can compare:
+
+- Linear vs. log-log (`log` in the results table)
+- Whether we should also include latitude (or only wind speed) (`dof` in the results table)
+
+First we set up the columns.
 
 ```python
-mean_quad_cols
+mean_quad_cols = [f"usa_r{speed}_mean" for speed in buffer_speeds]
 ```
 
 ```python
@@ -204,6 +213,8 @@ df_usa_recent["usa_lat_abs"] = df_usa_recent["usa_lat"].abs()
 for col in ["usa_wind", "usa_lat_abs"] + mean_quad_cols:
     df_usa_recent[f"{col}_log"] = np.log(df_usa_recent[col])
 ```
+
+Then we iterate over the possible setups.
 
 ```python
 dicts = []
@@ -216,6 +227,7 @@ for col in mean_quad_cols:
             [f"usa_wind{log_str}", f"usa_lat_abs{log_str}"],
         ]:
             df_reg = df_usa_recent[[target_col] + var_cols].dropna()
+            # exclude zero values (which would show up as -np.inf for the log)
             df_reg = df_reg[df_reg[target_col] > 0]
             X = df_reg[var_cols]
             y = df_reg[target_col]
@@ -241,6 +253,15 @@ df_results = pd.DataFrame(dicts)
 df_results
 ```
 
+From the results (column `r2adj` is the adjusted $R^2$ value) above it looks like:
+
+1. Log-log performs better than linear
+2. Including latitude (`dof=2`) is better than only wind
+
+So, we'll go with that.
+
+### Make predictions
+
 ```python
 dicts_params = []
 for col in mean_quad_cols:
@@ -258,16 +279,16 @@ for col in mean_quad_cols:
     df_usa_recent[f"{col}_log_pred"] = model.predict(X_pred)
 ```
 
+Here are the parameters which we will save in `src.constants` so we can apply them to new forecasts:
+
 ```python
 dicts_params
 ```
 
-```python
-log_pred_cols = [f"usa_r{speed}_mean_log_pred" for speed in buffer_speeds]
-```
+We also just want to set anywhere with a maximum wind speed lower than the buffer speed to a radius of 0.
 
 ```python
-log_pred_cols
+log_pred_cols = [f"usa_r{speed}_mean_log_pred" for speed in buffer_speeds]
 ```
 
 ```python
@@ -283,9 +304,9 @@ for speed in buffer_speeds:
     )
 ```
 
-```python
-df_usa_recent
-```
+### Plot results
+
+Here we plot the results - looks ok, although we often predict a non-zero radius when the radius. But this could be from the weird points above where it's possible that JTWC didn't calculate a radius.
 
 ```python
 for col in mean_quad_cols:
@@ -295,6 +316,8 @@ for col in mean_quad_cols:
         alpha=0.05,
     )
 ```
+
+We can also calculate the $R^2$ and correlation (including the zeros, so pessimistic estimate).
 
 ```python
 def calc_r2(y_pred, y_true, k):
@@ -324,6 +347,10 @@ for speed in buffer_speeds:
     print(r2, r2_adj)
     print()
 ```
+
+### Plot examples
+
+Plot examples for Winston, Yasa, and Harold. Looks not bad.
 
 ```python
 for sid in [WINSTON_SID, YASA_SID, HAROLD_SID]:

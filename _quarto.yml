@@ -12,6 +12,13 @@ book:
   favicon: quarto_assets/favicon.ico
   chapters:
     - index.md
+    - part: "Wind field calculation"
+      chapters:
+        - exploration/usa_radii_modelfit.ipynb
+    - part: "Archive"
+      chapters:
+        - exploration/fms_buffers_regression.ipynb
+
 
 
 format:
