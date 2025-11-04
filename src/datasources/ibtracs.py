@@ -1,6 +1,6 @@
 import logging
 import uuid
-from typing import Literal
+from typing import Literal, Tuple
 
 import geopandas as gpd
 import numpy as np
@@ -26,6 +26,7 @@ from scipy.interpolate import (
     CubicSpline,
     PchipInterpolator,
 )
+from shapely.geometry import Polygon
 from tqdm.auto import tqdm
 
 logger = logging.getLogger(__name__)
@@ -396,3 +397,59 @@ def expand_quad_col(df, col):
         )
     )
     return df.join(df_expanded)
+
+
+def _radius_from_quadrants(
+    theta_deg: np.ndarray, ne: float, se: float, sw: float, nw: float
+) -> np.ndarray:
+    """
+    Return radius for each angle by linearly interpolating between the
+    four quadrant control points defined at bearings:
+        45°  -> NE
+        135° -> NW
+        225° -> SW
+        315° -> SE
+    Bearing convention: 0° = East, 90° = North (mathematical).
+    """
+    # Control bearings (deg) and radii, with wrap-around point to close the loop
+    bearings = np.array([45, 135, 225, 315, 405], dtype=float)
+    radii = np.array([ne, nw, sw, se, ne], dtype=float)
+
+    # Map all thetas into [0, 360) and also allow values up to 405 for interpolation
+    t = (theta_deg % 360).astype(float)
+    # For values in [0,45), make an equivalent in [360,405) to interpolate to NE nicely
+    t_wrap = t.copy()
+    t_wrap[t < 45] += 360
+
+    # Interpolate and then map back (the interpolation function is periodic due to control duplication)
+    r = np.interp(t_wrap, bearings, radii)
+    return r
+
+
+def make_quadrant_disk(
+    center_xy: Tuple[float, float],
+    ne: float,
+    se: float,
+    sw: float,
+    nw: float,
+    n_points: int = 360,
+) -> Polygon:
+    """
+    Build a smooth polygon around (x, y) using quadrant radii. Units assumed meters.
+    - center_xy: (x, y) in EPSG:3832
+    - ne, se, sw, nw: radii for quadrants (meters)
+    - n_points: angular resolution
+    Bearing convention: 0°=East, 90°=North; polygon traced counter-clockwise.
+    """
+    x0, y0 = center_xy
+    theta = np.linspace(0, 360, n_points, endpoint=False)  # degrees
+    r = _radius_from_quadrants(theta, ne, se, sw, nw)
+
+    # Convert polar -> Cartesian
+    th = np.deg2rad(theta)
+    xs = x0 + r * np.cos(th)
+    ys = y0 + r * np.sin(th)
+
+    # Ensure valid ring: close the polygon
+    coords = np.column_stack([xs, ys])
+    return Polygon(coords)

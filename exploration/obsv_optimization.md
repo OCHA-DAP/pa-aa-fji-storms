@@ -49,7 +49,12 @@ df_imerg = pd.read_sql(query, stratus.get_engine("prod"))
 ```
 
 ```python
-df_imerg["roll2_mean"] = df_imerg["mean"].rolling(2).sum()
+df_imerg
+```
+
+```python
+for col in ["mean", "median"]:
+    df_imerg[f"roll2_{col}"] = df_imerg[col].rolling(2).sum()
 ```
 
 ```python

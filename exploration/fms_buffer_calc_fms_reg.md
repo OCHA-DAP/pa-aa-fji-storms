@@ -16,7 +16,7 @@ jupyter:
 # FMS buffer estimation
 <!-- markdownlint-disable MD013 -->
 
-Estimating the FMS wind buffers, using the model that was fitted on the historical FMS values.
+Estimating the FMS wind buffers, using the model that was fitted on the historical USA values.
 
 ```python
 %load_ext jupyter_black
@@ -74,6 +74,10 @@ gdf_tracks = gdf_tracks.merge(df_storms)
 ```
 
 ```python
+gdf_tracks.columns
+```
+
+```python
 gdf_tracks = gdf_tracks[~gdf_tracks["provisional"]]
 ```
 
@@ -125,10 +129,10 @@ buffer_speeds = [34, 50, 64]
 
 ```python
 for speed in buffer_speeds:
-    params = WIND_RADIUS_PARAMS[speed]
+    params = WIND_RADIUS_PARAMS_FMS[speed]
     df_tracks[f"r{speed}_log"] = (
         params["const"]
-        + df_tracks["wind_speed_log"] * params["wind_speed_log"]
+        + df_tracks["wind_speed_log"] * params["MeanWind_log"]
         + df_tracks["lat_abs_log"] * params["lat_abs_log"]
     )
     df_tracks[f"r{speed}"] = np.exp(df_tracks[f"r{speed}_log"])
@@ -140,7 +144,7 @@ for speed in buffer_speeds:
 ```
 
 ```python
-
+params
 ```
 
 ```python
@@ -175,11 +179,7 @@ gdf_tracks_interp = gpd.GeoDataFrame(
 ```
 
 ```python
-gdf_tracks_interp
-```
-
-```python
-
+gdf_tracks_interp[gdf_tracks_interp["r34_m"] > 0]
 ```
 
 ```python
@@ -215,8 +215,8 @@ def plot_buffers(sid):
     gdf_tracks_interp.to_crs(3832).set_index("sid").loc[sid].plot(
         ax=ax, markersize=1, marker=".", edgecolor="none"
     )
-    gdf_buffers.set_index("sid").loc[sid].plot(
-        ax=ax, linewidth=0.5, column="buffer_speed", alpha=0.2
+    gdf_buffers[gdf_buffers["sid"] == sid].plot(
+        ax=ax, linewidth=0.5, alpha=0.2
     )
     ax.axis("off")
 ```
@@ -244,6 +244,12 @@ buf.seek(0)
 ```
 
 ```python
-blob_name = f"{PROJECT_PREFIX}/processed/ibtracs/fms_wind_buffers.parquet"
+blob_name = (
+    f"{PROJECT_PREFIX}/processed/ibtracs/fms_wind_buffers_fms_reg.parquet"
+)
 stratus.upload_blob_data(data=buf.getvalue(), blob_name=blob_name)
+```
+
+```python
+
 ```
