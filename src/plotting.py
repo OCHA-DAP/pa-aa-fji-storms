@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+import re
 
 import geopandas as gpd
 import matplotlib.patches as mpatches
@@ -345,3 +346,93 @@ def plot_bullseye_exposures(
     ax.set_aspect("equal")
     ax.axis("off")
     return fig, ax
+
+
+def wrap_text(text, max_len=40, break_anywhere=False):
+    """
+    Wrap text to ~max_len chars per line.
+
+    - break_anywhere=False: break only at spaces or dashes; preserves spacing/dashes,
+      removes trailing spaces when breaking.
+    - break_anywhere=True : can break mid-word. If a mid-word break is needed,
+      split roughly halfway through the word and append a hyphen at the end of the line.
+    """
+    if not break_anywhere:
+        # Soft wrap (only at spaces or dashes)
+        tokens = re.findall(r"\S+-|\S+|[-]", text)
+        lines, current = [], ""
+
+        for token in tokens:
+            add_space = current != "" and not current.endswith("-")
+            if len(current) + (1 if add_space else 0) + len(token) > max_len:
+                if current:
+                    lines.append(
+                        current.rstrip()
+                    )  # <-- remove trailing spaces
+                current = token
+            else:
+                if add_space:
+                    current += " "
+                current += token
+
+        if current:
+            lines.append(current.rstrip())
+
+        return "\n".join(lines)
+
+    # Hard wrap with smart mid-word hyphenation
+    tokens = list(re.finditer(r"\w+|\W+", text))
+    lines, current = [], ""
+
+    def flush():
+        nonlocal current
+        lines.append(
+            current.rstrip()
+        )  # <-- ensure no trailing space before newline
+        current = ""
+
+    for m in tokens:
+        tok = m.group(0)
+        is_word = tok.isalnum() or re.fullmatch(r"\w+", tok) is not None
+
+        while tok:
+            remaining = max_len - len(current)
+            if remaining <= 0:
+                flush()
+                remaining = max_len
+
+            if len(tok) <= remaining:
+                current += tok
+                tok = ""
+            else:
+                if is_word:
+                    # Split inside word, roughly halfway through it
+                    half = max(1, len(tok) // 2)
+                    split_at = half if half <= remaining else remaining
+                    piece = tok[:split_at]
+                    if split_at < len(tok):
+                        # Add hyphen if word continues
+                        if (
+                            len(current) + len(piece) + 1 <= max_len
+                            or len(current) == 0
+                        ):
+                            current += piece + "-"
+                        else:
+                            flush()
+                            continue
+                        tok = tok[split_at:]
+                        flush()
+                    else:
+                        current += piece
+                        tok = tok[split_at:]
+                else:
+                    # Non-word: break cleanly
+                    piece = tok[:remaining]
+                    current += piece
+                    tok = tok[remaining:]
+                    flush()
+
+    if current:
+        lines.append(current.rstrip())
+
+    return "\n".join(lines).removeprefix("\n")

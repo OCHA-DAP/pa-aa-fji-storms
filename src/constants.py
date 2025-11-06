@@ -50,7 +50,7 @@ WIND_RADIUS_PARAMS_FMS = {
 
 NM_TO_M = 1.852 * 1000
 
-ROTUMA1 = "FJ315"
+ROTUMA2 = "FJ315"
 
 # storms that would have triggered 2023 framework
 OLD_TRIG_SIDS = []
@@ -63,3 +63,8 @@ NAMESEASON2SID = {
     "Rae [ray] 2025": "2025054S13182",
     "Yasa 2021": "2020346S13168",
 }
+
+EASTERN1 = "FJ3"
+LAU2 = "FJ305"
+WAINIKELI3 = "FJ10308"
+QUADS = ["ne", "se", "sw", "nw"]

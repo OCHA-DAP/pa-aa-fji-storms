@@ -1,6 +1,7 @@
 import numpy as np
 import ocha_stratus as stratus
 import requests
+import xarray as xr
 
 from src.blob import PROJECT_PREFIX
 from src.constants import ISO3
@@ -41,3 +42,21 @@ def load_worldpop_from_blob(iso3: str = ISO3):
     da = da.where(da != da.attrs["_FillValue"]).squeeze(drop=True)
     da.attrs["_FillValue"] = np.nan
     return da
+
+
+def upsample_dataarray(
+    da: xr.DataArray,
+    resolution: float = 0.1,
+    y_dim: str = "y",
+    x_dim: str = "x",
+) -> xr.DataArray:
+    new_y = np.arange(da[y_dim].min() - 1, da[y_dim].max() + 1, resolution)
+    new_x = np.arange(da[x_dim].min() - 1, da[x_dim].max() + 1, resolution)
+    return da.interp(
+        coords={
+            y_dim: new_y,
+            x_dim: new_x,
+        },
+        method="nearest",
+        kwargs={"fill_value": "extrapolate"},
+    )

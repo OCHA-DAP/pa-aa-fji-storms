@@ -54,11 +54,11 @@ da_wp.sum().values
 ```
 
 ```python
-da_wp = da_wp.assign_coords({"x": (((da_wp.x + 360) % 360))}).sortby("x")
+# da_wp = da_wp.assign_coords({"x": (((da_wp.x + 360) % 360))}).sortby("x")
 ```
 
 ```python
-da_wp_clip = da_wp.rio.clip(adm0.geometry)
+da_wp_clip = da_wp.rio.clip(adm3.geometry)
 ```
 
 ```python
@@ -135,12 +135,28 @@ stratus.upload_parquet_to_blob(df_exp, blob_name)
 ### At adm3 level
 
 ```python
+adm3 = adm3.to_crs(da_wp.rio.crs)
+```
+
+```python
+da_wp_clip_all = da_wp.rio.clip(adm3.geometry, all_touched=True)
+```
+
+```python
+da_wp.rio.crs
+```
+
+```python
+gdf_buffers_nowrap = gdf_buffers.to_crs(da_wp.rio.crs)
+```
+
+```python
 dicts = []
 for pcode, adm_row in tqdm(
     adm3.set_index("ADM3_PCODE").iterrows(), total=len(adm3)
 ):
-    da_clip_adm = da_wp_clip.rio.clip([adm_row.geometry])
-    for _, row in gdf_buffers.iterrows():
+    da_clip_adm = da_wp_clip_all.rio.clip([adm_row.geometry])
+    for _, row in gdf_buffers_nowrap.iterrows():
         if not row.geometry:
             pop_exposed = 0
         else:
@@ -164,6 +180,13 @@ df_exp_adm3 = pd.DataFrame(dicts)
 ```
 
 ```python
-blob_name = f"{PROJECT_PREFIX}/processed/ibtracs/fms_wind_buffers_exposure_adm3.parquet"
-stratus.upload_parquet_to_blob(df_exp_adm3, blob_name)
+df_exp_adm3[
+    (df_exp_adm3["ADM3_PCODE"] == WAINIKELI3)
+    & (df_exp_adm3["sid"] == WINSTON_SID)
+]
+```
+
+```python
+# blob_name = f"{PROJECT_PREFIX}/processed/ibtracs/fms_wind_buffers_exposure_adm3.parquet"
+# stratus.upload_parquet_to_blob(df_exp_adm3, blob_name)
 ```

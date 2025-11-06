@@ -7,6 +7,7 @@ import numpy as np
 import ocha_stratus as stratus
 import pandas as pd
 import pandera.pandas as pa
+import shapely
 import xarray as xr
 from ocha_lens.datasources.ibtracs import (
     _convert_string_columns,
@@ -21,6 +22,7 @@ from ocha_lens.utils.validation import (
     check_crs,
     check_quadrant_list,
 )
+from rioxarray.exceptions import NoDataInBounds
 from scipy.interpolate import (
     Akima1DInterpolator,
     CubicSpline,
@@ -28,6 +30,8 @@ from scipy.interpolate import (
 )
 from shapely.geometry import Polygon
 from tqdm.auto import tqdm
+
+from src.constants import FJI_CRS, NM_TO_M, QUADS
 
 logger = logging.getLogger(__name__)
 
@@ -453,3 +457,127 @@ def make_quadrant_disk(
     # Ensure valid ring: close the polygon
     coords = np.column_stack([xs, ys])
     return Polygon(coords)
+
+
+def calculate_wind_buffers_gdf(
+    df: pd.DataFrame,
+    quad_cols_format: str = "quadrant_radius_{speed}_{quad}",
+    lon_col: str = "Longitude",
+    lat_col: str = "Latitude",
+    valid_time_col: str = "valid_time",
+):
+    """
+    Calculate wind buffer polygons for given wind speed quadrants.
+    Note that this function interpolates the storm track to a regular
+    30-minute interval before calculating the wind buffers.
+    Parameters
+    ----------
+    df: pd.DataFrame
+        DataFrame with storm track data including quadrant radius columns
+    quad_cols_format: str = 'quadrant_radius_{speed}_{quad}'
+        Format string for quadrant radius columns, with placeholders for
+        speed and quad (e.g., 'quadrant_radius_{speed}_{quad}')
+    lon_col: str = 'Longitude'
+        Name of the longitude column in df
+    lat_col: str = 'Latitude'
+        Name of the latitude column in df
+    valid_time_col: str = 'valid_time'
+        Name of the valid time column in df
+
+    Returns
+    -------
+    gpd.GeoDataFrame
+        GeoDataFrame with wind buffer polygons for each speed
+
+    """
+    all_quad_cols = [
+        quad_cols_format.format(speed=speed, quad=x)
+        for speed in [34, 50, 64]
+        for x in QUADS
+    ]
+    df = df[[lon_col, lat_col, valid_time_col] + all_quad_cols].copy()
+    df[lon_col] = df[lon_col].apply(lambda x: (x + 360) % 360)
+    df_interp = interpolate_track(
+        df,
+        time_col=valid_time_col,
+        lat_col=lat_col,
+        lon_col=lon_col,
+        freq="30min",
+    )
+    gdf_interp = gpd.GeoDataFrame(
+        data=df_interp,
+        geometry=gpd.points_from_xy(
+            df_interp["Longitude"], df_interp["Latitude"]
+        ),
+        crs=FJI_CRS,
+    ).to_crs(3832)
+    dicts = []
+    geoms = []
+    for speed in [34, 50, 64]:
+        speed_quad_cols = tuple(
+            quad_cols_format.format(speed=speed, quad=x) for x in QUADS
+        )
+        geoms.append(build_merged_wind_buffer(gdf_interp, speed_quad_cols))
+        dicts.append({"speed": speed})
+    return gpd.GeoDataFrame(dicts, geometry=geoms, crs=3832)
+
+
+def build_merged_wind_buffer(
+    gdf: gpd.GeoDataFrame,
+    quad_cols: Tuple[str, str, str, str],
+):
+    """
+    Build a merged wind buffer polygon from quadrant radii columns.
+    Parameters
+    ----------
+    gdf: gpd.GeoDataFrame
+        GeoDataFrame with point geometries and quadrant radius columns
+    quad_cols: Tuple[str, str, str, str]
+        Names of the four quadrant radius columns in order:
+        (ne_col, se_col, sw_col, nw_col)
+
+    Returns
+    -------
+    gpd.GeoSeries or None
+        Merged polygon of wind buffers, or None if all radius values are NaN
+
+    """
+    ne_col, se_col, sw_col, nw_col = quad_cols
+    polys = []
+    gdf[[ne_col, se_col, sw_col, nw_col]] = (
+        gdf[[ne_col, se_col, sw_col, nw_col]].fillna(0) * NM_TO_M
+    )
+    for _, row in gdf.iterrows():
+        if row[[ne_col, se_col, sw_col, nw_col]].isna().all():
+            return None
+
+        poly = make_quadrant_disk(
+            (row.geometry.x, row.geometry.y),
+            row[ne_col],
+            row[se_col],
+            row[sw_col],
+            row[nw_col],
+        )
+        polys.append(poly)
+    return gpd.GeoSeries(polys).union_all()
+
+
+def calculate_adm_exposure(
+    da_wp_clip_adm: xr.DataArray,
+    buffer_geometry: shapely.geometry.Polygon,
+):
+    if buffer_geometry is None:
+        return 0
+    # check that da longitude is in [0, 360)
+    if np.any(da_wp_clip_adm["lon"] < 0):
+        raise ValueError("Longitude must be in [0, 360) for exposure calc")
+    # check that buffer_geometry is in [0, 360)
+    if buffer_geometry.bounds[0] < 0:
+        raise ValueError(
+            "Buffer geometry must be in [0, 360) for exposure calc"
+        )
+    try:
+        _da_clip = da_wp_clip_adm.rio.clip([buffer_geometry])
+        return int(_da_clip.sum())
+    except NoDataInBounds:
+        return 0

@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Literal
 
 import geopandas as gpd
+import ocha_stratus as stratus
 import pandas as pd
 import rioxarray as rxr
 import xarray as xr
@@ -17,6 +18,21 @@ DEV_BLOB_SAS = os.getenv("DEV_BLOB_SAS")
 DEV_BLOB_NAME = "imb0chd0dev"
 
 PROJECT_PREFIX = "pa-aa-fji-storms"
+
+
+def load_geoparquet_from_blob(blob_name, stage="dev"):
+    return gpd.read_parquet(io.BytesIO(stratus.load_blob_data(blob_name)))
+
+
+def upload_geoparquet_to_blob(gdf, blob_name, stage="dev"):
+    buffer = io.BytesIO()
+    gdf.to_parquet(buffer, index=False)
+    buffer.seek(0)
+    stratus.upload_blob_data(
+        data=buffer.getvalue(),
+        blob_name=blob_name,
+        stage=stage,
+    )
 
 
 def get_container_client(

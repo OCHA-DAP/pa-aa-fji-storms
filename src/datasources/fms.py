@@ -3,9 +3,18 @@ from io import BytesIO, StringIO
 from pathlib import Path
 
 import geopandas as gpd
+import numpy as np
 import pandas as pd
+from shapely.affinity import translate
 
-from src.constants import FJI_CRS
+from src.constants import FJI_CRS, QUADS
+
+SPEED2WORD = {34: "Gale", 50: "Storm", 64: "Hurricane"}
+QUAD_COL_RENAME = {
+    f"{x.upper()}{speedword}Radius": f"quadrant_radius_{speed}_{x}"
+    for speed, speedword in SPEED2WORD.items()
+    for x in QUADS
+}
 
 
 def datetime_to_season(dt: datetime) -> int:
@@ -76,3 +85,30 @@ def parse_fms_forecast(
     )
     gdf = gdf.set_crs(FJI_CRS)
     return gdf
+
+
+def shift_gdf_points(
+    gdf: gpd.GeoDataFrame,
+    azimuth_deg: float,
+    distance_col: str = "uncertainty_m",
+    geographic_crs: str = FJI_CRS,
+    projected_crs: str = "EPSG:3857",
+    longitude_col: str = "Longitude",
+    latitude_col: str = "Latitude",
+):
+    gdf = gdf.to_crs(projected_crs)
+    angle_rad = np.deg2rad(azimuth_deg)
+    dx = gdf[distance_col] * np.sin(angle_rad)
+    dy = gdf[distance_col] * np.cos(angle_rad)
+    new_geometry = [
+        translate(geom, xoff=x, yoff=y)
+        for geom, x, y in zip(gdf.geometry, dx, dy)
+    ]
+    df_out = gdf.drop(columns="geometry")
+    df_out["shift_deg"] = azimuth_deg
+    df_out["shift_distance_m"] = gdf[distance_col]
+    gdf_out = gpd.GeoDataFrame(df_out, geometry=new_geometry, crs=gdf.crs)
+    gdf_out = gdf_out.to_crs(geographic_crs)
+    gdf_out[longitude_col] = gdf_out.geometry.x
+    gdf_out[latitude_col] = gdf_out.geometry.y
+    return gdf_out
