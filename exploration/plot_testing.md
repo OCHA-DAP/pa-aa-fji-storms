@@ -183,6 +183,11 @@ plot_template_circles(
 ```
 
 ```python
+blob_name = f"{PROJECT_PREFIX}/processed/plotting/adm3_simple_template.parquet"
+stratus.upload_parquet_to_blob(template_df_simple, blob_name)
+```
+
+```python
 gdf_admin2 = (
     gdf_admin[["ADM2_PCODE", "ADM2_EN", "pop_total", "geometry"]]
     .dissolve(["ADM2_PCODE", "ADM2_EN"], aggfunc="sum")

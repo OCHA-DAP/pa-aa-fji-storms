@@ -37,7 +37,7 @@ from tqdm.auto import tqdm
 
 from src.datasources import fms, ibtracs, worldpop, codab
 from src.constants import *
-from src.blob import PROJECT_PREFIX
+from src.blob import PROJECT_PREFIX, upload_geoparquet_to_blob
 ```
 
 ```python
@@ -201,6 +201,11 @@ df_tracks = pd.concat(dfs)
 
 ```python
 gdf_buffers
+```
+
+```python
+blob_name = f"{PROJECT_PREFIX}/processed/fms/forecast_tracks_buffers.parquet"
+upload_geoparquet_to_blob(gdf_buffers, blob_name)
 ```
 
 ```python

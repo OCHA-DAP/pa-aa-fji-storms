@@ -11,6 +11,8 @@ import pandas as pd
 from matplotlib.colors import to_hex, to_rgb
 from matplotlib.patches import Circle
 
+from src.constants import FJI_CRS
+
 # -------------------------------
 # Helpers
 # -------------------------------
@@ -138,13 +140,17 @@ def plot_template_circles(
     outline_alpha: float = 1.0,
     outline_lw: float = 0.2,
     dpi: int = 200,
+    ax=None,
 ):
     """
     Plot ONLY the outer, unfilled circles from the template (for debugging sizing/layout).
     Labels (if label_col provided) are centered and scaled by total population.
     """
     t = template_df.copy()
-    fig, ax = plt.subplots(figsize=fig_size, dpi=dpi)
+    if ax is not None:
+        fig = ax.figure
+    else:
+        fig, ax = plt.subplots(figsize=fig_size, dpi=dpi)
 
     # label font scaling (by total pop)
     p = t["pop_total"].to_numpy() if "pop_total" in t.columns else np.array([])
@@ -238,6 +244,7 @@ def plot_bullseye_exposures(
     outline_alpha: float = 1.0,
     outline_lw: float = 0.2,
     dpi: int = 200,
+    ax=None,
 ):
     """
     Draws (optionally) the template empty circles first, then concentric filled disks for exposures.
@@ -274,6 +281,7 @@ def plot_bullseye_exposures(
             outline_alpha=outline_alpha,
             outline_lw=outline_lw,
             dpi=dpi,
+            ax=ax,
         )
     else:
         fig, ax = plt.subplots(figsize=fig_size, dpi=dpi)
@@ -436,3 +444,40 @@ def wrap_text(text, max_len=40, break_anywhere=False):
         lines.append(current.rstrip())
 
     return "\n".join(lines).removeprefix("\n")
+
+
+def plot_wind_buffers(gdf_adm, gdf_buffers, ax=None):
+    if ax is not None:
+        fig = ax.figure
+    else:
+        fig, ax = plt.subplots(dpi=200, figsize=(10, 8))
+    colors = {34: "gold", 50: "crimson", 64: "indigo"}
+    colors_pale = {s: lighten(colors[s]) for s in colors}
+
+    gdf_adm.to_crs(FJI_CRS).boundary.plot(ax=ax, color="black", linewidth=0.5)
+    xlims, ylims = ax.get_xlim(), ax.get_ylim()
+
+    ax.axis("off")
+    for speed, color in colors_pale.items():
+        gdf_buffers[gdf_buffers["buffer_speed"] == speed].plot(
+            ax=ax, color=color
+        )
+
+    legend_patches = [
+        mpatches.Patch(facecolor=colors_pale[34], label="34 kt"),
+        mpatches.Patch(facecolor=colors_pale[50], label="50 kt"),
+        mpatches.Patch(facecolor=colors_pale[64], label="64 kt"),
+    ]
+    ax.legend(
+        handles=legend_patches,
+        title="Wind speed",
+        frameon=True,
+        loc="upper left",
+        fontsize=7,
+        title_fontsize=8,
+    )
+
+    ax.set_xlim(xlims)
+    ax.set_ylim(ylims)
+
+    return fig, ax
