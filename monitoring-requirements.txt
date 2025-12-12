@@ -7,9 +7,10 @@ Jinja2
 kaleido==0.2.1
 numpy==1.25.1
 pandas
-pandera
 plotly==5.17.0
 python-dotenv==1.0.0
 shapely==2.0.1
 ocha-stratus
 ocha-lens
+scipy
+rioxarray
