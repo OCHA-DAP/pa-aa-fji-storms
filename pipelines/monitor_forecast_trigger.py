@@ -1,4 +1,5 @@
 import argparse
+import os
 from io import BytesIO
 
 import geopandas as gpd
@@ -26,6 +27,8 @@ TEST_EMAIL = load_boolean_env("TEST_EMAIL", True)
 SIMULATE_TRIGGER = load_boolean_env("FORCE_TRIGGER", False)
 DRY_RUN = load_boolean_env("DRY_RUN", True)
 
+TEST_FORECAST_BLOB_NAME = os.getenv("TEST_FORECAST_BLOB_NAME", "")
+
 YASA_TEST_BLOB_NAME = f"{PROJECT_PREFIX}/raw/fms/TC Data/TC Yasa/20201216T000000Z_Official_Forecast_Track_2021_02F_YASA.csv"
 
 if __name__ == "__main__":
@@ -40,11 +43,12 @@ if __name__ == "__main__":
         decoded_csv = decode_b64_string(csv_str)
     elif SIMULATE_TRIGGER:
         decoded_csv = BytesIO(stratus.load_blob_data(YASA_TEST_BLOB_NAME))
+    elif TEST_FORECAST_BLOB_NAME:
+        decoded_csv = BytesIO(stratus.load_blob_data(TEST_FORECAST_BLOB_NAME))
     else:
-        logger.info(
-            "No CSV input provided and FORCE_TRIGGER is False. Exiting."
-        )
+        logger.info("No forecast CSV provided and no test blob set; exiting.")
         exit(0)
+
     gdf_forecast = parse_fms_forecast(decoded_csv)
     gdf_forecast = gdf_forecast.rename(columns={"forecast_time": "valid_time"})
     geoms_in, dicts_in = calculate_fms_buffers(gdf_forecast)

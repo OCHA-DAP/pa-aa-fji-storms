@@ -7,14 +7,26 @@ on:
         description: 'Base64 string CSV file of forecast'
         type: string
       test_email:
-        description: 'If TRUE, send email to test mailing list instead of real one (fallback: True)'
-        type: boolean
+        description: 'If True, send email to test mailing list instead of real one (fallback: True)'
+        type: choice
+        options:
+          - 'True'
+          - 'False'
       simulate_trigger:
-        description: 'If TRUE, impute data to simulate triggering (fallback: False)'
-        type: boolean
+        description: 'If True, impute data to simulate triggering (fallback: False)'
+        type: choice
+        options:
+          - 'True'
+          - 'False'
       dry_run:
-        description: 'If TRUE, do not perform any write or email operations (fallback: True)'
-        type: boolean
+        description: 'If True, do not perform any write or email operations (fallback: True)'
+        type: choice
+        options:
+          - 'True'
+          - 'False'
+      test_forecast_blob_name:
+        description: 'Blob name of test forecast file to use instead of input CSV (optional)'
+        type: string
 
 jobs:
   build:
@@ -42,4 +54,5 @@ jobs:
           TEST_EMAIL: ${{ inputs.test_email || vars.TEST_EMAIL || 'True'}}
           SIMULATE_TRIGGER: ${{ vars.SIMULATE_TRIGGER || 'False'}}
           DRY_RUN: ${{ vars.DRY_RUN || 'True'}}
+          TEST_FORECAST_BLOB_NAME: ${{ inputs.test_forecast_blob_name }}
         run: python pipelines/monitor_forecast_trigger.py ${{ inputs.flags }} ${{ inputs.csv }}
