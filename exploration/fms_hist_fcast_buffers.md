@@ -51,6 +51,10 @@ fcast_blob_names = [x for x in blob_names if "Forecast_Track" in x]
 ```
 
 ```python
+fcast_blob_names
+```
+
+```python
 obsv_blob_names = [x for x in blob_names if "Best_Track" in x]
 ```
 

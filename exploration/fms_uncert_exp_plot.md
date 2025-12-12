@@ -350,6 +350,62 @@ storm_name = "Yasa"
 ```
 
 ```python
+fig, axes = plt.subplots(2, 3, figsize=(18, 12))  # Wider layout
+
+row_specs = [
+    ("middle", "Most likely track", middle_buffers),
+    ("worst", "Highest reasonable exposure\n(worst case scenario)", worst_buffers),
+    ("best", "Lowest reasonable exposure\n(best case scenario)", best_buffers),
+]
+
+# ---- Plotting Loop ----
+for col, (limit, title_str, gdf_buffers) in enumerate(row_specs):
+    # ---- Top row: wind swaths ----
+    top_ax = axes[0][col]
+    plot_wind_buffers(adm3_no_rotuma_lau, gdf_buffers, ax=top_ax)
+
+    # Add title to top axis
+    top_ax.set_title(title_str, fontsize=16, pad=10)
+
+    # ---- Bottom row: population exposure ----
+    bottom_ax = axes[1][col]
+    plot_bullseye_exposures(
+        adm3_simple_template.merge(adm3[["ADM3_PCODE", "adm_label"]]),
+        df_exp_adm3[df_exp_adm3["limit"] == limit],
+        label_col="adm_label",
+        min_font=4,
+        max_font=20,
+        ax=bottom_ax,
+    )
+
+# ---- Overall Column Titles ----
+axes[0][0].text(
+    0.5, 1.12, "Wind swaths", fontsize=18, fontweight="bold", ha="center", transform=axes[0][0].transAxes
+)
+axes[1][0].text(
+    0.5, 1.15, "Population exposure", fontsize=18, fontweight="bold", ha="center", transform=axes[1][0].transAxes
+)
+
+# ---- Overall Figure Title ----
+fig.suptitle(
+    f"{storm_name}: forecast issued {fji_time_str(issued_time)}",
+    fontsize=22,
+    fontweight="bold",
+    y=1.04,
+)
+
+# Adjust layout to prevent overlap
+fig.tight_layout(rect=[0, 0, 1, 0.98])
+
+# Save
+fig.savefig(
+    f"temp/{storm_name}_fcast_{issued_time:%Y%m%dT%H%MZ}.pdf",
+    format="pdf",
+    bbox_inches="tight",
+)
+```
+
+```python
 fig, axes = plt.subplots(3, 2, figsize=(12, 18))
 
 row_specs = [

@@ -1,3 +1,4 @@
+import base64
 from datetime import datetime
 from io import BytesIO, StringIO
 from pathlib import Path
@@ -5,11 +6,14 @@ from pathlib import Path
 import geopandas as gpd
 import numpy as np
 import pandas as pd
+from shapely import unary_union
 from shapely.affinity import translate
 
-from src.constants import FJI_CRS, QUADS
+from src.constants import FJI_CRS, NM_TO_M, QUADS
+from src.datasources import ibtracs
 
 SPEED2WORD = {34: "Gale", 50: "Storm", 64: "Hurricane"}
+SPEEDS = [34, 50, 64]
 QUAD_COL_RENAME = {
     f"{x.upper()}{speedword}Radius": f"quadrant_radius_{speed}_{x}"
     for speed, speedword in SPEED2WORD.items()
@@ -24,6 +28,26 @@ def datetime_to_season(dt: datetime) -> int:
     else:
         season = year
     return season
+
+
+def decode_b64_string(csv: str) -> StringIO:
+    """Decodes encoded string of CSV.
+
+    Parameters
+    ----------
+    csv: str
+        String of CSV (received as command line argument of script)
+
+    Returns
+    -------
+    StringIO
+        StringIO of CSV, to be used in process_fms_forecast()
+    """
+    bytes_str = csv.encode("ascii") + b"=="
+    converted_bytes = base64.b64decode(bytes_str)
+    csv_str = converted_bytes.decode("ascii")
+    str_out = StringIO(csv_str)
+    return str_out
 
 
 def parse_fms_forecast(
@@ -85,6 +109,82 @@ def parse_fms_forecast(
     )
     gdf = gdf.set_crs(FJI_CRS)
     return gdf
+
+
+def calculate_fms_buffers(gdf, best_track: bool = False):
+    gdf["Longitude"] = gdf["Longitude"].apply(lambda x: (x + 360) % 360)
+    name_season = gdf.iloc[0]["Name Season"]
+    if not best_track:
+        issued_time = gdf.iloc[0]["base_time"]
+    for speed in SPEEDS:
+        speedword = SPEED2WORD[speed]
+        gdf = gdf.rename(
+            columns={
+                f"{x.upper()}{speedword}Radius": f"quadrant_radius_{speed}_{x}"
+                for x in QUADS
+            }
+        )
+    cols = ["valid_time", "Latitude", "Longitude", "Category", "MeanWind"] + [
+        f"quadrant_radius_{speed}_{x}" for speed in SPEEDS for x in QUADS
+    ]
+    df = gdf[cols]
+    df_interp = ibtracs.interpolate_track(
+        df, time_col="valid_time", lat_col="Latitude", lon_col="Longitude"
+    )
+    gdf_interp = gpd.GeoDataFrame(
+        data=df_interp,
+        geometry=gpd.points_from_xy(
+            df_interp["Longitude"], df_interp["Latitude"]
+        ),
+        crs=FJI_CRS,
+    ).to_crs(3832)
+
+    dicts = []
+    geoms = []
+
+    def convert_nm_to_m(value_nm: float):
+        return np.nan_to_num(value_nm * NM_TO_M, nan=0)
+
+    n_points = 360
+
+    for speed in SPEEDS:
+        polys = []
+        for _, row in gdf_interp.iterrows():
+            ne_col, se_col, sw_col, nw_col = [
+                f"quadrant_radius_{speed}_{x}"
+                for x in ["ne", "se", "sw", "nw"]
+            ]
+            if row[[ne_col, se_col, sw_col, nw_col]].isna().all():
+                continue
+
+            poly = ibtracs.make_quadrant_disk(
+                (row.geometry.x, row.geometry.y),
+                ne=convert_nm_to_m(row[ne_col]),
+                se=convert_nm_to_m(row[se_col]),
+                sw=convert_nm_to_m(row[sw_col]),
+                nw=convert_nm_to_m(row[nw_col]),
+                n_points=n_points,
+            )
+            polys.append(poly)
+        gdf = gpd.GeoDataFrame(geometry=polys, crs=3832)
+        merged = unary_union(gdf.geometry.values)
+        if not best_track:
+            dicts.append(
+                {
+                    "buffer_speed": speed,
+                    "name_season": name_season,
+                    "issued_time": issued_time,
+                }
+            )
+        else:
+            dicts.append(
+                {
+                    "buffer_speed": speed,
+                    "name_season": name_season,
+                }
+            )
+        geoms.append(merged)
+    return geoms, dicts
 
 
 def shift_gdf_points(

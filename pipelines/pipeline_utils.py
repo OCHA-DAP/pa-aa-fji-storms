@@ -1,4 +1,17 @@
 import logging
+import os
+
+
+def load_boolean_env(var_name: str, default: bool) -> bool:
+    var_value = os.getenv(var_name)
+    if var_value is None:
+        return default
+    if var_value.lower() in ("true", "1", "yes"):
+        return True
+    elif var_value.lower() in ("false", "0", "no"):
+        return False
+    else:
+        return default
 
 
 def get_logger(name=__name__):
