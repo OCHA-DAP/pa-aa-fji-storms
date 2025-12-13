@@ -7,7 +7,7 @@ on:
         description: 'Base64 string CSV file of forecast'
         type: string
       test_email:
-        description: 'If True, send email to test mailing list instead of real one (fallback: True)'
+        description: 'TEST_EMAIL: If True, send email to test mailing list instead of real one (fallback: True)'
         type: choice
         options:
           - 'True'
@@ -15,7 +15,7 @@ on:
           - ''
         default: ''
       simulate_trigger:
-        description: 'If True, impute data to simulate triggering (fallback: False)'
+        description: 'SIMULATE_TRIGGER: If True, impute data to simulate triggering (fallback: False)'
         type: choice
         options:
           - 'True'
@@ -23,7 +23,7 @@ on:
           - ''
         default: ''
       dry_run:
-        description: 'If True, do not perform any write or email operations (fallback: True)'
+        description: 'DRY_RUN: If True, do not perform any write or email operations (fallback: True)'
         type: choice
         options:
           - 'True'
