@@ -16,7 +16,7 @@ from src.datasources.fms import (
     parse_fms_forecast,
 )
 from src.exposure_calc import calculate_single_adm_exposure
-from src.listmonk import create_and_send_campaign
+from src.listmonk import TRISTAN_ONLY_LIST_ID, create_and_send_campaign
 
 logger = get_logger(__name__)
 
@@ -34,6 +34,8 @@ DRY_RUN = load_boolean_env("DRY_RUN", True)
 TEST_FORECAST_BLOB_NAME = os.getenv("TEST_FORECAST_BLOB_NAME", "")
 
 YASA_TEST_BLOB_NAME = f"{PROJECT_PREFIX}/raw/fms/TC Data/TC Yasa/20201216T000000Z_Official_Forecast_Track_2021_02F_YASA.csv"
+
+LIST_IDS = [TRISTAN_ONLY_LIST_ID] if TEST_EMAIL else [TRISTAN_ONLY_LIST_ID]
 
 if __name__ == "__main__":
     # Init
@@ -110,6 +112,7 @@ if __name__ == "__main__":
             create_and_send_campaign(
                 subject=subject_readiness,
                 name=f"{email_base_name} Readiness Trigger",
+                list_ids=LIST_IDS,
             )
         else:
             logger.info("Readiness trigger condition not met; no email sent.")
