@@ -51,10 +51,6 @@ fcast_blob_names = [x for x in blob_names if "Forecast_Track" in x]
 ```
 
 ```python
-fcast_blob_names
-```
-
-```python
 obsv_blob_names = [x for x in blob_names if "Best_Track" in x]
 ```
 
@@ -116,76 +112,6 @@ quad_col_rename
 ```
 
 ```python
-def calculate_fms_buffers(gdf, best_track: bool = False):
-    gdf["Longitude"] = gdf["Longitude"].apply(lambda x: (x + 360) % 360)
-    name_season = gdf.iloc[0]["Name Season"]
-    if not best_track:
-        issued_time = gdf.iloc[0]["base_time"]
-    for speed in speeds:
-        speedword = speed2word[speed]
-        gdf = gdf.rename(
-            columns={
-                f"{x.upper()}{speedword}Radius": f"quadrant_radius_{speed}_{x}"
-                for x in quads
-            }
-        )
-
-    df = gdf[cols]
-    df_interp = ibtracs.interpolate_track(
-        df, time_col="valid_time", lat_col="Latitude", lon_col="Longitude"
-    )
-    gdf_interp = gpd.GeoDataFrame(
-        data=df_interp,
-        geometry=gpd.points_from_xy(
-            df_interp["Longitude"], df_interp["Latitude"]
-        ),
-        crs=FJI_CRS,
-    ).to_crs(3832)
-
-    dicts = []
-    geoms = []
-    for speed in speeds:
-        polys = []
-        for _, row in gdf_interp.iterrows():
-            ne_col, se_col, sw_col, nw_col = [
-                f"quadrant_radius_{speed}_{x}"
-                for x in ["ne", "se", "sw", "nw"]
-            ]
-            if row[[ne_col, se_col, sw_col, nw_col]].isna().all():
-                continue
-
-            poly = ibtracs.make_quadrant_disk(
-                (row.geometry.x, row.geometry.y),
-                ne=convert_nm_to_m(row[ne_col]),
-                se=convert_nm_to_m(row[se_col]),
-                sw=convert_nm_to_m(row[sw_col]),
-                nw=convert_nm_to_m(row[nw_col]),
-                n_points=n_points,
-            )
-            polys.append(poly)
-        gdf = gpd.GeoDataFrame(geometry=polys, crs=3832)
-        merged = unary_union(gdf.geometry.values)
-        merged_gs = gpd.GeoSeries([merged], crs=gdf.crs)
-        if not best_track:
-            dicts.append(
-                {
-                    "buffer_speed": speed,
-                    "name_season": name_season,
-                    "issued_time": issued_time,
-                }
-            )
-        else:
-            dicts.append(
-                {
-                    "buffer_speed": speed,
-                    "name_season": name_season,
-                }
-            )
-        geoms.append(merged)
-    return geoms, dicts
-```
-
-```python
 dicts = []
 geoms = []
 dfs = []
@@ -193,7 +119,7 @@ for blob_name in tqdm(fcast_blob_names):
     data = stratus.load_blob_data(blob_name)
     gdf = fms.parse_fms_forecast(BytesIO(data))
     gdf = gdf.rename(columns={"forecast_time": "valid_time"})
-    geoms_in, dicts_in = calculate_fms_buffers(gdf)
+    geoms_in, dicts_in = fms.calculate_fms_buffers(gdf)
     geoms.extend(geoms_in)
     dicts.extend(dicts_in)
     dfs.append(gdf.drop(columns="geometry"))
@@ -249,11 +175,7 @@ da_wp = worldpop.load_worldpop_from_blob()
 ```
 
 ```python
-da_wp
-```
-
-```python
-da_wp_reproject = da_wp.rio.reproject(3832)
+# da_wp_reproject = da_wp.rio.reproject(3832)
 ```
 
 ```python
@@ -265,7 +187,27 @@ adm0 = codab.load_codab_from_blob(admin_level=0)
 ```
 
 ```python
+da_wp = da_wp.assign_coords({"x": (((da_wp.x + 360) % 360))}).sortby("x")
+```
+
+```python
+da_wp.plot()
+```
+
+```python
+adm0 = adm0.to_crs(FJI_CRS)
+```
+
+```python
 da_wp_clip = da_wp.rio.clip(adm0.geometry)
+```
+
+```python
+da_wp_clip.plot()
+```
+
+```python
+
 ```
 
 ```python

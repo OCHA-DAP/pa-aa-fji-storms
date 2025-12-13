@@ -164,6 +164,14 @@ issued_time
 ```
 
 ```python
+gdf_buffers_sid_issued_single = gdf_buffers_single[
+    (gdf_buffers_single["name_season"] == "Yasa 2021")
+    & (gdf_buffers_single["issued_time"] == issued_time)
+]
+gdf_buffers_sid_issued_single
+```
+
+```python
 df_shift_exp_sid_issued = df_shift_exp_sid[
     df_shift_exp_sid["issued_time"] == issued_time
 ]
@@ -185,10 +193,6 @@ gdf_buffers_sid_isused = gdf_buffers[
 middle_buffers = gdf_buffers_single[
     gdf_buffers_single["issued_time"] == issued_time
 ]
-```
-
-```python
-gdf_buffers_sid_issued_single
 ```
 
 ```python
@@ -326,18 +330,6 @@ for row, stuff in enumerate(
 ```
 
 ```python
-axes[0]
-```
-
-```python
-title
-```
-
-```python
-y_center
-```
-
-```python
 issued_time
 ```
 
@@ -350,63 +342,7 @@ storm_name = "Yasa"
 ```
 
 ```python
-fig, axes = plt.subplots(2, 3, figsize=(18, 12))  # Wider layout
-
-row_specs = [
-    ("middle", "Most likely track", middle_buffers),
-    ("worst", "Highest reasonable exposure\n(worst case scenario)", worst_buffers),
-    ("best", "Lowest reasonable exposure\n(best case scenario)", best_buffers),
-]
-
-# ---- Plotting Loop ----
-for col, (limit, title_str, gdf_buffers) in enumerate(row_specs):
-    # ---- Top row: wind swaths ----
-    top_ax = axes[0][col]
-    plot_wind_buffers(adm3_no_rotuma_lau, gdf_buffers, ax=top_ax)
-
-    # Add title to top axis
-    top_ax.set_title(title_str, fontsize=16, pad=10)
-
-    # ---- Bottom row: population exposure ----
-    bottom_ax = axes[1][col]
-    plot_bullseye_exposures(
-        adm3_simple_template.merge(adm3[["ADM3_PCODE", "adm_label"]]),
-        df_exp_adm3[df_exp_adm3["limit"] == limit],
-        label_col="adm_label",
-        min_font=4,
-        max_font=20,
-        ax=bottom_ax,
-    )
-
-# ---- Overall Column Titles ----
-axes[0][0].text(
-    0.5, 1.12, "Wind swaths", fontsize=18, fontweight="bold", ha="center", transform=axes[0][0].transAxes
-)
-axes[1][0].text(
-    0.5, 1.15, "Population exposure", fontsize=18, fontweight="bold", ha="center", transform=axes[1][0].transAxes
-)
-
-# ---- Overall Figure Title ----
-fig.suptitle(
-    f"{storm_name}: forecast issued {fji_time_str(issued_time)}",
-    fontsize=22,
-    fontweight="bold",
-    y=1.04,
-)
-
-# Adjust layout to prevent overlap
-fig.tight_layout(rect=[0, 0, 1, 0.98])
-
-# Save
-fig.savefig(
-    f"temp/{storm_name}_fcast_{issued_time:%Y%m%dT%H%MZ}.pdf",
-    format="pdf",
-    bbox_inches="tight",
-)
-```
-
-```python
-fig, axes = plt.subplots(3, 2, figsize=(12, 18))
+fig, axes = plt.subplots(2, 3, figsize=(18, 12))
 
 row_specs = [
     ("middle", "Most likely track", middle_buffers),
@@ -418,52 +354,75 @@ row_specs = [
     ("best", "Lowest reasonable exposure\n(best case scenario)", best_buffers),
 ]
 
-# ---- Plotting Loop ----
-for row, (limit, title_str, gdf_buffers) in enumerate(row_specs):
-    # ---- Left column: wind swaths ----
-    left_ax = axes[row][0]
-    plot_wind_buffers(adm3_no_rotuma_lau, gdf_buffers, ax=left_ax)
+# ---- Plotting loop ----
+for col, (limit, title_str, gdf_buffers) in enumerate(row_specs):
+    top_ax = axes[0, col]
+    bottom_ax = axes[1, col]
 
-    # Row label on the left axis
-    left_ax.text(
-        -0.05,  # x-position (axes coords; <0 means “left of axis”)
-        0.5,  # y-position (centered vertically)
+    # Wind swaths
+    plot_wind_buffers(adm3_no_rotuma_lau, gdf_buffers, ax=top_ax)
+
+    # Column titles
+    if col == 0:
+        title_color = "black"
+        title_weight = "bold"
+    elif col == 1:
+        title_color = "red"
+        title_weight = "normal"
+    else:
+        title_color = "green"
+        title_weight = "normal"
+
+    top_ax.set_title(
         title_str,
-        fontsize=16,
-        va="center",
-        ha="center",
-        transform=left_ax.transAxes,
-        rotation=90,
+        fontsize=20,
+        fontweight=title_weight,
+        color=title_color,
+        pad=6,
     )
 
-    # ---- Right column: population exposure ----
+    # Population exposure
     plot_bullseye_exposures(
         adm3_simple_template.merge(adm3[["ADM3_PCODE", "adm_label"]]),
         df_exp_adm3[df_exp_adm3["limit"] == limit],
         label_col="adm_label",
         min_font=4,
         max_font=20,
-        ax=axes[row][1],
+        ax=bottom_ax,
     )
 
-# ---- Column Titles ----
-axes[0][0].set_title("Wind swaths", fontsize=18, pad=15)
-axes[0][1].set_title("Population exposure", fontsize=18, pad=15)
+# ---- Row labels (left side) ----
+for row_idx, row_label in enumerate(["Wind swaths", "Population exposure"]):
+    axes[row_idx, 0].text(
+        -0.02,
+        0.5,
+        row_label,
+        fontsize=18,
+        va="center",
+        ha="right",
+        rotation=90,
+        transform=axes[row_idx, 0].transAxes,
+    )
 
-# ---- Overall Figure Title ----
+# ---- Main title ----
 fig.suptitle(
     f"{storm_name}: forecast issued {fji_time_str(issued_time)}",
     fontsize=22,
     fontweight="bold",
-    y=0.97,
+    y=1,
 )
 
-# Adjust layout so nothing gets chopped off
-fig.tight_layout(rect=[0, 0, 1, 0.98])
+# ---- Layout ----
+fig.tight_layout(rect=[0, 0, 1, 1])
 
+# ---- Save ----
 fig.savefig(
     f"temp/{storm_name}_fcast_{issued_time:%Y%m%dT%H%MZ}.pdf",
     format="pdf",
     bbox_inches="tight",
 )
+```
+
+```python
+
 ```

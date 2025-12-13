@@ -65,3 +65,5 @@ EASTERN1 = "FJ3"
 LAU2 = "FJ305"
 WAINIKELI3 = "FJ10308"
 QUADS = ["ne", "se", "sw", "nw"]
+
+EXP_THRESHOLD_64_KNOTS = 5_000

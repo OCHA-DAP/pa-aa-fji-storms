@@ -52,3 +52,21 @@ def send_campaign(campaign_id: int):
         json={"status": "running"},
     )
     r.raise_for_status()
+
+
+def create_and_send_campaign(
+    name: str = "test_campaign",
+    subject: str = "Test Subject",
+    list_ids: list[int] = None,
+    template_id: int = BASE_CAMPAIGN_ID,
+    body: str = "",
+):
+    campaign_id = create_campaign(
+        name=name,
+        subject=subject,
+        list_ids=list_ids,
+        template_id=template_id,
+        body=body,
+    )
+    send_campaign(campaign_id)
+    return campaign_id

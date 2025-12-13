@@ -2,6 +2,7 @@ import base64
 from datetime import datetime
 from io import BytesIO, StringIO
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import geopandas as gpd
 import numpy as np
@@ -187,6 +188,15 @@ def calculate_fms_buffers(gdf, best_track: bool = False):
     return geoms, dicts
 
 
+def calculate_fms_buffers_gdf(
+    gdf: gpd.GeoDataFrame, best_track: bool = False
+) -> gpd.GeoDataFrame:
+    geoms, dicts = calculate_fms_buffers(gdf, best_track=best_track)
+    gdf_out = gpd.GeoDataFrame(dicts, geometry=geoms, crs=3832)
+    gdf_out = gdf_out.to_crs(FJI_CRS)
+    return gdf_out
+
+
 def shift_gdf_points(
     gdf: gpd.GeoDataFrame,
     azimuth_deg: float,
@@ -212,3 +222,30 @@ def shift_gdf_points(
     gdf_out[longitude_col] = gdf_out.geometry.x
     gdf_out[latitude_col] = gdf_out.geometry.y
     return gdf_out
+
+
+def get_forecast_id(
+    gdf: gpd.GeoDataFrame,
+) -> str:
+    row = gdf.iloc[0]
+    return f"{row['cyclone_name'].lower().replace(' ', '_')}_{row['season']}_{row['base_time']:%Y%m%dT%H%MZ}"
+
+
+def to_fji_time(dt):
+    dt_utc = dt.replace(tzinfo=ZoneInfo("UTC"))
+    dt_fiji = dt_utc.astimezone(ZoneInfo("Pacific/Fiji"))
+    return dt_fiji
+
+
+def fji_time_str(dt):
+    dt_fiji = to_fji_time(dt)
+    return f"{dt_fiji:%Y-%m-%d %H:%M} (Fiji time)"
+
+
+def get_forecast_display_str(
+    gdf: gpd.GeoDataFrame,
+) -> str:
+    row = gdf.iloc[0]
+    issued_time_fjt = to_fji_time(row["base_time"])
+    issued_time_fjt_str = fji_time_str(issued_time_fjt)
+    return issued_time_fjt_str
