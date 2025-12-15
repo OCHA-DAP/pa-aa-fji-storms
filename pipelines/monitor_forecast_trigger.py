@@ -11,10 +11,10 @@ from src.datasources import codab, worldpop
 from src.datasources.fms import (
     calculate_fms_buffers_gdf,
     decode_b64_string,
-    get_forecast_display_str,
-    get_forecast_id,
+    fji_time_str,
     parse_fms_forecast,
 )
+from src.email.content import render_template
 from src.exposure_calc import calculate_single_adm_exposure
 from src.listmonk import TRISTAN_ONLY_LIST_ID, create_and_send_campaign
 
@@ -58,11 +58,15 @@ if __name__ == "__main__":
     gdf_forecast = parse_fms_forecast(decoded_csv)
     gdf_forecast = gdf_forecast.rename(columns={"forecast_time": "valid_time"})
 
-    forecast_id = get_forecast_id(gdf_forecast)
-    logger.info(f"Forecast ID: {forecast_id=}")
+    row = gdf_forecast.iloc[0]
+    issued_time = row["base_time"]
+    cyclone_name = row["cyclone_name"]
+    season = row["season"]
+    logger.info(f"Issue time: {issued_time}, Cyclone name: {cyclone_name}")
+    forecast_display_str = fji_time_str(issued_time)
+    forecast_id = f"{cyclone_name.lower().replace(' ', '_')}_{season}_{issued_time:%Y%m%dT%H%MZ}"
 
-    forecast_display_str = get_forecast_display_str(gdf_forecast)
-    logger.info(f"Forecast Display String: {forecast_display_str=}")
+    logger.info(f"Forecast ID: {forecast_id=}")
 
     gdf_readiness = gdf_forecast[gdf_forecast["leadtime"] <= 120].copy()
     gdf_action = gdf_forecast[gdf_forecast["leadtime"] <= 72].copy()
@@ -99,23 +103,45 @@ if __name__ == "__main__":
     trigger_readiness = readiness_exp >= EXP_THRESHOLD_64_KNOTS
     trigger_action = action_exp >= EXP_THRESHOLD_64_KNOTS
 
-    email_base_name = "[TEST]" if TEST_EMAIL else ""
+    email_base_name = "[TEST]_" if TEST_EMAIL else ""
     email_base_name = email_base_name + forecast_id
 
     # Send trigger emails
     if not DRY_RUN:
         if trigger_readiness:
             logger.info("Readiness trigger condition met; sending email.")
-            subject_readiness = (
-                f"Fiji AA: Readiness ACTIVATED by {forecast_display_str}"
+            subject = f"Anticipatory action Fiji: Cyclone {cyclone_name} readiness trigger ACTIVATED"
+            body = render_template(
+                "readiness.html",
+                {
+                    "cyclone_name": cyclone_name,
+                    "forecast_display_str": forecast_display_str,
+                },
             )
             create_and_send_campaign(
-                subject=subject_readiness,
-                name=f"{email_base_name} Readiness Trigger",
+                subject=subject,
+                name=f"{email_base_name}_readiness",
                 list_ids=LIST_IDS,
+                body=body,
+            )
+        if trigger_action:
+            logger.info("Action trigger condition met; sending email.")
+            subject = f"Anticipatory action Fiji: Cyclone {cyclone_name} action trigger ACTIVATED"
+            body = render_template(
+                "action.html",
+                {
+                    "cyclone_name": cyclone_name,
+                    "forecast_display_str": forecast_display_str,
+                },
+            )
+            create_and_send_campaign(
+                subject=subject,
+                name=f"{email_base_name}_action",
+                list_ids=LIST_IDS,
+                body=body,
             )
         else:
-            logger.info("Readiness trigger condition not met; no email sent.")
+            logger.info("Trigger conditions not met; no emails sent.")
 
     # Calculate uncertainty buffers
 

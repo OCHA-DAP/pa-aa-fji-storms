@@ -240,12 +240,3 @@ def to_fji_time(dt):
 def fji_time_str(dt):
     dt_fiji = to_fji_time(dt)
     return f"{dt_fiji:%Y-%m-%d %H:%M} (Fiji time)"
-
-
-def get_forecast_display_str(
-    gdf: gpd.GeoDataFrame,
-) -> str:
-    row = gdf.iloc[0]
-    issued_time_fjt = to_fji_time(row["base_time"])
-    issued_time_fjt_str = fji_time_str(issued_time_fjt)
-    return issued_time_fjt_str
