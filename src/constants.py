@@ -67,3 +67,5 @@ WAINIKELI3 = "FJ10308"
 QUADS = ["ne", "se", "sw", "nw"]
 
 EXP_THRESHOLD_64_KNOTS = 5_000
+
+TOTAL_WP_POP = 824332

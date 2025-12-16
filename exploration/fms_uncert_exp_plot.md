@@ -39,7 +39,7 @@ from rioxarray.exceptions import NoDataInBounds
 from matplotlib.patches import Circle
 from tqdm.auto import tqdm
 
-from src.datasources import codab, worldpop
+from src.datasources import codab, worldpop, fms
 from src.constants import *
 from src.blob import PROJECT_PREFIX, load_geoparquet_from_blob
 from src.plotting import (
@@ -49,6 +49,7 @@ from src.plotting import (
     lighten,
     wrap_text,
     plot_wind_buffers,
+    plot_thermometer,
 )
 ```
 
@@ -319,17 +320,6 @@ storm_issued_str
 ```
 
 ```python
-for row, stuff in enumerate(
-    [
-        ("middle", "Most likely"),
-        ("worst", "Highest reasonable"),
-        ("best", "Lowest reasonable"),
-    ]
-):
-    print(row, stuff)
-```
-
-```python
 issued_time
 ```
 
@@ -348,10 +338,10 @@ row_specs = [
     ("middle", "Most likely track", middle_buffers),
     (
         "worst",
-        "Highest reasonable exposure\n(worst case scenario)",
+        "Upper bound exposure\n(worst case scenario)",
         worst_buffers,
     ),
-    ("best", "Lowest reasonable exposure\n(best case scenario)", best_buffers),
+    ("best", "Lower bound exposure\n(best case scenario)", best_buffers),
 ]
 
 # ---- Plotting loop ----
@@ -423,6 +413,71 @@ fig.savefig(
 )
 ```
 
-```python
+## Thermometer
 
+```python
+df_stats = fms.load_historical_stats()
+```
+
+```python
+df_stats
+```
+
+```python
+worst_row
+```
+
+```python
+best_row
+```
+
+```python
+impact_thresh = 10_000
+```
+
+```python
+df_stats_major = df_stats[df_stats["exp_64"] > 5000]
+```
+
+```python
+int(da_wp_clip.sum())
+```
+
+```python
+df_stats_major
+```
+
+```python
+cyclone_name = "Yasa"
+```
+
+```python
+forecast_display_str = "2020-12-16 12:00 (Fiji time)"
+```
+
+```python
+main_value = 48389
+max_value = 150_000
+trigger_threshold = EXP_THRESHOLD_64_KNOTS
+low_bound = 1856
+high_bound = 679947
+```
+
+```python
+fig, ax = plot_thermometer(
+    main_value=main_value,
+    low_bound=low_bound,
+    high_bound=high_bound,
+    df_stats=df_stats,
+    cyclone_name=cyclone_name,
+    forecast_display_str=forecast_display_str,
+)
+```
+
+```python
+fig.savefig(
+    f"temp/test.png",
+    format="png",
+    bbox_inches="tight",
+)
 ```

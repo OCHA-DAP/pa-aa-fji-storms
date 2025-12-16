@@ -154,7 +154,7 @@ dfs = []
 for blob_name in tqdm(obsv_blob_names):
     data = stratus.load_blob_data(blob_name)
     gdf = fms.parse_fms_forecast(BytesIO(data), best_track=True)
-    geoms_in, dicts_in = calculate_fms_buffers(gdf, best_track=True)
+    geoms_in, dicts_in = fms.calculate_fms_buffers(gdf, best_track=True)
     geoms.extend(geoms_in)
     dicts.extend(dicts_in)
     dfs.append(gdf.drop(columns="geometry"))
@@ -211,45 +211,11 @@ da_wp_clip.plot()
 ```
 
 ```python
-
+gdf_buffers.crs
 ```
 
 ```python
 da_wp_clip_new = da_wp.rio.clip(adm0.geometry)
-```
-
-```python
-dicts = []
-for _, row in gdf_buffers.iterrows():
-    if not row.geometry:
-        pop_exposed = 0
-    else:
-        try:
-            da_wp_clip_buffer = da_wp.rio.clip([row.geometry])
-            pop_exposed = int(da_wp_clip_buffer.sum())
-        except NoDataInBounds as e:
-            pop_exposed = 0
-    dicts.append(
-        {
-            "issued_time": row["issued_time"],
-            "name_season": row["name_season"],
-            "buffer_speed": row["buffer_speed"],
-            "pop_exposed": pop_exposed,
-        }
-    )
-df_exp_new = pd.DataFrame(dicts)
-```
-
-```python
-df_exp_new[df_exp_new["buffer_speed"] == 64]
-```
-
-```python
-df_exp[df_exp["buffer_speed"] == 64]
-```
-
-```python
-df_exp
 ```
 
 ```python
@@ -273,6 +239,10 @@ for _, row in gdf_buffers.iterrows():
     )
 
 df_exp = pd.DataFrame(dicts)
+```
+
+```python
+df_exp
 ```
 
 ```python

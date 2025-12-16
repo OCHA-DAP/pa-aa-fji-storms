@@ -1,36 +1,32 @@
-{% extends "base.html" %}
-
-{% block content %}
-<div style="font-size:11px;padding: 6px 10px 6px 10px;background-color:#F0F0F0;color:#000000;font-style:italic">
-  <p style="margin:0;">
+<div class="disclaimer-box">
     This email is purely advisory, and does not serve as an official notice for the anticipatory action framework. Official notices of activation are sent by a separate email. This email also does not constitute an official forecast. Under the World Meteorological Organization's Tropical Cyclone Programme, RSMC Nadi is responsible for monitoring tropical cyclones in the region; the <a href="https://www.met.gov.fj/index.php?page=trackmap">forecast track map</a> published on their website should be treated as authoritative.
-  </p>
 </div>
 <div>
   <p>Dear colleagues,</p>
   <p>
-    The forecast for cyclone {{ name }} produced at {{ pub_time }} on {{ pub_date }} (Fiji local time) has been shared with us by the Fiji Meteorological Service, operators of Regional Specialized Meteorological Centre (RSMC) Nadi.
+    The forecast for cyclone {{ cyclone_name }} produced at {{ forecast_display_str }} has been shared with us by the Fiji Meteorological Service, operators of Regional Specialized Meteorological Centre (RSMC) Nadi.
   </p>
   <p>
-    &nbsp;&nbsp;&nbsp;Readiness trigger: <b>{{ readiness }}</b><br>
-    &nbsp;&nbsp;&nbsp;Action trigger: <b>{{ action }}</b>
+    &nbsp;&nbsp;&nbsp;Readiness trigger: <b>{{ readiness_str }}</b><br>
+    &nbsp;&nbsp;&nbsp;Action trigger: <b>{{ action_str }}</b>
   </p>
   <p>
-    &nbsp;&nbsp;&nbsp;Forecasted closest pass to Fiji: <b>{{ min_distance }} km</b><br>
-    &nbsp;&nbsp;&nbsp;Time to forecasted closest pass: <b>{{ min_hours }} hours</b>
+    The number of people forecasted to be exposed to at least 64-knot ("hurricane-force") winds is shown below. Recall that the trigger threshold is <b>5,000 people</b>.
   </p>
   <p>
-    A plot of the forecast is shown below. The leadtime, in hours, is shown in brackets below some of the points. Due to the increased uncertainty of forecasting tropical cyclones beyond 72 hours, this portion of the forecast should be treated with caution.
-  </p>
-  <img src="cid:{{ map_cid }}" width="600"/>
-  <p>
-    The plot below shows the distance of each Province to the forecasted cyclone path, including the approximate uncertainty of the cyclone's path at its closest pass to the Province. Attached to this email is a CSV with this data, and another one with the distances to each Tikina. Note that the CSV filenames are based on the UTC publication time of this forecast.
-  </p>
-  <img src="cid:{{ distances_cid }}" width="600"/>
-  <p>
-    The code used to produce this alert is available on GitHub <a href="https://github.com/OCHA-DAP/pa-aa-fji-storms/blob/add-trigger/src/update_trigger.py">here</a>.
+    &nbsp;&nbsp;&nbsp;Readiness forecast (up to 120 hours): <b>{{ readiness_exp }} people</b><br>
+    &nbsp;&nbsp;&nbsp;Action forecast (up to 72 hours): <b>{{ action_exp }} people</b><br>
   </p>
   <p>Best wishes,</p>
   <p>OCHA Centre for Humanitarian Data</p>
 </div>
-{% endblock content %}
+<div>
+  <h2>Forecast information</h2>
+
+</div>
+<div>
+  <h2>Reference</h2>
+  <p>
+    The code used to produce this alert is available on GitHub <a href="https://github.com/OCHA-DAP/pa-aa-fji-storms">here</a>.
+  </p>
+</div>

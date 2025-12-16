@@ -6,12 +6,17 @@ from zoneinfo import ZoneInfo
 
 import geopandas as gpd
 import numpy as np
+import ocha_stratus as stratus
 import pandas as pd
+import xarray as xr
 from shapely import unary_union
 from shapely.affinity import translate
+from tqdm.auto import tqdm
 
+from src.blob import PROJECT_PREFIX
 from src.constants import FJI_CRS, NM_TO_M, QUADS
 from src.datasources import ibtracs
+from src.exposure_calc import calculate_single_adm_exposure
 
 SPEED2WORD = {34: "Gale", 50: "Storm", 64: "Hurricane"}
 SPEEDS = [34, 50, 64]
@@ -224,6 +229,38 @@ def shift_gdf_points(
     return gdf_out
 
 
+def calculate_shifted_exposures(
+    gdf, da_wp: xr.DataArray, disable_tqdm=True, deg_step: int = 10
+) -> (pd.DataFrame, gpd.GeoDataFrame, gpd.GeoDataFrame):
+    gdfs_shifts = []
+    gdfs_shifts_buffers = []
+    dfs = []
+    if "uncertainty_m" not in gdf.columns:
+        gdf["uncertainty_m"] = gdf["Uncertainty"] * NM_TO_M
+    for shift_deg in tqdm(range(0, 360, deg_step), disable=disable_tqdm):
+        _gdf_shift = shift_gdf_points(gdf, shift_deg)
+        _gdf_shift_buffers = calculate_fms_buffers_gdf(_gdf_shift)
+        _gdf_shift_buffers = _gdf_shift_buffers.to_crs(FJI_CRS)
+        _gdf_shift_buffers["shift_deg"] = shift_deg
+
+        gdfs_shifts.append(_gdf_shift)
+        gdfs_shifts_buffers.append(_gdf_shift_buffers)
+        _df_exp = calculate_single_adm_exposure(_gdf_shift_buffers, da_wp)
+        _df_exp["shift_deg"] = shift_deg
+        dfs.append(_df_exp)
+    gdf_shift_tracks = pd.concat(gdfs_shifts)
+    gdf_shift_buffers = pd.concat(gdfs_shifts_buffers)
+    df_exp_shift_raw = pd.concat(dfs, ignore_index=True)
+    df_exp_shift = df_exp_shift_raw.pivot(
+        columns="buffer_speed",
+        index="shift_deg",
+        values="pop_exposed",
+    )
+    df_exp_shift.columns = [f"exp_{x}" for x in df_exp_shift.columns]
+    df_exp_shift = df_exp_shift.reset_index()
+    return df_exp_shift, gdf_shift_buffers, gdf_shift_tracks
+
+
 def get_forecast_id(
     gdf: gpd.GeoDataFrame,
 ) -> str:
@@ -240,3 +277,48 @@ def to_fji_time(dt):
 def fji_time_str(dt):
     dt_fiji = to_fji_time(dt)
     return f"{dt_fiji:%Y-%m-%d %H:%M} (Fiji time)"
+
+
+def load_historical_stats():
+    blob_name = f"{PROJECT_PREFIX}/processed/fms/fms_besttrack_exp.parquet"
+    df_exp_besttrack = stratus.load_parquet_from_blob(blob_name)
+    df_exp_besttrack = df_exp_besttrack.rename(
+        columns={"pop_exposed": "pop_exposed_besttrack"}
+    )
+    blob_name = f"{PROJECT_PREFIX}/processed/ibtracs/fms_wind_buffers_exposure_fms_reg.parquet"
+    df_exp_raw = stratus.load_parquet_from_blob(blob_name)
+    df_exp = df_exp_raw.merge(
+        df_exp_besttrack[["sid", "pop_exposed_besttrack", "buffer_speed"]],
+        how="left",
+    )
+
+    df_exp["pop_exposed"] = (
+        df_exp["pop_exposed_besttrack"]
+        .fillna(df_exp["pop_exposed"])
+        .astype(int)
+    )
+
+    df_exp = df_exp.pivot(
+        index="sid", columns="buffer_speed", values="pop_exposed"
+    )
+    df_exp = df_exp.rename(
+        columns={x: f"exp_{x}" for x in df_exp}
+    ).reset_index()
+    df_exp.columns.name = None
+    df_exp = df_exp.fillna(0)
+    blob_name = f"{PROJECT_PREFIX}/processed/storm_stats_buffer250.parquet"
+    df_stats_raw = stratus.load_parquet_from_blob(blob_name)
+    df_stats_all = df_stats_raw.merge(df_exp, how="outer")
+    # take only from 2001 since this is the only season with full EM-DAT data
+    min_season = 2001
+    max_season = 2024
+    df_stats = df_stats_all[
+        (df_stats_all["season"] >= min_season)
+        & (df_stats_all["season"] <= max_season)
+    ].copy()
+    df_stats["name_season"] = (
+        df_stats["name"].str.capitalize()
+        + " "
+        + df_stats["season"].astype(int).astype(str)
+    )
+    return df_stats
