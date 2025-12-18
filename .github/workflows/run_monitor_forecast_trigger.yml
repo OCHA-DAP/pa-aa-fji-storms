@@ -12,24 +12,21 @@ on:
         options:
           - 'True'
           - 'False'
-          - ''
-        default: ''
+        default: 'True'
       simulate_trigger:
         description: 'SIMULATE_TRIGGER: If True, impute data to simulate triggering (fallback: False)'
         type: choice
         options:
           - 'True'
           - 'False'
-          - ''
-        default: ''
+        default: 'False'
       dry_run:
         description: 'DRY_RUN: If True, do not perform any write or email operations (fallback: True)'
         type: choice
         options:
           - 'True'
           - 'False'
-          - ''
-        default: ''
+        default: 'True'
       test_forecast_blob_name:
         description: 'Blob name of test forecast file to use instead of input CSV (optional)'
         type: string
@@ -61,4 +58,4 @@ jobs:
           SIMULATE_TRIGGER: ${{ inputs.simulate_trigger || vars.SIMULATE_TRIGGER || 'False'}}
           DRY_RUN: ${{ inputs.dry_run || vars.DRY_RUN || 'True'}}
           TEST_FORECAST_BLOB_NAME: ${{ inputs.test_forecast_blob_name }}
-        run: python pipelines/monitor_forecast_trigger.py ${{ inputs.flags }} ${{ inputs.csv }}
+        run: python pipelines/monitor_forecast_trigger.py ${{ inputs.csv }}
