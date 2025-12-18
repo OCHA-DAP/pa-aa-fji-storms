@@ -3,10 +3,11 @@ import os
 from io import BytesIO
 
 import ocha_stratus as stratus
+import pandas as pd
 from dotenv import load_dotenv
 
 from src.blob import PROJECT_PREFIX
-from src.constants import EXP_THRESHOLD_64_KNOTS, FJI_CRS
+from src.constants import EXP_THRESHOLD_64_KNOTS, FJI_CRS, LAU2, ROTUMA2
 from src.datasources import codab, worldpop
 from src.datasources.fms import (
     calculate_fms_buffers_gdf,
@@ -27,7 +28,11 @@ from src.listmonk import (
     upload_file,
 )
 from src.pipeline_utils import get_logger, load_boolean_env
-from src.plotting import fig_to_base64, plot_thermometer
+from src.plotting import (
+    fig_to_base64,
+    plot_bubbles_and_swaths,
+    plot_thermometer,
+)
 
 load_dotenv()
 
@@ -203,7 +208,7 @@ if __name__ == "__main__":
         gdf_buffers_readiness, da_wp_clip, adm3, disable_tqdm=False
     )
 
-    # Save file for attachment to email
+    # Save CSV file for attachment to email
     df_adm3_out = df_exp_adm3_mostlikely.pivot(
         columns="buffer_speed", index="ADM3_PCODE", values="pop_exposed"
     )
@@ -226,8 +231,65 @@ if __name__ == "__main__":
     if not os.path.exists("temp/"):
         os.makedirs("temp/")
     df_adm3_out.to_csv(adm3_exp_filename, index=False)
-    adm3_exp_id = upload_file(adm3_exp_filename)["id"]
-    logger.info(f"ADM3 exposure file uploaded with media ID: {adm3_exp_id}")
+    if not DRY_RUN:
+        adm3_exp_id = upload_file(adm3_exp_filename)["id"]
+        logger.info(
+            f"ADM3 exposure file uploaded with media ID: {adm3_exp_id}"
+        )
+    else:
+        adm3_exp_id = "DRY_RUN_MEDIA_ID"
+        logger.info("DRY RUN: ADM3 exposure file not uploaded.")
+
+    # Calcualte best and worst case adm3 exposures
+    worst_buffers = gdf_shift_buffers[
+        gdf_shift_buffers["shift_deg"] == worst_row["shift_deg"]
+    ]
+    best_buffers = gdf_shift_buffers[
+        gdf_shift_buffers["shift_deg"] == best_row["shift_deg"]
+    ]
+    df_exp_adm3_worst = calculate_multi_adm_exposure(
+        worst_buffers, da_wp_clip, adm3, disable_tqdm=False
+    )
+    df_exp_adm3_best = calculate_multi_adm_exposure(
+        best_buffers, da_wp_clip, adm3, disable_tqdm=False
+    )
+
+    # Create bubble plot
+    blob_name = (
+        f"{PROJECT_PREFIX}/processed/plotting/adm3_simple_template.parquet"
+    )
+    adm3_simple_template = stratus.load_parquet_from_blob(blob_name)
+    df_exp_adm3_best["limit"] = "best"
+    df_exp_adm3_worst["limit"] = "worst"
+    df_exp_adm3_mostlikely["limit"] = "middle"
+    df_exp_adm3 = pd.concat(
+        [
+            df_exp_adm3_best,
+            df_exp_adm3_mostlikely,
+            df_exp_adm3_worst,
+        ],
+        ignore_index=True,
+    )
+    adm3_no_rotuma_lau = adm3[~(adm3["ADM2_PCODE"].isin([ROTUMA2, LAU2]))]
+    fig, axs, bubbles_plot_filepath = plot_bubbles_and_swaths(
+        gdf_mostlikely_buffers=gdf_buffers_readiness,
+        gdf_worst_buffers=worst_buffers,
+        gdf_best_buffers=best_buffers,
+        gdf_adm3_swath_plot=adm3_no_rotuma_lau,
+        df_adm3_template=adm3_simple_template,
+        gdf_adm3=adm3,
+        df_exp_adm3=df_exp_adm3,
+        cyclone_name=cyclone_name,
+        forecast_display_str=forecast_display_str,
+        forecast_id=forecast_id,
+        save_local=True,
+    )
+    if not DRY_RUN:
+        bubbles_plot_id = upload_file(bubbles_plot_filepath)["id"]
+        logger.info(f"Bubbles plot uploaded with media ID: {bubbles_plot_id}")
+    else:
+        bubbles_plot_id = "DRY_RUN_MEDIA_ID"
+        logger.info("DRY RUN: Bubbles plot not uploaded.")
 
     # Send info email
     if trigger_action:
@@ -260,7 +322,7 @@ if __name__ == "__main__":
             name=f"{email_base_name}_forecast_info",
             list_ids=LIST_IDS,
             body=body,
-            media=[adm3_exp_id],
+            media=[adm3_exp_id, bubbles_plot_id],
         )
 
     logger.info("Monitor forecast trigger pipeline completed.")

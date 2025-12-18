@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import io
 import math
+import os
 import re
 
 import geopandas as gpd
@@ -642,3 +643,115 @@ def fig_to_base64(fig) -> str:
     img_base64 = base64.b64encode(buf.read()).decode("utf-8")
     buf.close()
     return img_base64
+
+
+def plot_bubbles_and_swaths(
+    gdf_mostlikely_buffers: gpd.GeoDataFrame,
+    gdf_worst_buffers: gpd.GeoDataFrame,
+    gdf_best_buffers: gpd.GeoDataFrame,
+    gdf_adm3_swath_plot: gpd.GeoDataFrame,
+    df_adm3_template: pd.DataFrame,
+    gdf_adm3: gpd.GeoDataFrame,
+    df_exp_adm3: pd.DataFrame,
+    cyclone_name: str = "",
+    forecast_display_str: str = "",
+    forecast_id: str = "",
+    save_local: bool = False,
+):
+    fig, axes = plt.subplots(2, 3, figsize=(18, 12))
+
+    gdf_adm3["adm_label"] = gdf_adm3["ADM3_EN"].apply(
+        wrap_text, max_len=9, break_anywhere=True
+    )
+
+    row_specs = [
+        ("middle", "Most likely track", gdf_mostlikely_buffers),
+        (
+            "worst",
+            "Upper bound exposure\n(worst case scenario)",
+            gdf_worst_buffers,
+        ),
+        (
+            "best",
+            "Lower bound exposure\n(best case scenario)",
+            gdf_best_buffers,
+        ),
+    ]
+
+    # ---- Plotting loop ----
+    for col, (limit, title_str, gdf_buffers) in enumerate(row_specs):
+        top_ax = axes[0, col]
+        bottom_ax = axes[1, col]
+
+        # Wind swaths
+        plot_wind_buffers(gdf_adm3_swath_plot, gdf_buffers, ax=top_ax)
+
+        # Column titles
+        if col == 0:
+            title_color = "black"
+            title_weight = "bold"
+        elif col == 1:
+            title_color = "red"
+            title_weight = "normal"
+        else:
+            title_color = "green"
+            title_weight = "normal"
+
+        top_ax.set_title(
+            title_str,
+            fontsize=20,
+            fontweight=title_weight,
+            color=title_color,
+            pad=6,
+        )
+
+        # Population exposure
+        plot_bullseye_exposures(
+            df_adm3_template.merge(gdf_adm3[["ADM3_PCODE", "adm_label"]]),
+            df_exp_adm3[df_exp_adm3["limit"] == limit],
+            label_col="adm_label",
+            min_font=4,
+            max_font=20,
+            ax=bottom_ax,
+        )
+
+    # ---- Row labels (left side) ----
+    for row_idx, row_label in enumerate(
+        ["Wind swaths", "Population exposure"]
+    ):
+        axes[row_idx, 0].text(
+            -0.02,
+            0.5,
+            row_label,
+            fontsize=18,
+            va="center",
+            ha="right",
+            rotation=90,
+            transform=axes[row_idx, 0].transAxes,
+        )
+
+    # ---- Main title ----
+    fig.suptitle(
+        f"{cyclone_name}: forecast issued {forecast_display_str}",
+        fontsize=22,
+        fontweight="bold",
+        y=1,
+    )
+
+    # ---- Layout ----
+    fig.tight_layout(rect=[0, 0, 1, 1])
+
+    if save_local:
+        if not forecast_id:
+            forecast_id = "test"
+        filepath = f"temp/{forecast_id}_adm3_exposure.pdf"
+        if not os.path.exists("temp/"):
+            os.makedirs("temp/")
+        fig.savefig(
+            filepath,
+            format="pdf",
+            bbox_inches="tight",
+        )
+    else:
+        filepath = None
+    return fig, axes, filepath
