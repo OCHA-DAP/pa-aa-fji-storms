@@ -3,7 +3,6 @@ import os
 from io import BytesIO
 
 import ocha_stratus as stratus
-import pandas as pd
 from dotenv import load_dotenv
 
 from src.blob import PROJECT_PREFIX
@@ -18,9 +17,17 @@ from src.datasources.fms import (
     parse_fms_forecast,
 )
 from src.email.content import render_template
-from src.exposure_calc import calculate_single_adm_exposure
-from src.listmonk import TRISTAN_ONLY_LIST_ID, create_and_send_campaign
+from src.exposure_calc import (
+    calculate_multi_adm_exposure,
+    calculate_single_adm_exposure,
+)
+from src.listmonk import (
+    TRISTAN_ONLY_LIST_ID,
+    create_and_send_campaign,
+    upload_file,
+)
 from src.pipeline_utils import get_logger, load_boolean_env
+from src.plotting import fig_to_base64, plot_thermometer
 
 load_dotenv()
 
@@ -70,7 +77,10 @@ if __name__ == "__main__":
     season = row["season"]
     logger.info(f"Issue time: {issued_time}, Cyclone name: {cyclone_name}")
     forecast_display_str = fji_time_str(issued_time)
-    forecast_id = f"{cyclone_name.lower().replace(' ', '_')}_{season}_{issued_time:%Y%m%dT%H%MZ}"
+    forecast_id = (
+        f"{cyclone_name.lower().replace(' ', '_')}_{season}_fcast_"
+        f"{issued_time:%Y%m%dT%H%MZ}"
+    )
 
     logger.info(f"Forecast ID: {forecast_id=}")
 
@@ -84,7 +94,7 @@ if __name__ == "__main__":
 
     # Calculate population exposure
     logger.info("Calculating population exposure.")
-    adm3 = codab.load_codab_from_blob(admin_level=0).to_crs(FJI_CRS)
+    adm3 = codab.load_codab_from_blob(admin_level=3).to_crs(FJI_CRS)
     da_wp = worldpop.load_worldpop_from_blob()
     da_wp = da_wp.assign_coords({"x": ((da_wp.x + 360) % 360)}).sortby("x")
     da_wp_clip = da_wp.rio.clip(adm3.geometry)
@@ -115,7 +125,7 @@ if __name__ == "__main__":
     email_base_name = email_base_name + forecast_id
 
     # Send trigger emails
-    if not DRY_RUN or False:
+    if not DRY_RUN and False:
         if trigger_readiness:
             logger.info("Readiness trigger condition met; sending email.")
             subject = f"Anticipatory action Fiji: Cyclone {cyclone_name} readiness trigger ACTIVATED"
@@ -151,7 +161,7 @@ if __name__ == "__main__":
         else:
             logger.info("Trigger conditions not met; no emails sent.")
 
-    # Calculate uncertainty exposure
+    # Calculate uncertainty exposure at adm0 level
     (
         df_exp_shift,
         gdf_shift_buffers,
@@ -166,12 +176,58 @@ if __name__ == "__main__":
     worst_row["level"] = "worst"
     best_row = df_exp_shift.iloc[-1].copy()
     best_row["level"] = "best"
-    df_exp_shift_summary = pd.DataFrame([worst_row, best_row])
     logger.info(
-        "Exposure under uncertainty:\n%s",
-        df_exp_shift_summary.to_string(index=False),
+        "Best case exposure:\n%s",
+        best_row.to_frame().T.to_string(index=False),
+    )
+    logger.info(
+        "Worst case exposure:\n%s",
+        worst_row.to_frame().T.to_string(index=False),
     )
     df_stats = load_historical_stats()
+
+    # Produce thermometer plot
+    fig_thermometer, ax = plot_thermometer(
+        main_value=readiness_exp,
+        low_bound=best_row["exp_64"],
+        high_bound=worst_row["exp_64"],
+        df_stats=df_stats,
+        cyclone_name=cyclone_name,
+        forecast_display_str=forecast_display_str,
+    )
+    img_base64_thermometer = fig_to_base64(fig_thermometer)
+
+    # Calculate exposure at adm3 level for most likely
+    logger.info("Calculating ADM3 level exposure for most likely track.")
+    df_exp_adm3_mostlikely = calculate_multi_adm_exposure(
+        gdf_buffers_readiness, da_wp_clip, adm3, disable_tqdm=False
+    )
+
+    # Save file for attachment to email
+    df_adm3_out = df_exp_adm3_mostlikely.pivot(
+        columns="buffer_speed", index="ADM3_PCODE", values="pop_exposed"
+    )
+    df_adm3_out = df_adm3_out.rename(
+        columns={x: f"exp_{x}_knot" for x in df_adm3_out.columns}
+    )
+    df_adm3_out = df_adm3_out.reset_index()
+    df_adm3_out.columns.name = None
+    cols = [
+        "ADM1_PCODE",
+        "ADM1_EN",
+        "ADM2_PCODE",
+        "ADM2_EN",
+        "ADM3_PCODE",
+        "ADM3_EN",
+    ]
+    df_adm3_out = adm3[cols].merge(df_adm3_out)
+    df_adm3_out = df_adm3_out.sort_values("exp_64_knot", ascending=False)
+    adm3_exp_filename = f"temp/{forecast_id}_adm3_exposure.csv"
+    if not os.path.exists("temp/"):
+        os.makedirs("temp/")
+    df_adm3_out.to_csv(adm3_exp_filename, index=False)
+    adm3_exp_id = upload_file(adm3_exp_filename)["id"]
+    logger.info(f"ADM3 exposure file uploaded with media ID: {adm3_exp_id}")
 
     # Send info email
     if trigger_action:
@@ -196,6 +252,7 @@ if __name__ == "__main__":
                 else "NOT ACTIVATED",
                 "readiness_exp": f"{readiness_exp:,.0f}",
                 "action_exp": f"{action_exp:,.0f}",
+                "img_base64_thermometer": img_base64_thermometer,
             },
         )
         create_and_send_campaign(
@@ -203,6 +260,7 @@ if __name__ == "__main__":
             name=f"{email_base_name}_forecast_info",
             list_ids=LIST_IDS,
             body=body,
+            media=[adm3_exp_id],
         )
 
     logger.info("Monitor forecast trigger pipeline completed.")

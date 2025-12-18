@@ -2,6 +2,7 @@ import geopandas as gpd
 import pandas as pd
 import xarray as xr
 from rioxarray.exceptions import NoDataInBounds
+from tqdm.auto import tqdm
 
 from src.constants import FJI_CRS
 
@@ -30,3 +31,27 @@ def calculate_single_adm_exposure(
         records.append(row_data)
 
     return pd.DataFrame(records)
+
+
+def calculate_multi_adm_exposure(
+    gdf_buffers: gpd.GeoDataFrame,
+    da_wp: xr.DataArray,
+    gdf_adm: gpd.GeoDataFrame,
+    adm_index: str = "ADM3_PCODE",
+    disable_tqdm: bool = True,
+) -> pd.DataFrame:
+    # ensure correct CRS
+    gdf_buffers = gdf_buffers.to_crs(FJI_CRS)
+    gdf_adm = gdf_adm.to_crs(FJI_CRS)
+    da_wp = da_wp.assign_coords({"x": ((da_wp.x + 360) % 360)}).sortby("x")
+
+    dfs = []
+    for _, adm_row in tqdm(
+        gdf_adm.iterrows(), total=len(gdf_adm), disable=disable_tqdm
+    ):
+        da_wp_adm = da_wp.rio.clip([adm_row.geometry])
+        _df_exp = calculate_single_adm_exposure(gdf_buffers, da_wp_adm)
+        _df_exp[adm_index] = adm_row[adm_index]
+        dfs.append(_df_exp)
+    df_exp = pd.concat(dfs, ignore_index=True)
+    return df_exp

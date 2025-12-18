@@ -66,7 +66,15 @@ df_imerg["valid_date"] = pd.to_datetime(df_imerg["valid_date"])
 ```
 
 ```python
-dates = pd.date_range("2020-12-10", "2020-12-30")
+df_imerg = df_imerg.sort_values("valid_date")
+```
+
+```python
+df_imerg["roll2_mean"] = df_imerg["mean"].rolling(2).sum()
+```
+
+```python
+dates = pd.date_range("2022-01-01", "2022-01-31")
 ```
 
 ```python
@@ -78,7 +86,25 @@ df_imerg_storm
 ```
 
 ```python
-raster_dates = pd.date_range("2020-12-16", "2020-12-17")
+current_date = "2022-01-09"
+```
+
+```python
+current_roll2_mean = df_imerg_storm.set_index("valid_date").loc[
+    current_date, "roll2_mean"
+]
+```
+
+```python
+current_roll2_mean
+```
+
+```python
+raster_dates = pd.date_range(end="2022-01-09", periods=2)
+```
+
+```python
+raster_dates
 ```
 
 ```python
@@ -165,6 +191,22 @@ da_imerg_sum_up_clip = da_imerg_sum_up.rio.clip(adm3.geometry)
 ```
 
 ```python
+roll2_mean = float(da_imerg_sum_up_clip.mean())
+```
+
+```python
+roll2_mean
+```
+
+```python
+da_imerg_sum_up_clip.where(da_imerg_sum_up_clip["x"] <= 180).plot()
+```
+
+```python
+da_imerg_sum_up_clip.where(da_imerg_sum_up_clip["x"] <= 180).mean()
+```
+
+```python
 levels = [25, 50, 100, 150, 200, 300, 400, 500, 750]
 colors = [
     "lawngreen",
@@ -184,6 +226,10 @@ cbar_kwargs = {
 ```
 
 ```python
+cyclone_name = "Cody"
+```
+
+```python
 fig, ax = plt.subplots(dpi=200, figsize=(10, 5))
 
 adm3.boundary.plot(ax=ax, linewidth=0.5, color="k")
@@ -193,7 +239,9 @@ da_imerg_sum_up_clip.where(da_imerg_sum_up_clip >= 0).plot(
 ax.axis("off")
 ax.set_ylim(-19.5, -16)
 ax.set_title(
-    f"Cyclone Yasa: 2-day rainfall\nAverage over whole country: {198.548186:.0f} mm"
+    f"Cyclone {cyclone_name}: 2-day rainfall\n"
+    f"Dates: {raster_dates.min().date()} and {raster_dates.max().date()}\n"
+    rf"Average over whole country: $\mathbf{{{current_roll2_mean:.0f}}}$ $\mathbf{{mm}}$"
 )
 
 fig.savefig("temp/fji_obvs_test.png", dpi=200, bbox_inches="tight")

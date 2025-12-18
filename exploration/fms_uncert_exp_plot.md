@@ -50,7 +50,11 @@ from src.plotting import (
     wrap_text,
     plot_wind_buffers,
     plot_thermometer,
+    fig_to_base64,
 )
+from src.exposure_calc import calculate_multi_adm_exposure
+from src.email.content import render_template
+from src import listmonk
 ```
 
 ```python
@@ -243,7 +247,7 @@ best_buffers.plot(ax=ax, alpha=0.3)
 ```
 
 ```python
-da_wp_clip
+da_wp_clip.plot()
 ```
 
 ```python
@@ -263,7 +267,7 @@ for buffers, limit in [
         for _, adm_row in adm3.iterrows():
             try:
                 da_clip_buffer_adm = da_clip_buffer.rio.clip(
-                    [adm_row.geometry], all_touched=True
+                    [adm_row.geometry]
                 )
                 pop_exposed = int(da_clip_buffer_adm.sum())
             except NoDataInBounds as e:
@@ -283,7 +287,53 @@ df_exp_adm3 = pd.DataFrame(dicts)
 ```
 
 ```python
-df_exp_adm3
+df_exp_adm3[df_exp_adm3["limit"] == "middle"].sort_values("ADM3_PCODE")
+```
+
+```python
+df_exp_adm3_test = calculate_multi_adm_exposure(
+    gdf_buffers_sid_issued_single, da_wp_clip, adm3, disable_tqdm=False
+)
+```
+
+```python
+df_adm3_out = df_exp_adm3_test.pivot(
+    columns="buffer_speed", index="ADM3_PCODE", values="pop_exposed"
+)
+df_adm3_out = df_adm3_out.rename(
+    columns={x: f"exp_{x}_knot" for x in df_adm3_out.columns}
+)
+df_adm3_out = df_adm3_out.reset_index()
+df_adm3_out.columns.name = None
+cols = [
+    "ADM1_PCODE",
+    "ADM1_EN",
+    "ADM2_PCODE",
+    "ADM2_EN",
+    "ADM3_PCODE",
+    "ADM3_EN",
+]
+df_adm3_out = adm3[cols].merge(df_adm3_out)
+df_adm3_out = df_adm3_out.sort_values("exp_64_knot", ascending=False)
+df_adm3_out
+```
+
+```python
+df_exp_adm3_test.sort_values("ADM3_PCODE")
+```
+
+```python
+plot_bullseye_exposures(
+    adm3_simple_template.merge(adm3[["ADM3_PCODE", "adm_label"]]),
+    df_exp_adm3_test,
+)
+```
+
+```python
+plot_bullseye_exposures(
+    adm3_simple_template.merge(adm3[["ADM3_PCODE", "adm_label"]]),
+    df_exp_adm3[df_exp_adm3["limit"] == "middle"],
+)
 ```
 
 ```python
@@ -413,6 +463,23 @@ fig.savefig(
 )
 ```
 
+```python
+filename = f"temp/{storm_name}_fcast_{issued_time:%Y%m%dT%H%MZ}.pdf"
+```
+
+```python
+filename
+```
+
+```python
+with open(filename, "rb") as f:
+    files = {"file": f.read()}
+```
+
+```python
+listmonk.upload_file(filename)
+```
+
 ## Thermometer
 
 ```python
@@ -472,6 +539,22 @@ fig, ax = plot_thermometer(
     cyclone_name=cyclone_name,
     forecast_display_str=forecast_display_str,
 )
+```
+
+```python
+img_base64 = fig_to_base64(fig)
+```
+
+```python
+html_str = render_template(
+    template_name="informational.html",
+    variables={"thermometer_plot": img_base64},
+)
+```
+
+```python
+with open("temp/test.html", "w", encoding="utf-8") as f:
+    f.write(html_str)
 ```
 
 ```python

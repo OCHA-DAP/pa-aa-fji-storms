@@ -11,21 +11,76 @@
     &nbsp;&nbsp;&nbsp;Action trigger: <b>{{ action_str }}</b>
   </p>
   <p>
-    The number of people forecasted to be exposed to at least 64-knot ("hurricane-force") winds is shown below. Recall that the trigger threshold is <b>5,000 people</b>.
+    The number of people forecasted to be exposed to at least 64-knot ("hurricane-force") winds is indicated below. Recall that the trigger threshold is <b>5,000 people</b>.
   </p>
   <p>
     &nbsp;&nbsp;&nbsp;Readiness forecast (up to 120 hours): <b>{{ readiness_exp }} people</b><br>
     &nbsp;&nbsp;&nbsp;Action forecast (up to 72 hours): <b>{{ action_exp }} people</b><br>
   </p>
+  <p>
+    Please find more information about this forecast below. As always, the official TC forecast track map from FMS can be found <a href="https://www.met.gov.fj/tropical-cyclone/tc-forecast-track-map/">online</a>.
+  </p>
   <p>Best wishes,</p>
   <p>OCHA Centre for Humanitarian Data</p>
 </div>
+<hr class="hr-divider">
 <div>
   <h2>Forecast information</h2>
-
+  <p>
+    The plot below shows the likely range of population exposure to 64-knot winds.
+  </p>
+  <img src="data:image/png;base64,{{ img_base64_thermometer }}" style="max-height:400px;"alt="Figure">
+  <p>
+    The <em>Most likely</em> value is based on the track forecast without considering the uncertainty cone, and is the value used for triggering (also listed in the section above). The <em>Max. reasonable</em> and <em>Min. reasonable</em> values are calculated by perturbing the track forecast for all points along the cone of uncertainty, and taking the perturbed tracks that cause the highest and lowest population exposures, respectively.
+  </p>
+  <p>
+    Population exposure values for all historical storms that would have triggered the framework are shown on the left. Storms for which there was a CERF allocation are shown in red.
+  </p>
 </div>
+<hr class="hr-divider">
 <div>
   <h2>Reference</h2>
+  <h3>Framework</h3>
+  <p>
+    The framework document is available online <a href="https://www.unocha.org/anticipatory-action">here</a>. The trigger mechanism, on page X of the framework document, is:
+  </p>
+  <div class="disclaimer-box">
+    <p>
+      This framework will be triggered by a tropical system that either:
+    </p>
+    <ul>
+      <li>
+        is forecasted by RSMC Nadi to cause winds of at least 64 knots  in zones where at least 5,000 people live, OR
+      </li>
+      <li>
+        is observed to cause at least 190 mm of rainfall over two consecutive days, averaged over the whole country.
+      </li>
+    </ul>
+    <p>
+      Every time RSMC Nadi produces a tropical cyclone track forecast, it will be evaluated by an automated script to determine whether the trigger conditions have been met.
+    </p>
+    <p>
+      The framework follows a 3-stage trigger activation, each part of which is triggered based on the lead time of the points in the forecast, or the observational data:
+    </p>
+    <ul>
+      <li>
+        Readiness trigger: If the wind field indicated by the 120-hour forecast meets the trigger conditions, the readiness trigger is activated.
+      </li>
+      <li>
+        Action trigger: If the wind field indicated by the forecast truncated up to a lead time of 72 hours meets the trigger conditions, the action trigger is activated.
+      </li>
+      <li>
+        Observational trigger: If the average rainfall over the whole country during two consecutive days meets the threshold (190 mm), the observational trigger is activated.
+      </li>
+    </ul>
+  </div>
+  <div>
+    <h3>Monitoring emails</h3>
+    <p>
+      To be added or removed from the @pacificihumanitarian.org mailing lists for this framework please contact Niko Momoka at <a href="mailto:niko.momoka@un.org">niko.momoka@un.org</a>.
+    </p>
+  </div>
+  <h3>Code</h3>
   <p>
     The code used to produce this alert is available on GitHub <a href="https://github.com/OCHA-DAP/pa-aa-fji-storms">here</a>.
   </p>

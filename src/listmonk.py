@@ -1,3 +1,4 @@
+import mimetypes
 import os
 
 import requests
@@ -20,6 +21,7 @@ def create_campaign(
     list_ids: list[int] = None,
     template_id: int = BASE_CAMPAIGN_ID,
     body: str = "",
+    media: list[int] = None,
 ):
     if list_ids is None:
         list_ids = [TEST_LIST_ID]
@@ -31,6 +33,7 @@ def create_campaign(
         "type": "regular",
         "content_type": "html",
         "body": body,
+        "media": media or [],
     }
 
     r = requests.post(
@@ -60,6 +63,7 @@ def create_and_send_campaign(
     list_ids: list[int] = None,
     template_id: int = BASE_CAMPAIGN_ID,
     body: str = "",
+    media: list[int] = None,
 ):
     campaign_id = create_campaign(
         name=name,
@@ -67,6 +71,24 @@ def create_and_send_campaign(
         list_ids=list_ids,
         template_id=template_id,
         body=body,
+        media=media,
     )
     send_campaign(campaign_id)
     return campaign_id
+
+
+def upload_file(file_path):
+    # Guess the MIME type based on the file extension
+    mime_type, _ = mimetypes.guess_type(file_path)
+    if mime_type is None:
+        mime_type = "application/octet-stream"  # Fallback
+
+    with open(file_path, "rb") as f:
+        files = {"file": (file_path, f, mime_type)}  # include MIME type
+        r = requests.post(
+            f"{BASE_URL}/media",
+            auth=AUTH,
+            files=files,
+        )
+    r.raise_for_status()
+    return r.json()["data"]
