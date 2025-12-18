@@ -45,6 +45,7 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_known_args()[0]
 
 
+# load standard email switches
 TEST_EMAIL = load_boolean_env("TEST_EMAIL", True)
 SIMULATE_TRIGGER = load_boolean_env("SIMULATE_TRIGGER", False)
 DRY_RUN = load_boolean_env("DRY_RUN", True)
@@ -54,6 +55,9 @@ TEST_FORECAST_BLOB_NAME = os.getenv("TEST_FORECAST_BLOB_NAME", "")
 YASA_TEST_BLOB_NAME = f"{PROJECT_PREFIX}/raw/fms/TC Data/TC Yasa/20201216T000000Z_Official_Forecast_Track_2021_02F_YASA.csv"
 
 LIST_IDS = [TRISTAN_ONLY_LIST_ID] if TEST_EMAIL else [TRISTAN_ONLY_LIST_ID]
+
+# enable/disable tqdm progress bars for running locally
+DISABLE_TQDM = load_boolean_env("DISABLE_TQDM", True)
 
 if __name__ == "__main__":
     # Init
@@ -73,6 +77,7 @@ if __name__ == "__main__":
         logger.info("No forecast CSV provided and no test blob set; exiting.")
         exit(0)
 
+    # Load forecast
     gdf_forecast = parse_fms_forecast(decoded_csv)
     gdf_forecast = gdf_forecast.rename(columns={"forecast_time": "valid_time"})
 
@@ -130,7 +135,7 @@ if __name__ == "__main__":
     email_base_name = email_base_name + forecast_id
 
     # Send trigger emails
-    if not DRY_RUN and False:
+    if not DRY_RUN:
         if trigger_readiness:
             logger.info("Readiness trigger condition met; sending email.")
             subject = f"Anticipatory action Fiji: Cyclone {cyclone_name} readiness trigger ACTIVATED"
@@ -166,13 +171,13 @@ if __name__ == "__main__":
         else:
             logger.info("Trigger conditions not met; no emails sent.")
 
-    # Calculate uncertainty exposure at adm0 level
+    # Calculate perturbed tracks exposure at adm0 level
     (
         df_exp_shift,
         gdf_shift_buffers,
         gdf_shift_tracks,
     ) = calculate_shifted_exposures(
-        gdf_readiness, da_wp_clip, disable_tqdm=False
+        gdf_readiness, da_wp_clip, disable_tqdm=DISABLE_TQDM
     )
     df_exp_shift = df_exp_shift.sort_values(
         [f"exp_{x}" for x in [64, 50, 34]], ascending=False
@@ -208,7 +213,7 @@ if __name__ == "__main__":
         gdf_buffers_readiness, da_wp_clip, adm3, disable_tqdm=False
     )
 
-    # Save CSV file for attachment to email
+    # Save adm3 exposure CSV file for attachment to email
     df_adm3_out = df_exp_adm3_mostlikely.pivot(
         columns="buffer_speed", index="ADM3_PCODE", values="pop_exposed"
     )
@@ -226,7 +231,9 @@ if __name__ == "__main__":
         "ADM3_EN",
     ]
     df_adm3_out = adm3[cols].merge(df_adm3_out)
-    df_adm3_out = df_adm3_out.sort_values("exp_64_knot", ascending=False)
+    df_adm3_out = df_adm3_out.sort_values(
+        [f"exp_{x}_knot" for x in [64, 50, 34]], ascending=False
+    )
     adm3_exp_filename = f"temp/{forecast_id}_adm3_exposure.csv"
     if not os.path.exists("temp/"):
         os.makedirs("temp/")
@@ -240,18 +247,20 @@ if __name__ == "__main__":
         adm3_exp_id = "DRY_RUN_MEDIA_ID"
         logger.info("DRY RUN: ADM3 exposure file not uploaded.")
 
-    # Calcualte best and worst case adm3 exposures
+    # Calculate best and worst case adm3 exposures
     worst_buffers = gdf_shift_buffers[
         gdf_shift_buffers["shift_deg"] == worst_row["shift_deg"]
     ]
     best_buffers = gdf_shift_buffers[
         gdf_shift_buffers["shift_deg"] == best_row["shift_deg"]
     ]
+    logger.info("Calculating ADM3 level exposure for worst case tracks.")
     df_exp_adm3_worst = calculate_multi_adm_exposure(
-        worst_buffers, da_wp_clip, adm3, disable_tqdm=False
+        worst_buffers, da_wp_clip, adm3, disable_tqdm=DISABLE_TQDM
     )
+    logger.info("Calculating ADM3 level exposure for best case tracks.")
     df_exp_adm3_best = calculate_multi_adm_exposure(
-        best_buffers, da_wp_clip, adm3, disable_tqdm=False
+        best_buffers, da_wp_clip, adm3, disable_tqdm=DISABLE_TQDM
     )
 
     # Create bubble plot
@@ -315,6 +324,7 @@ if __name__ == "__main__":
                 "readiness_exp": f"{readiness_exp:,.0f}",
                 "action_exp": f"{action_exp:,.0f}",
                 "img_base64_thermometer": img_base64_thermometer,
+                "forecast_id": forecast_id,
             },
         )
         create_and_send_campaign(

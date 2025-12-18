@@ -26,15 +26,31 @@
 <hr class="hr-divider">
 <div>
   <h2>Forecast information</h2>
+  <h3>Country-wide exposure</h3>
   <p>
     The plot below shows the likely range of population exposure to 64-knot winds.
   </p>
   <img src="data:image/png;base64,{{ img_base64_thermometer }}" style="max-height:400px;"alt="Figure">
+  <br>
+  <div class="disclaimer-box">
+    <p>
+      The <em>Most likely</em> value is based on the track forecast without considering the uncertainty cone, and is the value used for triggering (also listed in the section above). The <em>Max. reasonable</em> and <em>Min. reasonable</em> values are calculated by perturbing the track forecast for all points along the cone of uncertainty, and taking the perturbed tracks that cause the highest and lowest population exposures, respectively.
+    </p>
+    <p>
+      Population exposure values for all historical storms that would have triggered the framework are shown on the left. Storms for which there was a CERF allocation are shown in red.
+    </p>
+  </div>
+  <h3>Tikina-level exposure</h3>
   <p>
-    The <em>Most likely</em> value is based on the track forecast without considering the uncertainty cone, and is the value used for triggering (also listed in the section above). The <em>Max. reasonable</em> and <em>Min. reasonable</em> values are calculated by perturbing the track forecast for all points along the cone of uncertainty, and taking the perturbed tracks that cause the highest and lowest population exposures, respectively.
-  </p>
-  <p>
-    Population exposure values for all historical storms that would have triggered the framework are shown on the left. Storms for which there was a CERF allocation are shown in red.
+    The tikina-level predicted exposure is shown in the attached files:
+    <ul>
+      <li>
+        <b><em>{{ forecast_id }}_adm3_exposure.csv</em></b>: data indicating the tikina-level exposure to 34-, 50-, and 64-knots winds. Only the <em>Most likely</em> scenario is indicated. The values are sorted by 64-, then 50-, then 34-knot exposure, so the tikinas with the highest exposure are listed first.
+      </li>
+      <li>
+        <b><em>{{ forecast_id }}_adm3_exposure.pdf</em></b>: plots showing the tikina-level exposure to 34-, 50-, and 64-knots winds. All three scenarios are shown: the <em>Most likely</em>, <em>Max. reasonable total exposure</em>, and <em>Min. reasonable total exposure</em>, corresponding to the three cases outlined in the section above.
+      </li>
+    </ul>
   </p>
 </div>
 <hr class="hr-divider">
@@ -77,7 +93,7 @@
   <div>
     <h3>Monitoring emails</h3>
     <p>
-      To be added or removed from the @pacificihumanitarian.org mailing lists for this framework please contact Niko Momoka at <a href="mailto:niko.momoka@un.org">niko.momoka@un.org</a>.
+      To be added or removed from the @pacificihumanitarian.org mailing lists for this framework please contact Niko Momoka at <a href="mailto:niko.momoka@un.org">niko.momoka@un.org</a>. You a receiving this email via this mailing list if the mailing list address appears at the bottom of this email. Otherwise, contact OCHA Data Science directly at <a href="mailto:ocha-datascience@un.org">ocha-datascience@un.org</a> directly to be added or removed.
     </p>
   </div>
   <h3>Code</h3>
