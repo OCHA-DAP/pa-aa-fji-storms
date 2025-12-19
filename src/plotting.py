@@ -528,7 +528,8 @@ def plot_thermometer(
         (main_value, "Most likely"),
         (high_bound, "Max. reasonable"),
     ]:
-        if not value > 0:
+        # don't plot the high or low bound if they are 0
+        if not value > 0 and value in [low_bound, high_bound]:
             continue
         fontweight = "bold" if value == main_value else "normal"
         plot_value = min(value, max_value)

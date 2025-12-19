@@ -23,7 +23,9 @@ from src.exposure_calc import (
     calculate_single_adm_exposure,
 )
 from src.listmonk import (
-    TRISTAN_ONLY_LIST_ID,
+    PROD_INFO_LIST_IDS,
+    PROD_TRIGGER_LIST_IDS,
+    TEST_LIST_IDS,
     create_and_send_campaign,
     upload_file,
 )
@@ -54,7 +56,8 @@ TEST_FORECAST_BLOB_NAME = os.getenv("TEST_FORECAST_BLOB_NAME", "")
 
 YASA_TEST_BLOB_NAME = f"{PROJECT_PREFIX}/raw/fms/TC Data/TC Yasa/20201216T000000Z_Official_Forecast_Track_2021_02F_YASA.csv"
 
-LIST_IDS = [TRISTAN_ONLY_LIST_ID] if TEST_EMAIL else [TRISTAN_ONLY_LIST_ID]
+INFO_LIST_IDS = TEST_LIST_IDS if TEST_EMAIL else PROD_INFO_LIST_IDS
+TRIGGER_LIST_IDS = TEST_LIST_IDS if TEST_EMAIL else PROD_TRIGGER_LIST_IDS
 
 # enable/disable tqdm progress bars for running locally
 DISABLE_TQDM = load_boolean_env("DISABLE_TQDM", True)
@@ -131,7 +134,7 @@ if __name__ == "__main__":
     trigger_readiness = readiness_exp >= EXP_THRESHOLD_64_KNOTS
     trigger_action = action_exp >= EXP_THRESHOLD_64_KNOTS
 
-    email_base_name = "[TEST]_" if TEST_EMAIL else ""
+    email_base_name = "[TEST]_" if TEST_EMAIL or SIMULATE_TRIGGER else ""
     email_base_name = email_base_name + forecast_id
 
     # Send trigger emails
@@ -149,7 +152,7 @@ if __name__ == "__main__":
             create_and_send_campaign(
                 subject=subject,
                 name=f"{email_base_name}_readiness",
-                list_ids=LIST_IDS,
+                list_ids=TRIGGER_LIST_IDS,
                 body=body,
             )
         if trigger_action:
@@ -165,7 +168,7 @@ if __name__ == "__main__":
             create_and_send_campaign(
                 subject=subject,
                 name=f"{email_base_name}_action",
-                list_ids=LIST_IDS,
+                list_ids=TRIGGER_LIST_IDS,
                 body=body,
             )
         else:
@@ -210,7 +213,7 @@ if __name__ == "__main__":
     # Calculate exposure at adm3 level for most likely
     logger.info("Calculating ADM3 level exposure for most likely track.")
     df_exp_adm3_mostlikely = calculate_multi_adm_exposure(
-        gdf_buffers_readiness, da_wp_clip, adm3, disable_tqdm=False
+        gdf_buffers_readiness, da_wp_clip, adm3, disable_tqdm=DISABLE_TQDM
     )
 
     # Save adm3 exposure CSV file for attachment to email
@@ -330,7 +333,7 @@ if __name__ == "__main__":
         create_and_send_campaign(
             subject=subject,
             name=f"{email_base_name}_forecast_info",
-            list_ids=LIST_IDS,
+            list_ids=INFO_LIST_IDS,
             body=body,
             media=[adm3_exp_id, bubbles_plot_id],
         )
