@@ -297,7 +297,7 @@ df_exp_adm3_test = calculate_multi_adm_exposure(
 ```
 
 ```python
-df_adm3_out = df_exp_adm3_test.pivot(
+df_adm3_out = df_exp_adm3.pivot(
     columns="buffer_speed", index="ADM3_PCODE", values="pop_exposed"
 )
 df_adm3_out = df_adm3_out.rename(
@@ -319,13 +319,13 @@ df_adm3_out
 ```
 
 ```python
-df_exp_adm3_test.sort_values("ADM3_PCODE")
+df_exp_adm3.sort_values("ADM3_PCODE")
 ```
 
 ```python
 plot_bullseye_exposures(
     adm3_simple_template.merge(adm3[["ADM3_PCODE", "adm_label"]]),
-    df_exp_adm3_test,
+    df_exp_adm3,
 )
 ```
 

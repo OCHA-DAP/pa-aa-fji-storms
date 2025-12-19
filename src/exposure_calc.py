@@ -49,7 +49,11 @@ def calculate_multi_adm_exposure(
     for _, adm_row in tqdm(
         gdf_adm.iterrows(), total=len(gdf_adm), disable=disable_tqdm
     ):
-        da_wp_adm = da_wp.rio.clip([adm_row.geometry])
+        # note that we have to set all_touched=True here to ensure that
+        # all possible pixels are grabbed and the sum over all the
+        # buffers is correct (all_touched is then False in the admin
+        # aggregation to avoid double counting)
+        da_wp_adm = da_wp.rio.clip([adm_row.geometry], all_touched=True)
         _df_exp = calculate_single_adm_exposure(gdf_buffers, da_wp_adm)
         _df_exp[adm_index] = adm_row[adm_index]
         dfs.append(_df_exp)
