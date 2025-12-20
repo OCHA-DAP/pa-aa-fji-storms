@@ -155,6 +155,10 @@ if __name__ == "__main__":
                 list_ids=TRIGGER_LIST_IDS,
                 body=body,
             )
+        else:
+            logger.info(
+                "Readiness trigger conditions not met; not sending readiness email."
+            )
         if trigger_action:
             logger.info("Action trigger condition met; sending email.")
             subject = f"Anticipatory action Fiji: Cyclone {cyclone_name} action trigger ACTIVATED"
@@ -172,7 +176,9 @@ if __name__ == "__main__":
                 body=body,
             )
         else:
-            logger.info("Trigger conditions not met; no emails sent.")
+            logger.info(
+                "Action trigger conditions not met; not sending action email."
+            )
 
     # Calculate perturbed tracks exposure at adm0 level
     (

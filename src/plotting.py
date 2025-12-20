@@ -5,6 +5,7 @@ import io
 import math
 import os
 import re
+import warnings
 
 import geopandas as gpd
 import matplotlib.patches as mpatches
@@ -342,9 +343,12 @@ def plot_bullseye_exposures(
 
     # --- add legend for bullseye colors ---
     legend_patches = [
-        mpatches.Patch(facecolor=colors_pale[34], label="34 kt"),
-        mpatches.Patch(facecolor=colors_pale[50], label="50 kt"),
-        mpatches.Patch(facecolor=colors_pale[64], label="64 kt"),
+        mpatches.Patch(
+            facecolor="white", edgecolor="gainsboro", label="< 34 kt"
+        ),
+        mpatches.Patch(facecolor=colors_pale[34], label="≥ 34 kt"),
+        mpatches.Patch(facecolor=colors_pale[50], label="≥ 50 kt"),
+        mpatches.Patch(facecolor=colors_pale[64], label="≥ 64 kt"),
     ]
     ax.legend(
         handles=legend_patches,
@@ -450,6 +454,7 @@ def wrap_text(text, max_len=40, break_anywhere=False):
 
 
 def plot_wind_buffers(gdf_adm, gdf_buffers, ax=None):
+    warnings.filterwarnings("ignore", "GeoSeries.notna", UserWarning)
     if ax is not None:
         fig = ax.figure
     else:
@@ -462,14 +467,25 @@ def plot_wind_buffers(gdf_adm, gdf_buffers, ax=None):
 
     ax.axis("off")
     for speed, color in colors_pale.items():
-        gdf_buffers[gdf_buffers["buffer_speed"] == speed].plot(
-            ax=ax, color=color
-        )
+        gdf_speed = gdf_buffers[gdf_buffers["buffer_speed"] == speed]
+        gdf_speed = gdf_speed[
+            ~gdf_speed.geometry.is_empty
+            & gdf_speed.geometry.notna()
+            & gdf_speed.is_valid
+        ]
+
+        if gdf_speed.empty:
+            continue
+
+        gdf_speed.plot(ax=ax, color=color, aspect="equal")
 
     legend_patches = [
-        mpatches.Patch(facecolor=colors_pale[34], label="34 kt"),
-        mpatches.Patch(facecolor=colors_pale[50], label="50 kt"),
-        mpatches.Patch(facecolor=colors_pale[64], label="64 kt"),
+        mpatches.Patch(
+            facecolor="white", edgecolor="gainsboro", label="< 34 kt"
+        ),
+        mpatches.Patch(facecolor=colors_pale[34], label="≥ 34 kt"),
+        mpatches.Patch(facecolor=colors_pale[50], label="≥ 50 kt"),
+        mpatches.Patch(facecolor=colors_pale[64], label="≥ 64 kt"),
     ]
     ax.legend(
         handles=legend_patches,

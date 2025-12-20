@@ -24,6 +24,7 @@ jupyter:
 ```python
 import math
 import io
+from io import BytesIO
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -51,6 +52,7 @@ from src.plotting import (
     plot_wind_buffers,
     plot_thermometer,
     fig_to_base64,
+    plot_bubbles_and_swaths,
 )
 from src.exposure_calc import calculate_multi_adm_exposure
 from src.email.content import render_template
@@ -255,49 +257,65 @@ gdf_buffers_sid_issued_single
 ```
 
 ```python
-dicts = []
+TEST_FORECAST_BLOB_NAME = "pa-aa-fji-storms/raw/fms/TC Data/TC Cody/20220110T000000Z_GP_Forecast_Track_2122_03F_CODY_(CO_DEE).csv"
+```
+
+```python
+decoded_csv = BytesIO(stratus.load_blob_data(TEST_FORECAST_BLOB_NAME))
+gdf_forecast = fms.parse_fms_forecast(decoded_csv)
+gdf_forecast = gdf_forecast.rename(columns={"forecast_time": "valid_time"})
+```
+
+```python
+gdf_readiness = gdf_forecast[gdf_forecast["leadtime"] <= 120].copy()
+gdf_buffers_readiness = fms.calculate_fms_buffers_gdf(gdf_readiness)
+```
+
+```python
+(
+    df_exp_shift,
+    gdf_shift_buffers,
+    gdf_shift_tracks,
+) = fms.calculate_shifted_exposures(
+    gdf_readiness, da_wp_clip, disable_tqdm=False
+)
+df_exp_shift = df_exp_shift.sort_values(
+    [f"exp_{x}" for x in [64, 50, 34]], ascending=False
+)
+worst_row = df_exp_shift.iloc[0].copy()
+worst_row["level"] = "worst"
+best_row = df_exp_shift.iloc[-1].copy()
+best_row["level"] = "best"
+```
+
+```python
+worst_buffers = gdf_shift_buffers[
+    gdf_shift_buffers["shift_deg"] == worst_row["shift_deg"]
+]
+best_buffers = gdf_shift_buffers[
+    gdf_shift_buffers["shift_deg"] == best_row["shift_deg"]
+]
+```
+
+```python
+dfs = []
 
 for buffers, limit in [
-    (gdf_buffers_sid_issued_single, "middle"),
+    (gdf_buffers_readiness, "middle"),
     (worst_buffers, "worst"),
     (best_buffers, "best"),
 ]:
-    for _, buffer_row in tqdm(buffers.iterrows(), total=len(buffers)):
-        da_clip_buffer = da_wp_clip.rio.clip([buffer_row.geometry])
-        for _, adm_row in adm3.iterrows():
-            try:
-                da_clip_buffer_adm = da_clip_buffer.rio.clip(
-                    [adm_row.geometry]
-                )
-                pop_exposed = int(da_clip_buffer_adm.sum())
-            except NoDataInBounds as e:
-                pop_exposed = 0
-            dicts.append(
-                {
-                    "ADM3_PCODE": adm_row["ADM3_PCODE"],
-                    "limit": limit,
-                    "buffer_speed": buffer_row["buffer_speed"],
-                    "pop_exposed": pop_exposed,
-                }
-            )
+    df_in = calculate_multi_adm_exposure(
+        buffers, da_wp_clip, adm3, disable_tqdm=False
+    )
+    df_in["limit"] = limit
+    dfs.append(df_in)
+
+df_exp_adm3 = pd.concat(dfs, ignore_index=True)
 ```
 
 ```python
-df_exp_adm3 = pd.DataFrame(dicts)
-```
-
-```python
-df_exp_adm3[df_exp_adm3["limit"] == "middle"].sort_values("ADM3_PCODE")
-```
-
-```python
-df_exp_adm3_test = calculate_multi_adm_exposure(
-    gdf_buffers_sid_issued_single, da_wp_clip, adm3, disable_tqdm=False
-)
-```
-
-```python
-df_adm3_out = df_exp_adm3.pivot(
+df_adm3_out = df_exp_adm3[df_exp_adm3["limit"] == "middle"].pivot(
     columns="buffer_speed", index="ADM3_PCODE", values="pop_exposed"
 )
 df_adm3_out = df_adm3_out.rename(
@@ -316,24 +334,6 @@ cols = [
 df_adm3_out = adm3[cols].merge(df_adm3_out)
 df_adm3_out = df_adm3_out.sort_values("exp_64_knot", ascending=False)
 df_adm3_out
-```
-
-```python
-df_exp_adm3.sort_values("ADM3_PCODE")
-```
-
-```python
-plot_bullseye_exposures(
-    adm3_simple_template.merge(adm3[["ADM3_PCODE", "adm_label"]]),
-    df_exp_adm3,
-)
-```
-
-```python
-plot_bullseye_exposures(
-    adm3_simple_template.merge(adm3[["ADM3_PCODE", "adm_label"]]),
-    df_exp_adm3[df_exp_adm3["limit"] == "middle"],
-)
 ```
 
 ```python
@@ -379,6 +379,28 @@ f"{issued_time:%Y%m%dT%H%MZ}"
 
 ```python
 storm_name = "Yasa"
+```
+
+```python
+fig, ax = plt.subplots()
+adm3.plot(ax=ax)
+middle_buffers.plot(alpha=0.3, ax=ax)
+```
+
+```python
+fig, axs, bubbles_plot_filepath = plot_bubbles_and_swaths(
+    gdf_mostlikely_buffers=gdf_buffers_readiness,
+    gdf_worst_buffers=worst_buffers,
+    gdf_best_buffers=best_buffers,
+    gdf_adm3_swath_plot=adm3_no_rotuma_lau,
+    df_adm3_template=adm3_simple_template,
+    gdf_adm3=adm3,
+    df_exp_adm3=df_exp_adm3,
+    cyclone_name=cyclone_name,
+    forecast_display_str=forecast_display_str,
+    forecast_id="TEST_ID",
+    save_local=True,
+)
 ```
 
 ```python
