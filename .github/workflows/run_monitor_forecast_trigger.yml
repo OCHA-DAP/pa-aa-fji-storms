@@ -12,21 +12,18 @@ on:
         options:
           - 'True'
           - 'False'
-        default: 'True'
       simulate_trigger:
         description: 'SIMULATE_TRIGGER: If True, impute data to simulate triggering (fallback: False)'
         type: choice
         options:
           - 'True'
           - 'False'
-        default: 'False'
       dry_run:
         description: 'DRY_RUN: If True, do not perform any write or email operations (fallback: True)'
         type: choice
         options:
           - 'True'
           - 'False'
-        default: 'True'
       test_forecast_blob_name:
         description: 'Blob name of test forecast file to use instead of input CSV (optional)'
         type: string
