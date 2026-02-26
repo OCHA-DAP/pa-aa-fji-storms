@@ -26,6 +26,8 @@
 <hr class="hr-divider">
 <div>
   <h2>Forecast information</h2>
+  {% if any_34_knot_exposure %}
+
   <h3>Country-wide exposure</h3>
   <p>
     The plot below shows the likely range of population exposure to 64-knot winds.
@@ -57,6 +59,9 @@
       </li>
     </ul>
   </p>
+  {% else %}
+  <p><i>No exposure forecasted in Fiji, even in worst case.</i></p>
+  {% endif %}
 </div>
 <hr class="hr-divider">
 <div>

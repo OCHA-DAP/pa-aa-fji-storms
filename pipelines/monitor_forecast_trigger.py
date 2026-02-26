@@ -206,8 +206,10 @@ if __name__ == "__main__":
     df_stats = load_historical_stats()
 
     any_64_knot_exposure = worst_row["exp_64"] > 0
+    any_34_knot_exposure = worst_row["exp_34"] > 0
     # Produce thermometer plot
     if any_64_knot_exposure:
+        logger.info("64 knot exposure detected; generating thermometer plot.")
         fig_thermometer, ax = plot_thermometer(
             main_value=readiness_exp,
             low_bound=best_row["exp_64"],
@@ -218,100 +220,111 @@ if __name__ == "__main__":
         )
         img_base64_thermometer = fig_to_base64(fig_thermometer)
     else:
+        logger.info("No 64 knot exposure detected; skipping thermometer plot.")
         img_base64_thermometer = None
 
     # Calculate exposure at adm3 level for most likely
-    logger.info("Calculating ADM3 level exposure for most likely track.")
-    df_exp_adm3_mostlikely = calculate_multi_adm_exposure(
-        gdf_buffers_readiness, da_wp_clip, adm3, disable_tqdm=DISABLE_TQDM
-    )
-
-    # Save adm3 exposure CSV file for attachment to email
-    df_adm3_out = df_exp_adm3_mostlikely.pivot(
-        columns="buffer_speed", index="ADM3_PCODE", values="pop_exposed"
-    )
-    df_adm3_out = df_adm3_out.rename(
-        columns={x: f"exp_{x}_knot" for x in df_adm3_out.columns}
-    )
-    df_adm3_out = df_adm3_out.reset_index()
-    df_adm3_out.columns.name = None
-    cols = [
-        "ADM1_PCODE",
-        "ADM1_EN",
-        "ADM2_PCODE",
-        "ADM2_EN",
-        "ADM3_PCODE",
-        "ADM3_EN",
-    ]
-    df_adm3_out = adm3[cols].merge(df_adm3_out)
-    df_adm3_out = df_adm3_out.sort_values(
-        [f"exp_{x}_knot" for x in [64, 50, 34]], ascending=False
-    )
-    adm3_exp_filename = f"temp/{forecast_id}_adm3_exposure.csv"
-    if not os.path.exists("temp/"):
-        os.makedirs("temp/")
-    df_adm3_out.to_csv(adm3_exp_filename, index=False)
-    if not DRY_RUN:
-        adm3_exp_id = upload_file(adm3_exp_filename)["id"]
-        logger.info(
-            f"ADM3 exposure file uploaded with media ID: {adm3_exp_id}"
+    if any_34_knot_exposure:
+        logger.info("Calculating ADM3 level exposure for most likely track.")
+        df_exp_adm3_mostlikely = calculate_multi_adm_exposure(
+            gdf_buffers_readiness, da_wp_clip, adm3, disable_tqdm=DISABLE_TQDM
         )
-    else:
-        adm3_exp_id = "DRY_RUN_MEDIA_ID"
-        logger.info("DRY RUN: ADM3 exposure file not uploaded.")
 
-    # Calculate best and worst case adm3 exposures
-    worst_buffers = gdf_shift_buffers[
-        gdf_shift_buffers["shift_deg"] == worst_row["shift_deg"]
-    ]
-    best_buffers = gdf_shift_buffers[
-        gdf_shift_buffers["shift_deg"] == best_row["shift_deg"]
-    ]
-    logger.info("Calculating ADM3 level exposure for worst case tracks.")
-    df_exp_adm3_worst = calculate_multi_adm_exposure(
-        worst_buffers, da_wp_clip, adm3, disable_tqdm=DISABLE_TQDM
-    )
-    logger.info("Calculating ADM3 level exposure for best case tracks.")
-    df_exp_adm3_best = calculate_multi_adm_exposure(
-        best_buffers, da_wp_clip, adm3, disable_tqdm=DISABLE_TQDM
-    )
+        # Save adm3 exposure CSV file for attachment to email
+        df_adm3_out = df_exp_adm3_mostlikely.pivot(
+            columns="buffer_speed", index="ADM3_PCODE", values="pop_exposed"
+        )
+        df_adm3_out = df_adm3_out.rename(
+            columns={x: f"exp_{x}_knot" for x in df_adm3_out.columns}
+        )
+        df_adm3_out = df_adm3_out.reset_index()
+        df_adm3_out.columns.name = None
+        cols = [
+            "ADM1_PCODE",
+            "ADM1_EN",
+            "ADM2_PCODE",
+            "ADM2_EN",
+            "ADM3_PCODE",
+            "ADM3_EN",
+        ]
+        df_adm3_out = adm3[cols].merge(df_adm3_out)
+        df_adm3_out = df_adm3_out.sort_values(
+            [f"exp_{x}_knot" for x in [64, 50, 34]], ascending=False
+        )
+        adm3_exp_filename = f"temp/{forecast_id}_adm3_exposure.csv"
+        if not os.path.exists("temp/"):
+            os.makedirs("temp/")
+        df_adm3_out.to_csv(adm3_exp_filename, index=False)
 
-    # Create bubble plot
-    blob_name = (
-        f"{PROJECT_PREFIX}/processed/plotting/adm3_simple_template.parquet"
-    )
-    adm3_simple_template = stratus.load_parquet_from_blob(blob_name)
-    df_exp_adm3_best["limit"] = "best"
-    df_exp_adm3_worst["limit"] = "worst"
-    df_exp_adm3_mostlikely["limit"] = "middle"
-    df_exp_adm3 = pd.concat(
-        [
-            df_exp_adm3_best,
-            df_exp_adm3_mostlikely,
-            df_exp_adm3_worst,
-        ],
-        ignore_index=True,
-    )
-    adm3_no_rotuma_lau = adm3[~(adm3["ADM2_PCODE"].isin([ROTUMA2, LAU2]))]
-    fig, axs, bubbles_plot_filepath = plot_bubbles_and_swaths(
-        gdf_mostlikely_buffers=gdf_buffers_readiness,
-        gdf_worst_buffers=worst_buffers,
-        gdf_best_buffers=best_buffers,
-        gdf_adm3_swath_plot=adm3_no_rotuma_lau,
-        df_adm3_template=adm3_simple_template,
-        gdf_adm3=adm3,
-        df_exp_adm3=df_exp_adm3,
-        cyclone_name=cyclone_name,
-        forecast_display_str=forecast_display_str,
-        forecast_id=forecast_id,
-        save_local=True,
-    )
-    if not DRY_RUN:
-        bubbles_plot_id = upload_file(bubbles_plot_filepath)["id"]
-        logger.info(f"Bubbles plot uploaded with media ID: {bubbles_plot_id}")
+        if not DRY_RUN:
+            adm3_exp_id = upload_file(adm3_exp_filename)["id"]
+            logger.info(
+                f"ADM3 exposure file uploaded with media ID: {adm3_exp_id}"
+            )
+        else:
+            adm3_exp_id = "DRY_RUN_MEDIA_ID"
+            logger.info("DRY RUN: ADM3 exposure file not uploaded.")
+
+        # Calculate best and worst case adm3 exposures
+        worst_buffers = gdf_shift_buffers[
+            gdf_shift_buffers["shift_deg"] == worst_row["shift_deg"]
+        ]
+        best_buffers = gdf_shift_buffers[
+            gdf_shift_buffers["shift_deg"] == best_row["shift_deg"]
+        ]
+        logger.info("Calculating ADM3 level exposure for worst case tracks.")
+        df_exp_adm3_worst = calculate_multi_adm_exposure(
+            worst_buffers, da_wp_clip, adm3, disable_tqdm=DISABLE_TQDM
+        )
+        logger.info("Calculating ADM3 level exposure for best case tracks.")
+        df_exp_adm3_best = calculate_multi_adm_exposure(
+            best_buffers, da_wp_clip, adm3, disable_tqdm=DISABLE_TQDM
+        )
+
+        # Create bubble plot
+        blob_name = (
+            f"{PROJECT_PREFIX}/processed/plotting/adm3_simple_template.parquet"
+        )
+        adm3_simple_template = stratus.load_parquet_from_blob(blob_name)
+        df_exp_adm3_best["limit"] = "best"
+        df_exp_adm3_worst["limit"] = "worst"
+        df_exp_adm3_mostlikely["limit"] = "middle"
+        df_exp_adm3 = pd.concat(
+            [
+                df_exp_adm3_best,
+                df_exp_adm3_mostlikely,
+                df_exp_adm3_worst,
+            ],
+            ignore_index=True,
+        )
+        adm3_no_rotuma_lau = adm3[~(adm3["ADM2_PCODE"].isin([ROTUMA2, LAU2]))]
+        fig, axs, bubbles_plot_filepath = plot_bubbles_and_swaths(
+            gdf_mostlikely_buffers=gdf_buffers_readiness,
+            gdf_worst_buffers=worst_buffers,
+            gdf_best_buffers=best_buffers,
+            gdf_adm3_swath_plot=adm3_no_rotuma_lau,
+            df_adm3_template=adm3_simple_template,
+            gdf_adm3=adm3,
+            df_exp_adm3=df_exp_adm3,
+            cyclone_name=cyclone_name,
+            forecast_display_str=forecast_display_str,
+            forecast_id=forecast_id,
+            save_local=True,
+        )
+        if not DRY_RUN:
+            bubbles_plot_id = upload_file(bubbles_plot_filepath)["id"]
+            logger.info(
+                f"Bubbles plot uploaded with media ID: {bubbles_plot_id}"
+            )
+        else:
+            bubbles_plot_id = "DRY_RUN_MEDIA_ID"
+            logger.info("DRY RUN: Bubbles plot not uploaded.")
     else:
-        bubbles_plot_id = "DRY_RUN_MEDIA_ID"
-        logger.info("DRY RUN: Bubbles plot not uploaded.")
+        logger.info(
+            "No 34 knot exposure detected; skipping ADM3 exposure and bubble plot."
+        )
+        adm3_exp_id = None
+        bubbles_plot_id = None
 
     # Send info email
     if trigger_action:
@@ -339,6 +352,7 @@ if __name__ == "__main__":
                 "img_base64_thermometer": img_base64_thermometer,
                 "forecast_id": forecast_id,
                 "any_64_knot_exposure": any_64_knot_exposure,
+                "any_34_knot_exposure": any_34_knot_exposure,
             },
         )
         create_and_send_campaign(
