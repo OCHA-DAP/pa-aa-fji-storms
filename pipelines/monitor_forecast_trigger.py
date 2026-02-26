@@ -205,16 +205,20 @@ if __name__ == "__main__":
     )
     df_stats = load_historical_stats()
 
+    any_64_knot_exposure = worst_row["exp_64"] > 0
     # Produce thermometer plot
-    fig_thermometer, ax = plot_thermometer(
-        main_value=readiness_exp,
-        low_bound=best_row["exp_64"],
-        high_bound=worst_row["exp_64"],
-        df_stats=df_stats,
-        cyclone_name=cyclone_name,
-        forecast_display_str=forecast_display_str,
-    )
-    img_base64_thermometer = fig_to_base64(fig_thermometer)
+    if any_64_knot_exposure:
+        fig_thermometer, ax = plot_thermometer(
+            main_value=readiness_exp,
+            low_bound=best_row["exp_64"],
+            high_bound=worst_row["exp_64"],
+            df_stats=df_stats,
+            cyclone_name=cyclone_name,
+            forecast_display_str=forecast_display_str,
+        )
+        img_base64_thermometer = fig_to_base64(fig_thermometer)
+    else:
+        img_base64_thermometer = None
 
     # Calculate exposure at adm3 level for most likely
     logger.info("Calculating ADM3 level exposure for most likely track.")
@@ -334,6 +338,7 @@ if __name__ == "__main__":
                 "action_exp": f"{action_exp:,.0f}",
                 "img_base64_thermometer": img_base64_thermometer,
                 "forecast_id": forecast_id,
+                "any_64_knot_exposure": any_64_knot_exposure,
             },
         )
         create_and_send_campaign(

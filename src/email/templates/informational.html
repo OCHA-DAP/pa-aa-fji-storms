@@ -30,8 +30,13 @@
   <p>
     The plot below shows the likely range of population exposure to 64-knot winds.
   </p>
+  {% if any_64_knot_exposure %}
   <img src="data:image/png;base64,{{ img_base64_thermometer }}" style="max-height:400px;"alt="Figure">
   <br>
+  {% else %}
+  <i>No 64-knot exposure is forecasted in Fiji, even in worst case; plot is omitted.</i>
+  {% endif %}
+
   <div class="disclaimer-box">
     <p>
       The <em>Most likely</em> value is based on the track forecast without considering the uncertainty cone, and is the value used for triggering (also listed in the section above). The <em>Max. reasonable</em> and <em>Min. reasonable</em> values are calculated by perturbing the track forecast for all points along the cone of uncertainty, and taking the perturbed tracks that cause the highest and lowest population exposures, respectively.
