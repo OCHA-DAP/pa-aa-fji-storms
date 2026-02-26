@@ -206,7 +206,7 @@ if __name__ == "__main__":
     df_stats = load_historical_stats()
 
     any_64_knot_exposure = worst_row["exp_64"] > 0
-    any_34_knot_exposure = worst_row["exp_34"] > 0
+    any_34_knot_exposure = False  # worst_row["exp_34"] > 0
     # Produce thermometer plot
     if any_64_knot_exposure:
         logger.info("64 knot exposure detected; generating thermometer plot.")
