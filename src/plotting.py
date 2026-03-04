@@ -763,7 +763,7 @@ def plot_bubbles_and_swaths(
             forecast_id = "test"
         filepath = f"temp/{forecast_id}_adm3_exposure.pdf"
         if not os.path.exists("temp/"):
-            os.makedirs("temp/")
+            os.makedirs("temp/", exist_ok=True)
         fig.savefig(
             filepath,
             format="pdf",

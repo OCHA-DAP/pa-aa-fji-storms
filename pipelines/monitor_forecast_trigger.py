@@ -253,7 +253,7 @@ if __name__ == "__main__":
         )
         adm3_exp_filename = f"temp/{forecast_id}_adm3_exposure.csv"
         if not os.path.exists("temp/"):
-            os.makedirs("temp/")
+            os.makedirs("temp/", exist_ok=True)
         df_adm3_out.to_csv(adm3_exp_filename, index=False)
 
         if not DRY_RUN:
