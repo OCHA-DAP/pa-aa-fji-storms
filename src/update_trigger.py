@@ -20,7 +20,6 @@ import plotly.graph_objects as go
 from dotenv import load_dotenv
 from html2text import html2text
 from jinja2 import Environment, FileSystemLoader
-from ochanticipy.utils.hdx_api import load_resource_from_hdx
 from shapely.geometry import LineString, Point
 
 from src import blob
@@ -205,8 +204,8 @@ def load_adm(level: int = 0) -> gpd.GeoDataFrame:
     resource_name = f"fji_polbnda_adm{level}_{adm_name}.zip"
     zip_path = INPUT_DIR / resource_name
     if not zip_path.exists():
-        print(f"adm{level} does not exist, downloading now")
-        load_resource_from_hdx("cod-ab-fji", resource_name, zip_path)
+        print(f"adm{level} does not exist")
+        # load_resource_from_hdx("cod-ab-fji", resource_name, zip_path)
     gdf = gpd.read_file(
         f"zip://{zip_path.as_posix()}", layer=zip_path.stem
     ).set_crs(3832)

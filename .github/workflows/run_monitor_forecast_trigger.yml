@@ -1,0 +1,56 @@
+name: Check Trigger
+
+on:
+  workflow_dispatch:
+    inputs:
+      csv:
+        description: 'Base64 string CSV file of forecast'
+        type: string
+      test_email:
+        description: 'TEST_EMAIL: If True, send email to test mailing list instead of real one (fallback: True)'
+        type: choice
+        options:
+          - 'True'
+          - 'False'
+      simulate_trigger:
+        description: 'SIMULATE_TRIGGER: If True, impute data to simulate triggering (fallback: False)'
+        type: choice
+        options:
+          - 'True'
+          - 'False'
+      dry_run:
+        description: 'DRY_RUN: If True, do not perform any write or email operations (fallback: True)'
+        type: choice
+        options:
+          - 'True'
+          - 'False'
+      test_forecast_blob_name:
+        description: 'Blob name of test forecast file to use instead of input CSV (optional)'
+        type: string
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: monitoring-requirements.txt
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install -r monitoring-requirements.txt
+      - name: Run forecast monitoring script
+        env:
+          DSCI_AZ_BLOB_DEV_SAS: ${{ secrets.DSCI_AZ_BLOB_DEV_SAS }}
+          DSCI_AZ_BLOB_DEV_SAS_WRITE: ${{ secrets.DSCI_AZ_BLOB_DEV_SAS_WRITE }}
+          DSCI_LISTMONK_API_USERNAME: ${{ vars.DSCI_LISTMONK_API_USERNAME }}
+          DSCI_LISTMONK_API_KEY: ${{ secrets.DSCI_LISTMONK_API_KEY }}
+          TEST_EMAIL: ${{ inputs.test_email || vars.TEST_EMAIL || 'True'}}
+          SIMULATE_TRIGGER: ${{ inputs.simulate_trigger || vars.SIMULATE_TRIGGER || 'False'}}
+          DRY_RUN: ${{ inputs.dry_run || vars.DRY_RUN || 'True'}}
+          TEST_FORECAST_BLOB_NAME: ${{ inputs.test_forecast_blob_name }}
+        run: python pipelines/monitor_forecast_trigger.py ${{ inputs.csv }}

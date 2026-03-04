@@ -52,9 +52,6 @@ NM_TO_M = 1.852 * 1000
 
 ROTUMA2 = "FJ315"
 
-# storms that would have triggered 2023 framework
-OLD_TRIG_SIDS = []
-
 NAMESEASON2SID = {
     "Ana 2021": "2021029S16171",
     "Cody (co-dee) 2022": "2022008S17173",
@@ -68,3 +65,7 @@ EASTERN1 = "FJ3"
 LAU2 = "FJ305"
 WAINIKELI3 = "FJ10308"
 QUADS = ["ne", "se", "sw", "nw"]
+
+EXP_THRESHOLD_64_KNOTS = 5_000
+
+TOTAL_WP_POP = 824332

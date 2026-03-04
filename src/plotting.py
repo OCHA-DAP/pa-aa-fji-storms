@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import base64
+import io
 import math
+import os
 import re
+import warnings
 
 import geopandas as gpd
 import matplotlib.patches as mpatches
@@ -10,6 +14,8 @@ import numpy as np
 import pandas as pd
 from matplotlib.colors import to_hex, to_rgb
 from matplotlib.patches import Circle
+
+from src.constants import EXP_THRESHOLD_64_KNOTS, FJI_CRS
 
 # -------------------------------
 # Helpers
@@ -138,13 +144,17 @@ def plot_template_circles(
     outline_alpha: float = 1.0,
     outline_lw: float = 0.2,
     dpi: int = 200,
+    ax=None,
 ):
     """
     Plot ONLY the outer, unfilled circles from the template (for debugging sizing/layout).
     Labels (if label_col provided) are centered and scaled by total population.
     """
     t = template_df.copy()
-    fig, ax = plt.subplots(figsize=fig_size, dpi=dpi)
+    if ax is not None:
+        fig = ax.figure
+    else:
+        fig, ax = plt.subplots(figsize=fig_size, dpi=dpi)
 
     # label font scaling (by total pop)
     p = t["pop_total"].to_numpy() if "pop_total" in t.columns else np.array([])
@@ -238,6 +248,7 @@ def plot_bullseye_exposures(
     outline_alpha: float = 1.0,
     outline_lw: float = 0.2,
     dpi: int = 200,
+    ax=None,
 ):
     """
     Draws (optionally) the template empty circles first, then concentric filled disks for exposures.
@@ -274,6 +285,7 @@ def plot_bullseye_exposures(
             outline_alpha=outline_alpha,
             outline_lw=outline_lw,
             dpi=dpi,
+            ax=ax,
         )
     else:
         fig, ax = plt.subplots(figsize=fig_size, dpi=dpi)
@@ -331,9 +343,12 @@ def plot_bullseye_exposures(
 
     # --- add legend for bullseye colors ---
     legend_patches = [
-        mpatches.Patch(facecolor=colors_pale[34], label="34 kt"),
-        mpatches.Patch(facecolor=colors_pale[50], label="50 kt"),
-        mpatches.Patch(facecolor=colors_pale[64], label="64 kt"),
+        mpatches.Patch(
+            facecolor="white", edgecolor="gainsboro", label="< 34 kt"
+        ),
+        mpatches.Patch(facecolor=colors_pale[34], label="≥ 34 kt"),
+        mpatches.Patch(facecolor=colors_pale[50], label="≥ 50 kt"),
+        mpatches.Patch(facecolor=colors_pale[64], label="≥ 64 kt"),
     ]
     ax.legend(
         handles=legend_patches,
@@ -436,3 +451,324 @@ def wrap_text(text, max_len=40, break_anywhere=False):
         lines.append(current.rstrip())
 
     return "\n".join(lines).removeprefix("\n")
+
+
+def plot_wind_buffers(gdf_adm, gdf_buffers, ax=None):
+    warnings.filterwarnings("ignore", "GeoSeries.notna", UserWarning)
+    if ax is not None:
+        fig = ax.figure
+    else:
+        fig, ax = plt.subplots(dpi=200, figsize=(10, 8))
+    colors = {34: "gold", 50: "crimson", 64: "indigo"}
+    colors_pale = {s: lighten(colors[s]) for s in colors}
+
+    gdf_adm.to_crs(FJI_CRS).boundary.plot(ax=ax, color="black", linewidth=0.5)
+    xlims, ylims = ax.get_xlim(), ax.get_ylim()
+
+    ax.axis("off")
+    for speed, color in colors_pale.items():
+        gdf_speed = gdf_buffers[gdf_buffers["buffer_speed"] == speed]
+        gdf_speed = gdf_speed[
+            ~gdf_speed.geometry.is_empty
+            & gdf_speed.geometry.notna()
+            & gdf_speed.is_valid
+        ]
+
+        if gdf_speed.empty:
+            continue
+
+        gdf_speed.plot(ax=ax, color=color, aspect="equal")
+
+    legend_patches = [
+        mpatches.Patch(
+            facecolor="white", edgecolor="gainsboro", label="< 34 kt"
+        ),
+        mpatches.Patch(facecolor=colors_pale[34], label="≥ 34 kt"),
+        mpatches.Patch(facecolor=colors_pale[50], label="≥ 50 kt"),
+        mpatches.Patch(facecolor=colors_pale[64], label="≥ 64 kt"),
+    ]
+    ax.legend(
+        handles=legend_patches,
+        title="Wind speed",
+        frameon=True,
+        loc="upper left",
+        fontsize=7,
+        title_fontsize=8,
+    )
+
+    ax.set_xlim(xlims)
+    ax.set_ylim(ylims)
+
+    return fig, ax
+
+
+def plot_thermometer(
+    main_value: float,
+    df_stats: pd.DataFrame,
+    low_bound: float = None,
+    high_bound: float = None,
+    trigger_threshold: float = EXP_THRESHOLD_64_KNOTS,
+    cyclone_name: str = "",
+    forecast_display_str: str = "",
+    buffer_speed: int = 64,
+    max_value: float = 150_000,
+):
+    if buffer_speed == 64:
+        df_stats_major = df_stats[df_stats["exp_64"] > 5000].copy()
+    else:
+        df_stats_major = df_stats.copy()
+
+    fig, ax = plt.subplots(figsize=(3, 6))
+
+    width = 1
+
+    ax.bar(x=0, height=max_value, color="gainsboro", width=width, alpha=0.5)
+    ax.hlines(
+        y=0, xmin=-width / 2 - 0.1, xmax=width / 2 + 0.1, color="black", lw=2
+    )
+    ax.annotate(
+        f"{max_value:,.0f}\npeople",
+        (-width / 2 - 0.05, max_value),
+        ha="right",
+        va="center",
+        fontsize=6,
+        fontstyle="italic",
+        color="grey",
+    )
+    ax.hlines(
+        y=max_value, xmin=-width / 2, xmax=width / 2, color="grey", lw=0.5
+    )
+
+    for value, label in [
+        (low_bound, "Min. reasonable"),
+        (main_value, "Most likely"),
+        (high_bound, "Max. reasonable"),
+    ]:
+        # don't plot the high or low bound if they are 0
+        if not value > 0 and value in [low_bound, high_bound]:
+            continue
+        fontweight = "bold" if value == main_value else "normal"
+        plot_value = min(value, max_value)
+        label_value = plot_value
+        if value == low_bound and main_value - low_bound < 10000:
+            label_value -= 8000
+        if value == high_bound and high_bound - main_value < 10000:
+            label_value += 8000
+        full_label = f"{label}:\n{round(value, -2):,.0f} people"
+        if value > max_value:
+            full_label = "↑ " + full_label
+        ax.bar(x=0, height=plot_value, alpha=0.3, color="indigo", width=width)
+        ax.annotate(
+            full_label,
+            (width / 2 + 0.6, label_value),
+            ha="left",
+            va="center",
+            color="indigo",
+            fontweight=fontweight,
+        )
+        if not value > max_value:
+            ax.hlines(
+                y=plot_value,
+                xmin=-width / 2,
+                xmax=width / 2 + 0.5,
+                color="indigo",
+            )
+
+    # Trigger threshold line
+    ax.hlines(
+        y=trigger_threshold,
+        xmin=-width / 2 - 1.7,
+        xmax=width / 2,
+        color="darkorange",
+    )
+    if buffer_speed == 64:
+        ax.text(
+            -width / 2 - 1.7,
+            trigger_threshold,
+            "Trig. threshold:\n5,000 people",
+            va="center",
+            ha="right",
+            fontsize=8,
+            color="darkorange",
+        )
+
+    # Plot historical values to the left
+    for _, row in df_stats_major.iterrows():
+        y = row[f"exp_{buffer_speed}"]
+        ylabel = y
+        name_season = row["name_season"]
+        is_cerf = row["cerf"]
+        color = "crimson" if is_cerf else "black"
+        label = f"{name_season}:\n{round(y, -2):,.0f} people"
+        if name_season == "Harold 2020":
+            ylabel += 4000
+        elif name_season == "Ami 2003":
+            ylabel -= 4000
+
+        if y <= max_value:
+            ax.hlines(
+                y=y,
+                xmin=-width / 2,
+                xmax=width / 2,
+                color=color,
+                lw=0.5,
+                # alpha=0.5,
+            )
+            ax.text(
+                -width / 2 - 0.1,
+                ylabel,
+                label,
+                va="center",
+                ha="right",
+                fontsize=8,
+                color=color,
+                zorder=3,
+                fontstyle="italic",
+            )
+        else:
+            ylabel = max_value + 2000
+            if name_season == "Evan 2013":
+                ylabel -= 9000
+            ax.annotate(
+                f"↑ {label}",
+                xy=(-width / 2 - 1, ylabel),
+                va="center",
+                ha="right",
+                fontsize=8,
+                color=color,
+                fontstyle="italic",
+            )
+
+    # Final plot tweaks
+    ax.set_xlim(-2, 2)
+    ax.set_ylim(0, max_value * 1.05)
+    ax.set_title(
+        f"64 knot exposure:\n{cyclone_name} forecast issued\n{forecast_display_str}",
+        loc="center",
+        fontsize=12,
+    )
+    ax.axis("off")
+    ax.tick_params(axis="x", which="both", bottom=False, labelbottom=False)
+    ax.grid(False)
+    return fig, ax
+
+
+def fig_to_base64(fig) -> str:
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", bbox_inches="tight")
+    buf.seek(0)
+    img_base64 = base64.b64encode(buf.read()).decode("utf-8")
+    buf.close()
+    return img_base64
+
+
+def plot_bubbles_and_swaths(
+    gdf_mostlikely_buffers: gpd.GeoDataFrame,
+    gdf_worst_buffers: gpd.GeoDataFrame,
+    gdf_best_buffers: gpd.GeoDataFrame,
+    gdf_adm3_swath_plot: gpd.GeoDataFrame,
+    df_adm3_template: pd.DataFrame,
+    gdf_adm3: gpd.GeoDataFrame,
+    df_exp_adm3: pd.DataFrame,
+    cyclone_name: str = "",
+    forecast_display_str: str = "",
+    forecast_id: str = "",
+    save_local: bool = False,
+):
+    fig, axes = plt.subplots(2, 3, figsize=(18, 12))
+
+    gdf_adm3["adm_label"] = gdf_adm3["ADM3_EN"].apply(
+        wrap_text, max_len=9, break_anywhere=True
+    )
+
+    row_specs = [
+        ("middle", "Most likely track", gdf_mostlikely_buffers),
+        (
+            "worst",
+            "Upper bound exposure\n(worst case scenario)",
+            gdf_worst_buffers,
+        ),
+        (
+            "best",
+            "Lower bound exposure\n(best case scenario)",
+            gdf_best_buffers,
+        ),
+    ]
+
+    # ---- Plotting loop ----
+    for col, (limit, title_str, gdf_buffers) in enumerate(row_specs):
+        top_ax = axes[0, col]
+        bottom_ax = axes[1, col]
+
+        # Wind swaths
+        plot_wind_buffers(gdf_adm3_swath_plot, gdf_buffers, ax=top_ax)
+
+        # Column titles
+        if col == 0:
+            title_color = "black"
+            title_weight = "bold"
+        elif col == 1:
+            title_color = "red"
+            title_weight = "normal"
+        else:
+            title_color = "green"
+            title_weight = "normal"
+
+        top_ax.set_title(
+            title_str,
+            fontsize=20,
+            fontweight=title_weight,
+            color=title_color,
+            pad=6,
+        )
+
+        # Population exposure
+        plot_bullseye_exposures(
+            df_adm3_template.merge(gdf_adm3[["ADM3_PCODE", "adm_label"]]),
+            df_exp_adm3[df_exp_adm3["limit"] == limit],
+            label_col="adm_label",
+            min_font=4,
+            max_font=20,
+            ax=bottom_ax,
+        )
+
+    # ---- Row labels (left side) ----
+    for row_idx, row_label in enumerate(
+        ["Wind swaths", "Population exposure"]
+    ):
+        axes[row_idx, 0].text(
+            -0.02,
+            0.5,
+            row_label,
+            fontsize=18,
+            va="center",
+            ha="right",
+            rotation=90,
+            transform=axes[row_idx, 0].transAxes,
+        )
+
+    # ---- Main title ----
+    fig.suptitle(
+        f"{cyclone_name}: forecast issued {forecast_display_str}",
+        fontsize=22,
+        fontweight="bold",
+        y=1,
+    )
+
+    # ---- Layout ----
+    fig.tight_layout(rect=[0, 0, 1, 1])
+
+    if save_local:
+        if not forecast_id:
+            forecast_id = "test"
+        filepath = f"temp/{forecast_id}_adm3_exposure.pdf"
+        if not os.path.exists("temp/"):
+            os.makedirs("temp/", exist_ok=True)
+        fig.savefig(
+            filepath,
+            format="pdf",
+            bbox_inches="tight",
+        )
+    else:
+        filepath = None
+    return fig, axes, filepath

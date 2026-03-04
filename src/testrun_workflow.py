@@ -8,7 +8,7 @@ load_dotenv()
 
 OWNER = "OCHA-DAP"
 REPO = "pa-aa-fji-storms"
-WORKFLOW_ID = "check-trigger.yml"
+WORKFLOW_ID = "run_monitor_forecast_trigger.yml"
 GH_ACTIONS_TOKEN = os.getenv("GH_ACTIONS_TOKEN")
 TEST_CSV = os.getenv("TEST_CSV")
 
