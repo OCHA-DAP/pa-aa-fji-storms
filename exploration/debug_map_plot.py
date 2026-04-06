@@ -67,6 +67,11 @@ df_exp_shift = df_exp_shift.sort_values(
 )
 worst_row = df_exp_shift.iloc[0]
 best_row = df_exp_shift.iloc[-1]
+if (best_row[[f"exp_{s}" for s in [34, 50, 64]]] == 0).all():
+    opposite_deg = (worst_row["shift_deg"] + 180) % 360
+    best_row = df_exp_shift.loc[
+        (df_exp_shift["shift_deg"] - opposite_deg).abs().idxmin()
+    ]
 
 worst_buffers = gdf_shift_buffers[
     gdf_shift_buffers["shift_deg"] == worst_row["shift_deg"]

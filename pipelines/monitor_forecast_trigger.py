@@ -196,6 +196,11 @@ if __name__ == "__main__":
     worst_row = df_exp_shift.iloc[0].copy()
     worst_row["level"] = "worst"
     best_row = df_exp_shift.iloc[-1].copy()
+    if (best_row[[f"exp_{s}" for s in [34, 50, 64]]] == 0).all():
+        opposite_deg = (worst_row["shift_deg"] + 180) % 360
+        best_row = df_exp_shift.loc[
+            (df_exp_shift["shift_deg"] - opposite_deg).abs().idxmin()
+        ].copy()
     best_row["level"] = "best"
     logger.info(
         "Best case exposure:\n%s",
