@@ -13,7 +13,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib.colors import to_hex, to_rgb
-from matplotlib.patches import Circle
+from matplotlib.lines import Line2D
+from matplotlib.patches import Circle, Patch
 
 from src.constants import EXP_THRESHOLD_64_KNOTS, FJI_CRS
 
@@ -682,6 +683,9 @@ def plot_bubbles_and_swaths(
     forecast_display_str: str = "",
     forecast_id: str = "",
     save_local: bool = False,
+    gdf_tracks_plot: gpd.GeoDataFrame = None,
+    uncertainty_cone=None,
+    forecast_label: str = "",
 ):
     fig, axes = plt.subplots(2, 3, figsize=(18, 12))
 
@@ -710,6 +714,51 @@ def plot_bubbles_and_swaths(
 
         # Wind swaths
         plot_wind_buffers(gdf_adm3_swath_plot, gdf_buffers, ax=top_ax)
+
+        # Track and uncertainty cone
+        _track = (
+            gdf_tracks_plot[col]
+            if isinstance(gdf_tracks_plot, list)
+            else gdf_tracks_plot
+        )
+        if _track is not None and uncertainty_cone is not None:
+            xs = _track.geometry.x.values
+            ys = _track.geometry.y.values
+            top_ax.plot(xs, ys, color="black", linewidth=1.5, zorder=9)
+            _track.plot(ax=top_ax, color="black", markersize=20, zorder=10)
+            gpd.GeoSeries([uncertainty_cone], crs=gdf_adm3.crs).plot(
+                ax=top_ax,
+                facecolor="none",
+                edgecolor="grey",
+                linewidth=1.5,
+                linestyle="--",
+                zorder=10,
+            )
+            existing_legend = top_ax.get_legend()
+            if existing_legend is not None:
+                top_ax.add_artist(existing_legend)
+            col_label = (
+                forecast_label[col]
+                if isinstance(forecast_label, list)
+                else forecast_label
+            )
+            track_handle = Line2D(
+                [0], [0], color="black", linewidth=1.5, label=col_label
+            )
+            cone_handle = Patch(
+                facecolor="none",
+                edgecolor="grey",
+                linewidth=1.5,
+                linestyle="--",
+                label="Uncertainty cone",
+            )
+            legend_track = top_ax.legend(
+                handles=[track_handle, cone_handle],
+                loc="upper right",
+                fontsize=7,
+                frameon=True,
+            )
+            top_ax.add_artist(legend_track)
 
         # Column titles
         if col == 0:
