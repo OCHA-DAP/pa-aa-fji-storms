@@ -539,20 +539,28 @@ def plot_thermometer(
         y=max_value, xmin=-width / 2, xmax=width / 2, color="grey", lw=0.5
     )
 
-    for value, label in [
-        (low_bound, "Min. reasonable"),
-        (main_value, "Most likely"),
-        (high_bound, "Max. reasonable"),
+    for value, label, is_main in [
+        (low_bound, "Min. reasonable", False),
+        (main_value, "Most likely", True),
+        (high_bound, "Max. reasonable", False),
     ]:
         # don't plot the high or low bound if they are 0
-        if not value > 0 and value in [low_bound, high_bound]:
+        if not value > 0 and not is_main:
             continue
-        fontweight = "bold" if value == main_value else "normal"
+        fontweight = "bold" if is_main else "normal"
         plot_value = min(value, max_value)
         label_value = plot_value
-        if value == low_bound and main_value - low_bound < 10000:
+        if (
+            not is_main
+            and value == low_bound
+            and main_value - low_bound < 10000
+        ):
             label_value -= 8000
-        if value == high_bound and high_bound - main_value < 10000:
+        if (
+            not is_main
+            and value == high_bound
+            and high_bound - main_value < 10000
+        ):
             label_value += 8000
         full_label = f"{label}:\n{round(value, -2):,.0f} people"
         if value > max_value:
