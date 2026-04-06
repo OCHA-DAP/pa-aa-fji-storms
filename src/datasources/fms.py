@@ -223,6 +223,30 @@ def calculate_fms_buffers_gdf(
     return gdf_out
 
 
+def calculate_uncertainty_cone(gdf: gpd.GeoDataFrame):
+    df = gdf[["valid_time", "Latitude", "Longitude", "Uncertainty"]].copy()
+    df_interp = ibtracs.interpolate_track(
+        df, time_col="valid_time", lat_col="Latitude", lon_col="Longitude"
+    )
+    gdf_interp = gpd.GeoDataFrame(
+        data=df_interp,
+        geometry=gpd.points_from_xy(
+            df_interp["Longitude"], df_interp["Latitude"]
+        ),
+        crs=FJI_CRS,
+    ).to_crs(3832)
+    circles = [
+        row.geometry.buffer(row["Uncertainty"] * NM_TO_M)
+        for _, row in gdf_interp.iterrows()
+    ]
+    return (
+        gpd.GeoDataFrame(geometry=circles, crs=3832)
+        .dissolve()
+        .to_crs(FJI_CRS)
+        .geometry[0]
+    )
+
+
 def shift_gdf_points(
     gdf: gpd.GeoDataFrame,
     azimuth_deg: float,
@@ -263,6 +287,7 @@ def calculate_shifted_exposures(
         _gdf_shift_buffers = calculate_fms_buffers_gdf(_gdf_shift)
         _gdf_shift_buffers = _gdf_shift_buffers.to_crs(FJI_CRS)
         _gdf_shift_buffers["shift_deg"] = shift_deg
+        _gdf_shift["shift_deg"] = shift_deg
 
         gdfs_shifts.append(_gdf_shift)
         gdfs_shifts_buffers.append(_gdf_shift_buffers)

@@ -2,6 +2,7 @@ import argparse
 import os
 from io import BytesIO
 
+import geopandas as gpd
 import ocha_stratus as stratus
 import pandas as pd
 from dotenv import load_dotenv
@@ -12,6 +13,7 @@ from src.datasources import codab, worldpop
 from src.datasources.fms import (
     calculate_fms_buffers_gdf,
     calculate_shifted_exposures,
+    calculate_uncertainty_cone,
     decode_b64_string,
     fji_time_str,
     load_historical_stats,
@@ -298,6 +300,24 @@ if __name__ == "__main__":
             ignore_index=True,
         )
         adm3_no_rotuma_lau = adm3[~(adm3["ADM2_PCODE"].isin([ROTUMA2, LAU2]))]
+        uncertainty_cone = calculate_uncertainty_cone(gdf_readiness)
+
+        def _track_gdf(gdf):
+            return gdf.set_geometry(
+                gpd.points_from_xy(gdf["Longitude"], gdf["Latitude"])
+            ).set_crs(FJI_CRS)
+
+        worst_track = gdf_shift_tracks[
+            gdf_shift_tracks["shift_deg"] == worst_row["shift_deg"]
+        ]
+        best_track = gdf_shift_tracks[
+            gdf_shift_tracks["shift_deg"] == best_row["shift_deg"]
+        ]
+        gdf_tracks_plot = [
+            _track_gdf(gdf_readiness),
+            _track_gdf(worst_track),
+            _track_gdf(best_track),
+        ]
         fig, axs, bubbles_plot_filepath = plot_bubbles_and_swaths(
             gdf_mostlikely_buffers=gdf_buffers_readiness,
             gdf_worst_buffers=worst_buffers,
@@ -310,6 +330,13 @@ if __name__ == "__main__":
             forecast_display_str=forecast_display_str,
             forecast_id=forecast_id,
             save_local=True,
+            gdf_tracks_plot=gdf_tracks_plot,
+            uncertainty_cone=uncertainty_cone,
+            forecast_label=[
+                "Most likely track",
+                "Worst case track",
+                "Best case track",
+            ],
         )
         if not DRY_RUN:
             bubbles_plot_id = upload_file(bubbles_plot_filepath)["id"]
