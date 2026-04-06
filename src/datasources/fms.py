@@ -19,6 +19,7 @@ from src.datasources import ibtracs
 from src.exposure_calc import calculate_single_adm_exposure
 
 SPEED2WORD = {34: "Gale", 50: "Storm", 64: "Hurricane"}
+SPEED2FALLBACK = {34: "GaleRadius", 50: "StormRadius", 64: "HurricaneRadius"}
 SPEEDS = [34, 50, 64]
 QUAD_COL_RENAME = {
     f"{x.upper()}{speedword}Radius": f"quadrant_radius_{speed}_{x}"
@@ -133,6 +134,12 @@ def calculate_fms_buffers(gdf, best_track: bool = False):
     cols = ["valid_time", "Latitude", "Longitude", "Category", "MeanWind"] + [
         f"quadrant_radius_{speed}_{x}" for speed in SPEEDS for x in QUADS
     ]
+    fallback_cols = [
+        SPEED2FALLBACK[speed]
+        for speed in SPEEDS
+        if SPEED2FALLBACK[speed] in gdf.columns
+    ]
+    cols = cols + fallback_cols
     df = gdf[cols]
     df_interp = ibtracs.interpolate_track(
         df, time_col="valid_time", lat_col="Latitude", lon_col="Longitude"
@@ -161,14 +168,28 @@ def calculate_fms_buffers(gdf, best_track: bool = False):
                 for x in ["ne", "se", "sw", "nw"]
             ]
             if row[[ne_col, se_col, sw_col, nw_col]].isna().all():
-                continue
+                fallback_col = SPEED2FALLBACK[speed]
+                fallback_val = (
+                    row.get(fallback_col)
+                    if fallback_col in row.index
+                    else np.nan
+                )
+                if pd.isna(fallback_val):
+                    continue
+                r = convert_nm_to_m(fallback_val)
+                ne = se = sw = nw = r
+            else:
+                ne = convert_nm_to_m(row[ne_col])
+                se = convert_nm_to_m(row[se_col])
+                sw = convert_nm_to_m(row[sw_col])
+                nw = convert_nm_to_m(row[nw_col])
 
             poly = ibtracs.make_quadrant_disk(
                 (row.geometry.x, row.geometry.y),
-                ne=convert_nm_to_m(row[ne_col]),
-                se=convert_nm_to_m(row[se_col]),
-                sw=convert_nm_to_m(row[sw_col]),
-                nw=convert_nm_to_m(row[nw_col]),
+                ne=ne,
+                se=se,
+                sw=sw,
+                nw=nw,
                 n_points=n_points,
             )
             polys.append(poly)
