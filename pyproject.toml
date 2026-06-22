@@ -1,3 +1,27 @@
+[project]
+name = "pa-aa-fji-storms"
+version = "0.1.0"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+    "azure-storage-blob",
+    "fiona==1.9.6",
+    "frictionless==5.15.6",
+    "geopandas",
+    "html2text==2020.1.16",
+    "Jinja2",
+    "kaleido==0.2.1",
+    "numpy==1.25.1",
+    "pandas",
+    "plotly==5.17.0",
+    "python-dotenv==1.0.0",
+    "shapely==2.0.1",
+    "ocha-stratus",
+    "ocha-lens",
+    "scipy",
+    "rioxarray",
+    "matplotlib",
+]
+
 [tool.black]
 line-length = 79
 
