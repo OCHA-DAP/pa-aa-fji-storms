@@ -152,3 +152,5 @@ outputs
 .DS_Store
 
 temp
+
+/.quarto/

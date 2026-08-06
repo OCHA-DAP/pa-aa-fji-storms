@@ -1,0 +1,3517 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.6.36">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>1&nbsp; USA tracks radius model fit – Anticipatory Action - Fiji Tropical Cyclones</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script><script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../exploration/fms_buffers_regression.html" rel="next">
+<link href="../index.html" rel="prev">
+<link href="../quarto_assets/favicon.ico" rel="icon">
+<script src="../site_libs/quarto-html/quarto.js"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-01c78b5cd655e4cd89133cf59d535862.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-7580570a2e354cd56757c689413fca0c.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<style>html{ scroll-behavior: smooth; }</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" integrity="sha512-c3Nl8+7g4LMSTdrm621y7kf9v3SDPnhxLNhcjFJbKECVnmZHTdo+IRO05sNLTH/D3vA6u1X32ehoLC7WFVdheg==" crossorigin="anonymous"></script>
+
+<script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN") {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="../quarto_assets/custom.css">
+</head>
+
+<body class="nav-sidebar floating">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../exploration/usa_radii_modelfit.html">Wind field calculation</a></li><li class="breadcrumb-item"><a href="../exploration/usa_radii_modelfit.html"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">USA tracks radius model fit</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header sidebar-header-stacked">
+      <a href="../index.html" class="sidebar-logo-link">
+      <img src="../quarto_assets/centre_banner_greenbg.png" alt="" class="sidebar-logo py-0 d-lg-inline d-none">
+      </a>
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../">Anticipatory Action - Fiji Tropical Cyclones</a>
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container">
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container">
+  <a href="../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Overview</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container">
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">Wind field calculation</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a>
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">
+          <li class="sidebar-item">
+  <div class="sidebar-item-container">
+  <a href="../exploration/usa_radii_modelfit.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">USA tracks radius model fit</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container">
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">Archive</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a>
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">
+          <li class="sidebar-item">
+  <div class="sidebar-item-container">
+  <a href="../exploration/fms_buffers_regression.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Wind buffers - FMS approximation</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+
+  <ul>
+  <li><a href="#processing-data" id="toc-processing-data" class="nav-link active" data-scroll-target="#processing-data"><span class="header-section-number">1.1</span> Processing data</a></li>
+  <li><a href="#load-and-process-data" id="toc-load-and-process-data" class="nav-link" data-scroll-target="#load-and-process-data"><span class="header-section-number">1.2</span> Load and process data</a></li>
+  <li><a href="#regression" id="toc-regression" class="nav-link" data-scroll-target="#regression"><span class="header-section-number">1.3</span> Regression</a>
+  <ul class="collapse">
+  <li><a href="#compare-various-methods" id="toc-compare-various-methods" class="nav-link" data-scroll-target="#compare-various-methods"><span class="header-section-number">1.3.1</span> Compare various methods</a></li>
+  <li><a href="#make-predictions" id="toc-make-predictions" class="nav-link" data-scroll-target="#make-predictions"><span class="header-section-number">1.3.2</span> Make predictions</a></li>
+  <li><a href="#plot-results" id="toc-plot-results" class="nav-link" data-scroll-target="#plot-results"><span class="header-section-number">1.3.3</span> Plot results</a></li>
+  <li><a href="#plot-examples" id="toc-plot-examples" class="nav-link" data-scroll-target="#plot-examples"><span class="header-section-number">1.3.4</span> Plot examples</a></li>
+  </ul></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../exploration/usa_radii_modelfit.html">Wind field calculation</a></li><li class="breadcrumb-item"><a href="../exploration/usa_radii_modelfit.html"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">USA tracks radius model fit</span></a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">USA tracks radius model fit</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+
+
+
+  </div>
+
+
+
+</header>
+
+
+<!-- markdownlint-disable MD013 -->
+<p>Fitting model for wind radii to USA tracks</p>
+<div id="a3fabdd2-0327-437c-9443-509341354bc5" class="cell" data-execution_count="1">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>load_ext jupyter_black</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>load_ext autoreload</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>autoreload <span class="dv">2</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-display">
+
+                <script type="application/javascript" id="jupyter_black">
+                (function() {
+                    if (window.IPython === undefined) {
+                        return
+                    }
+                    var msg = "WARNING: it looks like you might have loaded " +
+                        "jupyter_black in a non-lab notebook with " +
+                        "`is_lab=True`. Please double check, and if " +
+                        "loading with `%load_ext` please review the README!"
+                    console.log(msg)
+                    alert(msg)
+                })()
+                </script>
+
+</div>
+</div>
+<div id="26cc9b28-39a6-4f98-90bf-392bcb1c564f" class="cell" data-execution_count="128">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> ocha_lens <span class="im">as</span> lens</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> ocha_stratus <span class="im">as</span> stratus</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> statsmodels.api <span class="im">as</span> sm</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> src.constants <span class="im">import</span> <span class="op">*</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> src.blob <span class="im">import</span> PROJECT_PREFIX</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> src.datasources.ibtracs <span class="im">import</span> expand_quad_col</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<section id="processing-data" class="level2" data-number="1.1">
+<h2 data-number="1.1" class="anchored" data-anchor-id="processing-data"><span class="header-section-number">1.1</span> Processing data</h2>
+<p>Just extracting USA values from IBTrACS - can all be skipped if file is already saved to blob</p>
+<div id="34725624-80af-401f-afad-2a11e5d5a54b" class="cell" data-execution_count="31">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># ds = lens.ibtracs.load_ibtracs(dataset="SP")</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<div id="c9489d47-0130-4d14-8978-e7a9f96d1388" class="cell" data-execution_count="32">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># df_storm = lens.ibtracs.get_storms(ds)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<div id="2bc39c95-7eb7-41e3-aa8b-2fefbe3244d6" class="cell" data-execution_count="33">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># gdf_tracks = lens.ibtracs.get_tracks(ds)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<div id="9ba38f3e-6741-4b40-be50-d384580f301a" class="cell" data-execution_count="34">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># speeds = [34, 50, 64]</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<div id="eaf01b83-e26f-47b2-b0e7-9fa8cbb29d1f" class="cell" data-execution_count="35">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>quad_cols <span class="op">=</span> [<span class="ss">f"usa_r</span><span class="sc">{</span>x<span class="sc">}</span><span class="ss">"</span> <span class="cf">for</span> x <span class="kw">in</span> speeds]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<div id="2cbc6847-73d1-4aee-a51f-ecc5341ff804" class="cell" data-execution_count="83">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>other_cols <span class="op">=</span> [<span class="st">"sid"</span>, <span class="st">"usa_lat"</span>, <span class="st">"usa_lon"</span>, <span class="st">"usa_wind"</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<div id="69fa71dc-b7cc-4094-b6df-4672e87daaec" class="cell" data-execution_count="84">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>var_cols <span class="op">=</span> other_cols <span class="op">+</span> quad_cols</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<div id="0ea67837-d139-4210-8892-6d06cfaace61" class="cell" data-execution_count="86">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>ds_subset <span class="op">=</span> ds[var_cols]</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>df_select <span class="op">=</span> ds_subset.to_dataframe().reset_index()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<div id="8e54f154-d723-4fa4-8ff8-40d5c6addc70" class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>df_ <span class="op">=</span> lens.ibtracs.normalize_radii(df_select, radii_cols<span class="op">=</span>quad_cols)</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>df_[<span class="st">"valid_time"</span>] <span class="op">=</span> df_[<span class="st">"time"</span>].dt.<span class="bu">round</span>(<span class="st">"min"</span>)</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>df_ <span class="op">=</span> lens.ibtracs._convert_string_columns(df_, [<span class="st">"sid"</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<div id="426263af-9e78-4278-a8a6-d0b9d8d02883" class="cell" data-execution_count="88">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>df_ <span class="op">=</span> df_[var_cols <span class="op">+</span> [<span class="st">"valid_time"</span>]]</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>df_ <span class="op">=</span> df_[df_.valid_time.notna()]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<div id="42d39b6c-e70f-4e04-ba9b-37ccffaf8962" class="cell" data-execution_count="89">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>df_</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-display" data-execution_count="89">
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">sid</th>
+<th data-quarto-table-cell-role="th">usa_lat</th>
+<th data-quarto-table-cell-role="th">usa_lon</th>
+<th data-quarto-table-cell-role="th">usa_wind</th>
+<th data-quarto-table-cell-role="th">usa_r34</th>
+<th data-quarto-table-cell-role="th">usa_r50</th>
+<th data-quarto-table-cell-role="th">usa_r64</th>
+<th data-quarto-table-cell-role="th">valid_time</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">0</td>
+<td>1897005S10135</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>1897-01-04 12:00:00</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">1</td>
+<td>1897005S10135</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>1897-01-04 15:00:00</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2</td>
+<td>1897005S10135</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>1897-01-04 18:00:00</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">3</td>
+<td>1897005S10135</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>1897-01-04 21:00:00</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">4</td>
+<td>1897005S10135</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>1897-01-05 00:00:00</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">447504</td>
+<td>2025129S08138</td>
+<td>-9.0</td>
+<td>137.800003</td>
+<td>35.0</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>2025-05-12 00:00:00</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">447505</td>
+<td>2025129S08138</td>
+<td>-8.6</td>
+<td>137.500000</td>
+<td>32.0</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>2025-05-12 03:00:00</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">447506</td>
+<td>2025129S08138</td>
+<td>-8.1</td>
+<td>137.199997</td>
+<td>29.0</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>2025-05-12 06:00:00</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">447507</td>
+<td>2025129S08138</td>
+<td>-7.9</td>
+<td>137.000000</td>
+<td>27.0</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>2025-05-12 09:00:00</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">447508</td>
+<td>2025129S08138</td>
+<td>-7.9</td>
+<td>137.000000</td>
+<td>25.0</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>2025-05-12 12:00:00</td>
+</tr>
+</tbody>
+</table>
+
+<p>76381 rows × 8 columns</p>
+</div>
+</div>
+</div>
+<div id="dca6ffe9-8cb1-4095-a651-132df41fb0f8" class="cell" data-execution_count="90">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>df_usa <span class="op">=</span> df_.copy()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<div id="6054b159-335c-4b38-b545-1fe381a33090" class="cell" data-execution_count="91">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>blob_name <span class="op">=</span> <span class="ss">f"</span><span class="sc">{</span>PROJECT_PREFIX<span class="sc">}</span><span class="ss">/processed/ibtracs/usa_only_wind_radii.parquet"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<div id="d179a4fe-4858-4151-b366-6261d5906e4e" class="cell" data-execution_count="92">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>stratus.upload_parquet_to_blob(df_usa, blob_name)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+</section>
+<section id="load-and-process-data" class="level2" data-number="1.2">
+<h2 data-number="1.2" class="anchored" data-anchor-id="load-and-process-data"><span class="header-section-number">1.2</span> Load and process data</h2>
+<div id="ae748b17-c374-4165-b58d-ccdea0adf835" class="cell" data-execution_count="93">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>df_usa <span class="op">=</span> stratus.load_parquet_from_blob(blob_name)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<div id="745fd0e5-ead3-4230-bd7a-a3b17049468f" class="cell" data-execution_count="94">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>query <span class="op">=</span> <span class="st">"""</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="st">SELECT *</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a><span class="st">FROM storms.ibtracs_storms</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="st">"""</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> stratus.get_engine(stage<span class="op">=</span><span class="st">"dev"</span>).<span class="ex">connect</span>() <span class="im">as</span> conn:</span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>    df_storms <span class="op">=</span> pd.read_sql(query, conn)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<div id="428950c9-c8a0-4e7d-abf5-01e6a3b37b49" class="cell" data-execution_count="95">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>df_usa <span class="op">=</span> df_usa.merge(df_storms)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<div id="ed0b5102-dc8c-418c-8179-947b95e9912e" class="cell" data-scrolled="true" data-execution_count="97">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>buffer_speeds <span class="op">=</span> [<span class="dv">34</span>, <span class="dv">50</span>, <span class="dv">64</span>]</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> buffer_speed <span class="kw">in</span> buffer_speeds:</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>    df_usa <span class="op">=</span> expand_quad_col(df_usa, <span class="ss">f"usa_r</span><span class="sc">{</span>buffer_speed<span class="sc">}</span><span class="ss">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<div id="12f1e72e-5e96-4954-8153-fb2a42a07ddf" class="cell" data-execution_count="98">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>quads <span class="op">=</span> [<span class="st">"ne"</span>, <span class="st">"nw"</span>, <span class="st">"se"</span>, <span class="st">"sw"</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<p>Let’s see which quadrant tends to be the highest, and check where we have historical values for it.</p>
+<div id="6db48a9a-b826-4e74-9c14-e066a4267f79" class="cell" data-scrolled="true" data-execution_count="99">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>df_usa[[<span class="ss">f"usa_r34_</span><span class="sc">{</span>x<span class="sc">}</span><span class="ss">"</span> <span class="cf">for</span> x <span class="kw">in</span> quads]].mean()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-display" data-execution_count="99">
+<pre><code>usa_r34_ne     96.604865
+usa_r34_nw    100.630890
+usa_r34_se     91.911209
+usa_r34_sw     86.478483
+dtype: float64</code></pre>
+</div>
+</div>
+<div id="13198cb1-eb6e-4df6-b5a0-e1732eda6312" class="cell" data-execution_count="100">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>df_usa.groupby(<span class="st">"season"</span>)[<span class="st">"usa_r34_nw"</span>].count().plot()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="usa_radii_modelfit_files/figure-html/cell-24-output-1.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+<div id="84a5cc47-f033-47f0-a013-403bee469ad2" class="cell" data-scrolled="true" data-execution_count="101">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>df_usa[df_usa[<span class="st">"season"</span>] <span class="op">&gt;=</span> <span class="dv">1980</span>].groupby(<span class="st">"season"</span>)[<span class="st">"usa_r34_nw"</span>].count()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-display" data-execution_count="101">
+<pre><code>season
+1980      0
+1981      0
+1982      0
+1983      0
+1984      0
+1985      0
+1986      0
+1987      0
+1988      0
+1989      0
+1990      0
+1991      0
+1992      0
+1993      0
+1994      0
+1995      0
+1996      0
+1997      0
+1998      0
+1999      0
+2000      0
+2001      0
+2002     62
+2003    244
+2004    206
+2005    342
+2006    240
+2007    201
+2008    189
+2009    124
+2010    377
+2011    288
+2012    123
+2013    267
+2014    276
+2015    317
+2016    404
+2017    228
+2018    304
+2019    351
+2020    316
+2021    232
+2022    189
+2023    185
+2024    235
+2025    179
+Name: usa_r34_nw, dtype: int64</code></pre>
+</div>
+</div>
+<p>Looks like JTWC started fully recording this in the 2003 season, so we can filter from only then onwards.</p>
+<div id="7cede6fc-f1fa-49bc-bf78-b403a809690b" class="cell" data-execution_count="102">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>min_season <span class="op">=</span> <span class="dv">2003</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<div id="981de5d3-5dfe-48c8-b32b-22491d8c745a" class="cell" data-execution_count="109">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>df_usa_recent <span class="op">=</span> df_usa[df_usa[<span class="st">"season"</span>] <span class="op">&gt;=</span> min_season]</span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>df_usa_recent <span class="op">=</span> df_usa_recent.dropna(subset<span class="op">=</span><span class="st">"usa_wind"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<div id="8c4f7f8d-2cc4-496b-9231-a738acff77ec" class="cell" data-execution_count="116">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>radius_cols <span class="op">=</span> [</span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>    <span class="ss">f"usa_r</span><span class="sc">{</span>speed<span class="sc">}</span><span class="ss">_</span><span class="sc">{</span>quad<span class="sc">}</span><span class="ss">"</span> <span class="cf">for</span> speed <span class="kw">in</span> buffer_speeds <span class="cf">for</span> quad <span class="kw">in</span> quads</span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<p>Since we now know that we’re only including years where (presumably) JTWC would record the wind radius if it exists, we can assume that if it’s missing, it should be zero.</p>
+<div id="ff2a3461-d0c6-47a1-8b85-38a8f1dc3021" class="cell" data-execution_count="254">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>df_usa_recent[radius_cols] <span class="op">=</span> df_usa_recent[radius_cols].fillna(<span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<p>We can calculate the mean radius. We won’t bother with trying to model the individual quadrants just for simplicity.</p>
+<div id="ff5219e5-e059-450d-87cf-7f629377a244" class="cell" data-execution_count="216">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> speed <span class="kw">in</span> buffer_speeds:</span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>    cols <span class="op">=</span> [<span class="ss">f"usa_r</span><span class="sc">{</span>speed<span class="sc">}</span><span class="ss">_</span><span class="sc">{</span>quad<span class="sc">}</span><span class="ss">"</span> <span class="cf">for</span> quad <span class="kw">in</span> quads]</span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>    df_usa_recent[<span class="ss">f"usa_r</span><span class="sc">{</span>speed<span class="sc">}</span><span class="ss">_mean"</span>] <span class="op">=</span> df_usa_recent[cols].mean(axis<span class="op">=</span><span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<div id="4c579186-c110-4fa3-a34a-4029a7bdaee1" class="cell" data-scrolled="true" data-execution_count="217">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>df_usa_recent</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-display" data-execution_count="217">
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">sid</th>
+<th data-quarto-table-cell-role="th">usa_lat</th>
+<th data-quarto-table-cell-role="th">usa_lon</th>
+<th data-quarto-table-cell-role="th">usa_wind</th>
+<th data-quarto-table-cell-role="th">usa_r34</th>
+<th data-quarto-table-cell-role="th">usa_r50</th>
+<th data-quarto-table-cell-role="th">usa_r64</th>
+<th data-quarto-table-cell-role="th">valid_time</th>
+<th data-quarto-table-cell-role="th">atcf_id</th>
+<th data-quarto-table-cell-role="th">number</th>
+<th data-quarto-table-cell-role="th">...</th>
+<th data-quarto-table-cell-role="th">usa_r64_mean_log</th>
+<th data-quarto-table-cell-role="th">usa_lat_log</th>
+<th data-quarto-table-cell-role="th">usa_r34_mean_pred</th>
+<th data-quarto-table-cell-role="th">usa_r50_mean_pred</th>
+<th data-quarto-table-cell-role="th">usa_r64_mean_pred</th>
+<th data-quarto-table-cell-role="th">usa_lat_abs</th>
+<th data-quarto-table-cell-role="th">usa_lat_abs_log</th>
+<th data-quarto-table-cell-role="th">usa_r34_mean_log_pred</th>
+<th data-quarto-table-cell-role="th">usa_r50_mean_log_pred</th>
+<th data-quarto-table-cell-role="th">usa_r64_mean_log_pred</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">61342</td>
+<td>2002335S13182</td>
+<td>-13.2</td>
+<td>-178.300003</td>
+<td>25.0</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>2002-12-01 06:00:00</td>
+<td>SH042003</td>
+<td>94</td>
+<td>...</td>
+<td>-inf</td>
+<td>NaN</td>
+<td>0.000000</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>13.2</td>
+<td>2.580217</td>
+<td>3.738919</td>
+<td>2.634926</td>
+<td>2.234446</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">61343</td>
+<td>2002335S13182</td>
+<td>-13.4</td>
+<td>-178.199997</td>
+<td>25.0</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>2002-12-01 09:00:00</td>
+<td>SH042003</td>
+<td>94</td>
+<td>...</td>
+<td>-inf</td>
+<td>NaN</td>
+<td>0.000000</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>13.4</td>
+<td>2.595255</td>
+<td>3.747939</td>
+<td>2.646504</td>
+<td>2.242664</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">61344</td>
+<td>2002335S13182</td>
+<td>-13.5</td>
+<td>-178.000000</td>
+<td>25.0</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>2002-12-01 12:00:00</td>
+<td>SH042003</td>
+<td>94</td>
+<td>...</td>
+<td>-inf</td>
+<td>NaN</td>
+<td>0.000000</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>13.5</td>
+<td>2.602690</td>
+<td>3.752399</td>
+<td>2.652228</td>
+<td>2.246726</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">61345</td>
+<td>2002335S13182</td>
+<td>-13.7</td>
+<td>-177.800003</td>
+<td>25.0</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>2002-12-01 15:00:00</td>
+<td>SH042003</td>
+<td>94</td>
+<td>...</td>
+<td>-inf</td>
+<td>NaN</td>
+<td>0.000000</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>13.7</td>
+<td>2.617396</td>
+<td>3.761221</td>
+<td>2.663549</td>
+<td>2.254763</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">61346</td>
+<td>2002335S13182</td>
+<td>-13.8</td>
+<td>-177.600006</td>
+<td>25.0</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>2002-12-01 18:00:00</td>
+<td>SH042003</td>
+<td>94</td>
+<td>...</td>
+<td>-inf</td>
+<td>NaN</td>
+<td>0.000000</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>13.8</td>
+<td>2.624669</td>
+<td>3.765584</td>
+<td>2.669149</td>
+<td>2.258737</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">76376</td>
+<td>2025129S08138</td>
+<td>-9.0</td>
+<td>137.800003</td>
+<td>35.0</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>2025-05-12 00:00:00</td>
+<td>SH322025</td>
+<td>27</td>
+<td>...</td>
+<td>-inf</td>
+<td>NaN</td>
+<td>40.729703</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>9.0</td>
+<td>2.197225</td>
+<td>3.706958</td>
+<td>2.609259</td>
+<td>2.256789</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">76377</td>
+<td>2025129S08138</td>
+<td>-8.6</td>
+<td>137.500000</td>
+<td>32.0</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>2025-05-12 03:00:00</td>
+<td>SH322025</td>
+<td>27</td>
+<td>...</td>
+<td>-inf</td>
+<td>NaN</td>
+<td>0.000000</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>8.6</td>
+<td>2.151762</td>
+<td>3.627011</td>
+<td>2.502567</td>
+<td>2.170257</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">76378</td>
+<td>2025129S08138</td>
+<td>-8.1</td>
+<td>137.199997</td>
+<td>29.0</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>2025-05-12 06:00:00</td>
+<td>SH322025</td>
+<td>27</td>
+<td>...</td>
+<td>-inf</td>
+<td>NaN</td>
+<td>0.000000</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>8.1</td>
+<td>2.091864</td>
+<td>3.533216</td>
+<td>2.377698</td>
+<td>2.069760</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">76379</td>
+<td>2025129S08138</td>
+<td>-7.9</td>
+<td>137.000000</td>
+<td>27.0</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>2025-05-12 09:00:00</td>
+<td>SH322025</td>
+<td>27</td>
+<td>...</td>
+<td>-inf</td>
+<td>NaN</td>
+<td>0.000000</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>7.9</td>
+<td>2.066863</td>
+<td>3.476214</td>
+<td>2.301281</td>
+<td>2.006906</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">76380</td>
+<td>2025129S08138</td>
+<td>-7.9</td>
+<td>137.000000</td>
+<td>25.0</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>[nan, nan, nan, nan]</td>
+<td>2025-05-12 12:00:00</td>
+<td>SH322025</td>
+<td>27</td>
+<td>...</td>
+<td>-inf</td>
+<td>NaN</td>
+<td>0.000000</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>7.9</td>
+<td>2.066863</td>
+<td>3.430975</td>
+<td>2.239710</td>
+<td>1.953926</td>
+</tr>
+</tbody>
+</table>
+
+<p>10955 rows × 43 columns</p>
+</div>
+</div>
+</div>
+<p>Let’s see how things look for each buffer speed.</p>
+<div id="9461dc9e-a21c-4513-b233-fa7b39aaece9" class="cell" data-scrolled="true" data-execution_count="255">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> speed <span class="kw">in</span> buffer_speeds:</span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>    df_usa_recent.plot.scatter(</span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>        x<span class="op">=</span><span class="st">"usa_wind"</span>,</span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>        y<span class="op">=</span><span class="ss">f"usa_r</span><span class="sc">{</span>speed<span class="sc">}</span><span class="ss">_mean"</span>,</span>
+<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a>        alpha<span class="op">=</span><span class="fl">0.1</span>,</span>
+<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a>    )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="usa_radii_modelfit_files/figure-html/cell-32-output-1.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="usa_radii_modelfit_files/figure-html/cell-32-output-2.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="usa_radii_modelfit_files/figure-html/cell-32-output-3.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>It’s interesting, it looks like for many points there is no buffer defined despite the wind speed being high enough. We can filter these out when fitting the regression.</p>
+</section>
+<section id="regression" class="level2" data-number="1.3">
+<h2 data-number="1.3" class="anchored" data-anchor-id="regression"><span class="header-section-number">1.3</span> Regression</h2>
+<section id="compare-various-methods" class="level3" data-number="1.3.1">
+<h3 data-number="1.3.1" class="anchored" data-anchor-id="compare-various-methods"><span class="header-section-number">1.3.1</span> Compare various methods</h3>
+<p>Here we can compare: - Linear vs.&nbsp;log-log (<code>log</code> in the results table) - Whether we should also include latitude (or only wind speed) (<code>dof</code> in the results table)</p>
+<p>First we set up the columns.</p>
+<div id="efce36de-150f-48a3-a2b7-21ee72417405" class="cell" data-execution_count="132">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>mean_quad_cols <span class="op">=</span> [<span class="ss">f"usa_r</span><span class="sc">{</span>speed<span class="sc">}</span><span class="ss">_mean"</span> <span class="cf">for</span> speed <span class="kw">in</span> buffer_speeds]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<div id="dbb0b92b-b00c-4d79-b3ac-d7c393ea2281" class="cell" data-execution_count="152">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>df_usa_recent[<span class="st">"usa_lat_abs"</span>] <span class="op">=</span> df_usa_recent[<span class="st">"usa_lat"</span>].<span class="bu">abs</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<div id="cec8d426-56be-4b1d-a3e8-7c32b17c18b5" class="cell" data-execution_count="153">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> col <span class="kw">in</span> [<span class="st">"usa_wind"</span>, <span class="st">"usa_lat_abs"</span>] <span class="op">+</span> mean_quad_cols:</span>
+<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>    df_usa_recent[<span class="ss">f"</span><span class="sc">{</span>col<span class="sc">}</span><span class="ss">_log"</span>] <span class="op">=</span> np.log(df_usa_recent[col])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<p>Then we iterate over the possible setups.</p>
+<div id="e6f855ce-7c2a-434e-8a19-857c9ecf5967" class="cell" data-scrolled="true" data-execution_count="178">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>dicts <span class="op">=</span> []</span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> col <span class="kw">in</span> mean_quad_cols:</span>
+<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(col)</span>
+<span id="cb37-4"><a href="#cb37-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> log_str <span class="kw">in</span> [<span class="st">""</span>, <span class="st">"_log"</span>]:</span>
+<span id="cb37-5"><a href="#cb37-5" aria-hidden="true" tabindex="-1"></a>        target_col <span class="op">=</span> <span class="ss">f"</span><span class="sc">{</span>col<span class="sc">}{</span>log_str<span class="sc">}</span><span class="ss">"</span></span>
+<span id="cb37-6"><a href="#cb37-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> var_cols <span class="kw">in</span> [</span>
+<span id="cb37-7"><a href="#cb37-7" aria-hidden="true" tabindex="-1"></a>            [<span class="ss">f"usa_wind</span><span class="sc">{</span>log_str<span class="sc">}</span><span class="ss">"</span>],</span>
+<span id="cb37-8"><a href="#cb37-8" aria-hidden="true" tabindex="-1"></a>            [<span class="ss">f"usa_wind</span><span class="sc">{</span>log_str<span class="sc">}</span><span class="ss">"</span>, <span class="ss">f"usa_lat_abs</span><span class="sc">{</span>log_str<span class="sc">}</span><span class="ss">"</span>],</span>
+<span id="cb37-9"><a href="#cb37-9" aria-hidden="true" tabindex="-1"></a>        ]:</span>
+<span id="cb37-10"><a href="#cb37-10" aria-hidden="true" tabindex="-1"></a>            df_reg <span class="op">=</span> df_usa_recent[[target_col] <span class="op">+</span> var_cols].dropna()</span>
+<span id="cb37-11"><a href="#cb37-11" aria-hidden="true" tabindex="-1"></a>            <span class="co"># exclude zero values (which would show up as -np.inf for the log)</span></span>
+<span id="cb37-12"><a href="#cb37-12" aria-hidden="true" tabindex="-1"></a>            df_reg <span class="op">=</span> df_reg[df_reg[target_col] <span class="op">&gt;</span> <span class="dv">0</span>]</span>
+<span id="cb37-13"><a href="#cb37-13" aria-hidden="true" tabindex="-1"></a>            X <span class="op">=</span> df_reg[var_cols]</span>
+<span id="cb37-14"><a href="#cb37-14" aria-hidden="true" tabindex="-1"></a>            y <span class="op">=</span> df_reg[target_col]</span>
+<span id="cb37-15"><a href="#cb37-15" aria-hidden="true" tabindex="-1"></a>            X <span class="op">=</span> sm.add_constant(X)</span>
+<span id="cb37-16"><a href="#cb37-16" aria-hidden="true" tabindex="-1"></a>            model <span class="op">=</span> sm.OLS(y, X).fit()</span>
+<span id="cb37-17"><a href="#cb37-17" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(var_cols)</span>
+<span id="cb37-18"><a href="#cb37-18" aria-hidden="true" tabindex="-1"></a>            display(model.summary())</span>
+<span id="cb37-19"><a href="#cb37-19" aria-hidden="true" tabindex="-1"></a>            dicts.append(</span>
+<span id="cb37-20"><a href="#cb37-20" aria-hidden="true" tabindex="-1"></a>                {</span>
+<span id="cb37-21"><a href="#cb37-21" aria-hidden="true" tabindex="-1"></a>                    <span class="st">"col"</span>: col,</span>
+<span id="cb37-22"><a href="#cb37-22" aria-hidden="true" tabindex="-1"></a>                    <span class="st">"dof"</span>: <span class="bu">len</span>(var_cols),</span>
+<span id="cb37-23"><a href="#cb37-23" aria-hidden="true" tabindex="-1"></a>                    <span class="st">"log"</span>: log_str,</span>
+<span id="cb37-24"><a href="#cb37-24" aria-hidden="true" tabindex="-1"></a>                    <span class="st">"r2adj"</span>: model.rsquared_adj,</span>
+<span id="cb37-25"><a href="#cb37-25" aria-hidden="true" tabindex="-1"></a>                }</span>
+<span id="cb37-26"><a href="#cb37-26" aria-hidden="true" tabindex="-1"></a>            )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>usa_r34_mean
+['usa_wind']</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<table class="simpletable caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<caption>OLS Regression Results</caption>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Dep. Variable:</td>
+<td>usa_r34_mean</td>
+<td data-quarto-table-cell-role="th">R-squared:</td>
+<td>0.143</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Model:</td>
+<td>OLS</td>
+<td data-quarto-table-cell-role="th">Adj. R-squared:</td>
+<td>0.143</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Method:</td>
+<td>Least Squares</td>
+<td data-quarto-table-cell-role="th">F-statistic:</td>
+<td>972.1</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Date:</td>
+<td>Tue, 30 Sep 2025</td>
+<td data-quarto-table-cell-role="th">Prob (F-statistic):</td>
+<td>1.79e-197</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Time:</td>
+<td>13:53:31</td>
+<td data-quarto-table-cell-role="th">Log-Likelihood:</td>
+<td>-29327.</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">No. Observations:</td>
+<td>5817</td>
+<td data-quarto-table-cell-role="th">AIC:</td>
+<td>5.866e+04</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Df Residuals:</td>
+<td>5815</td>
+<td data-quarto-table-cell-role="th">BIC:</td>
+<td>5.867e+04</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Df Model:</td>
+<td>1</td>
+<td data-quarto-table-cell-role="th"></td>
+<td></td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Covariance Type:</td>
+<td>nonrobust</td>
+<td data-quarto-table-cell-role="th"></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+
+<table class="simpletable caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<tbody>
+<tr class="odd">
+<td></td>
+<td data-quarto-table-cell-role="th">coef</td>
+<td data-quarto-table-cell-role="th">std err</td>
+<td data-quarto-table-cell-role="th">t</td>
+<td data-quarto-table-cell-role="th">P&gt;|t|</td>
+<td data-quarto-table-cell-role="th">[0.025</td>
+<td data-quarto-table-cell-role="th">0.975]</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">const</td>
+<td>56.2839</td>
+<td>1.300</td>
+<td>43.282</td>
+<td>0.000</td>
+<td>53.735</td>
+<td>58.833</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">usa_wind</td>
+<td>0.5662</td>
+<td>0.018</td>
+<td>31.178</td>
+<td>0.000</td>
+<td>0.531</td>
+<td>0.602</td>
+</tr>
+</tbody>
+</table>
+
+
+<table class="simpletable caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Omnibus:</td>
+<td>824.492</td>
+<td data-quarto-table-cell-role="th">Durbin-Watson:</td>
+<td>0.121</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Prob(Omnibus):</td>
+<td>0.000</td>
+<td data-quarto-table-cell-role="th">Jarque-Bera (JB):</td>
+<td>1312.977</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Skew:</td>
+<td>0.980</td>
+<td data-quarto-table-cell-role="th">Prob(JB):</td>
+<td>7.77e-286</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Kurtosis:</td>
+<td>4.255</td>
+<td data-quarto-table-cell-role="th">Cond. No.</td>
+<td>190.</td>
+</tr>
+</tbody>
+</table>
+<br><br>Notes:<br>[1] Standard Errors assume that the covariance matrix of the errors is correctly specified.
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>['usa_wind', 'usa_lat_abs']</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<table class="simpletable caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<caption>OLS Regression Results</caption>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Dep. Variable:</td>
+<td>usa_r34_mean</td>
+<td data-quarto-table-cell-role="th">R-squared:</td>
+<td>0.317</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Model:</td>
+<td>OLS</td>
+<td data-quarto-table-cell-role="th">Adj. R-squared:</td>
+<td>0.317</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Method:</td>
+<td>Least Squares</td>
+<td data-quarto-table-cell-role="th">F-statistic:</td>
+<td>1348.</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Date:</td>
+<td>Tue, 30 Sep 2025</td>
+<td data-quarto-table-cell-role="th">Prob (F-statistic):</td>
+<td>0.00</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Time:</td>
+<td>13:53:32</td>
+<td data-quarto-table-cell-role="th">Log-Likelihood:</td>
+<td>-28669.</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">No. Observations:</td>
+<td>5817</td>
+<td data-quarto-table-cell-role="th">AIC:</td>
+<td>5.734e+04</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Df Residuals:</td>
+<td>5814</td>
+<td data-quarto-table-cell-role="th">BIC:</td>
+<td>5.736e+04</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Df Model:</td>
+<td>2</td>
+<td data-quarto-table-cell-role="th"></td>
+<td></td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Covariance Type:</td>
+<td>nonrobust</td>
+<td data-quarto-table-cell-role="th"></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+
+<table class="simpletable caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<tbody>
+<tr class="odd">
+<td></td>
+<td data-quarto-table-cell-role="th">coef</td>
+<td data-quarto-table-cell-role="th">std err</td>
+<td data-quarto-table-cell-role="th">t</td>
+<td data-quarto-table-cell-role="th">P&gt;|t|</td>
+<td data-quarto-table-cell-role="th">[0.025</td>
+<td data-quarto-table-cell-role="th">0.975]</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">const</td>
+<td>-8.6823</td>
+<td>2.051</td>
+<td>-4.233</td>
+<td>0.000</td>
+<td>-12.703</td>
+<td>-4.662</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">usa_wind</td>
+<td>0.6521</td>
+<td>0.016</td>
+<td>39.831</td>
+<td>0.000</td>
+<td>0.620</td>
+<td>0.684</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">usa_lat_abs</td>
+<td>3.2433</td>
+<td>0.084</td>
+<td>38.429</td>
+<td>0.000</td>
+<td>3.078</td>
+<td>3.409</td>
+</tr>
+</tbody>
+</table>
+
+
+<table class="simpletable caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Omnibus:</td>
+<td>403.791</td>
+<td data-quarto-table-cell-role="th">Durbin-Watson:</td>
+<td>0.117</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Prob(Omnibus):</td>
+<td>0.000</td>
+<td data-quarto-table-cell-role="th">Jarque-Bera (JB):</td>
+<td>523.749</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Skew:</td>
+<td>0.631</td>
+<td data-quarto-table-cell-role="th">Prob(JB):</td>
+<td>1.86e-114</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Kurtosis:</td>
+<td>3.755</td>
+<td data-quarto-table-cell-role="th">Cond. No.</td>
+<td>344.</td>
+</tr>
+</tbody>
+</table>
+<br><br>Notes:<br>[1] Standard Errors assume that the covariance matrix of the errors is correctly specified.
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>['usa_wind_log']</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<table class="simpletable caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<caption>OLS Regression Results</caption>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Dep. Variable:</td>
+<td>usa_r34_mean_log</td>
+<td data-quarto-table-cell-role="th">R-squared:</td>
+<td>0.189</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Model:</td>
+<td>OLS</td>
+<td data-quarto-table-cell-role="th">Adj. R-squared:</td>
+<td>0.189</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Method:</td>
+<td>Least Squares</td>
+<td data-quarto-table-cell-role="th">F-statistic:</td>
+<td>1358.</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Date:</td>
+<td>Tue, 30 Sep 2025</td>
+<td data-quarto-table-cell-role="th">Prob (F-statistic):</td>
+<td>2.44e-267</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Time:</td>
+<td>13:53:32</td>
+<td data-quarto-table-cell-role="th">Log-Likelihood:</td>
+<td>-3329.5</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">No. Observations:</td>
+<td>5817</td>
+<td data-quarto-table-cell-role="th">AIC:</td>
+<td>6663.</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Df Residuals:</td>
+<td>5815</td>
+<td data-quarto-table-cell-role="th">BIC:</td>
+<td>6676.</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Df Model:</td>
+<td>1</td>
+<td data-quarto-table-cell-role="th"></td>
+<td></td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Covariance Type:</td>
+<td>nonrobust</td>
+<td data-quarto-table-cell-role="th"></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+
+<table class="simpletable caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<tbody>
+<tr class="odd">
+<td></td>
+<td data-quarto-table-cell-role="th">coef</td>
+<td data-quarto-table-cell-role="th">std err</td>
+<td data-quarto-table-cell-role="th">t</td>
+<td data-quarto-table-cell-role="th">P&gt;|t|</td>
+<td data-quarto-table-cell-role="th">[0.025</td>
+<td data-quarto-table-cell-role="th">0.975]</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">const</td>
+<td>2.1968</td>
+<td>0.061</td>
+<td>35.946</td>
+<td>0.000</td>
+<td>2.077</td>
+<td>2.317</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">usa_wind_log</td>
+<td>0.5444</td>
+<td>0.015</td>
+<td>36.849</td>
+<td>0.000</td>
+<td>0.515</td>
+<td>0.573</td>
+</tr>
+</tbody>
+</table>
+
+
+<table class="simpletable caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Omnibus:</td>
+<td>219.114</td>
+<td data-quarto-table-cell-role="th">Durbin-Watson:</td>
+<td>0.188</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Prob(Omnibus):</td>
+<td>0.000</td>
+<td data-quarto-table-cell-role="th">Jarque-Bera (JB):</td>
+<td>373.137</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Skew:</td>
+<td>-0.321</td>
+<td data-quarto-table-cell-role="th">Prob(JB):</td>
+<td>9.42e-82</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Kurtosis:</td>
+<td>4.062</td>
+<td data-quarto-table-cell-role="th">Cond. No.</td>
+<td>47.6</td>
+</tr>
+</tbody>
+</table>
+<br><br>Notes:<br>[1] Standard Errors assume that the covariance matrix of the errors is correctly specified.
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>['usa_wind_log', 'usa_lat_abs_log']</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<table class="simpletable caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<caption>OLS Regression Results</caption>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Dep. Variable:</td>
+<td>usa_r34_mean_log</td>
+<td data-quarto-table-cell-role="th">R-squared:</td>
+<td>0.315</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Model:</td>
+<td>OLS</td>
+<td data-quarto-table-cell-role="th">Adj. R-squared:</td>
+<td>0.315</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Method:</td>
+<td>Least Squares</td>
+<td data-quarto-table-cell-role="th">F-statistic:</td>
+<td>1337.</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Date:</td>
+<td>Tue, 30 Sep 2025</td>
+<td data-quarto-table-cell-role="th">Prob (F-statistic):</td>
+<td>0.00</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Time:</td>
+<td>13:53:32</td>
+<td data-quarto-table-cell-role="th">Log-Likelihood:</td>
+<td>-2839.2</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">No. Observations:</td>
+<td>5817</td>
+<td data-quarto-table-cell-role="th">AIC:</td>
+<td>5684.</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Df Residuals:</td>
+<td>5814</td>
+<td data-quarto-table-cell-role="th">BIC:</td>
+<td>5704.</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Df Model:</td>
+<td>2</td>
+<td data-quarto-table-cell-role="th"></td>
+<td></td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Covariance Type:</td>
+<td>nonrobust</td>
+<td data-quarto-table-cell-role="th"></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+
+<table class="simpletable caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<tbody>
+<tr class="odd">
+<td></td>
+<td data-quarto-table-cell-role="th">coef</td>
+<td data-quarto-table-cell-role="th">std err</td>
+<td data-quarto-table-cell-role="th">t</td>
+<td data-quarto-table-cell-role="th">P&gt;|t|</td>
+<td data-quarto-table-cell-role="th">[0.025</td>
+<td data-quarto-table-cell-role="th">0.975]</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">const</td>
+<td>0.2990</td>
+<td>0.081</td>
+<td>3.701</td>
+<td>0.000</td>
+<td>0.141</td>
+<td>0.457</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">usa_wind_log</td>
+<td>0.5878</td>
+<td>0.014</td>
+<td>43.076</td>
+<td>0.000</td>
+<td>0.561</td>
+<td>0.615</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">usa_lat_abs_log</td>
+<td>0.5999</td>
+<td>0.018</td>
+<td>32.672</td>
+<td>0.000</td>
+<td>0.564</td>
+<td>0.636</td>
+</tr>
+</tbody>
+</table>
+
+
+<table class="simpletable caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Omnibus:</td>
+<td>426.097</td>
+<td data-quarto-table-cell-role="th">Durbin-Watson:</td>
+<td>0.186</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Prob(Omnibus):</td>
+<td>0.000</td>
+<td data-quarto-table-cell-role="th">Jarque-Bera (JB):</td>
+<td>777.888</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Skew:</td>
+<td>-0.529</td>
+<td data-quarto-table-cell-role="th">Prob(JB):</td>
+<td>1.21e-169</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Kurtosis:</td>
+<td>4.446</td>
+<td data-quarto-table-cell-role="th">Cond. No.</td>
+<td>81.9</td>
+</tr>
+</tbody>
+</table>
+<br><br>Notes:<br>[1] Standard Errors assume that the covariance matrix of the errors is correctly specified.
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>usa_r50_mean
+['usa_wind']</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<table class="simpletable caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<caption>OLS Regression Results</caption>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Dep. Variable:</td>
+<td>usa_r50_mean</td>
+<td data-quarto-table-cell-role="th">R-squared:</td>
+<td>0.110</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Model:</td>
+<td>OLS</td>
+<td data-quarto-table-cell-role="th">Adj. R-squared:</td>
+<td>0.110</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Method:</td>
+<td>Least Squares</td>
+<td data-quarto-table-cell-role="th">F-statistic:</td>
+<td>364.3</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Date:</td>
+<td>Tue, 30 Sep 2025</td>
+<td data-quarto-table-cell-role="th">Prob (F-statistic):</td>
+<td>1.13e-76</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Time:</td>
+<td>13:53:32</td>
+<td data-quarto-table-cell-role="th">Log-Likelihood:</td>
+<td>-12906.</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">No. Observations:</td>
+<td>2953</td>
+<td data-quarto-table-cell-role="th">AIC:</td>
+<td>2.582e+04</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Df Residuals:</td>
+<td>2951</td>
+<td data-quarto-table-cell-role="th">BIC:</td>
+<td>2.583e+04</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Df Model:</td>
+<td>1</td>
+<td data-quarto-table-cell-role="th"></td>
+<td></td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Covariance Type:</td>
+<td>nonrobust</td>
+<td data-quarto-table-cell-role="th"></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+
+<table class="simpletable caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<tbody>
+<tr class="odd">
+<td></td>
+<td data-quarto-table-cell-role="th">coef</td>
+<td data-quarto-table-cell-role="th">std err</td>
+<td data-quarto-table-cell-role="th">t</td>
+<td data-quarto-table-cell-role="th">P&gt;|t|</td>
+<td data-quarto-table-cell-role="th">[0.025</td>
+<td data-quarto-table-cell-role="th">0.975]</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">const</td>
+<td>25.1539</td>
+<td>1.245</td>
+<td>20.207</td>
+<td>0.000</td>
+<td>22.713</td>
+<td>27.595</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">usa_wind</td>
+<td>0.2776</td>
+<td>0.015</td>
+<td>19.087</td>
+<td>0.000</td>
+<td>0.249</td>
+<td>0.306</td>
+</tr>
+</tbody>
+</table>
+
+
+<table class="simpletable caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Omnibus:</td>
+<td>324.252</td>
+<td data-quarto-table-cell-role="th">Durbin-Watson:</td>
+<td>0.163</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Prob(Omnibus):</td>
+<td>0.000</td>
+<td data-quarto-table-cell-role="th">Jarque-Bera (JB):</td>
+<td>454.674</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Skew:</td>
+<td>0.851</td>
+<td data-quarto-table-cell-role="th">Prob(JB):</td>
+<td>1.86e-99</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Kurtosis:</td>
+<td>3.893</td>
+<td data-quarto-table-cell-role="th">Cond. No.</td>
+<td>302.</td>
+</tr>
+</tbody>
+</table>
+<br><br>Notes:<br>[1] Standard Errors assume that the covariance matrix of the errors is correctly specified.
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>['usa_wind', 'usa_lat_abs']</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<table class="simpletable caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<caption>OLS Regression Results</caption>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Dep. Variable:</td>
+<td>usa_r50_mean</td>
+<td data-quarto-table-cell-role="th">R-squared:</td>
+<td>0.308</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Model:</td>
+<td>OLS</td>
+<td data-quarto-table-cell-role="th">Adj. R-squared:</td>
+<td>0.308</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Method:</td>
+<td>Least Squares</td>
+<td data-quarto-table-cell-role="th">F-statistic:</td>
+<td>657.0</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Date:</td>
+<td>Tue, 30 Sep 2025</td>
+<td data-quarto-table-cell-role="th">Prob (F-statistic):</td>
+<td>9.99e-237</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Time:</td>
+<td>13:53:32</td>
+<td data-quarto-table-cell-role="th">Log-Likelihood:</td>
+<td>-12534.</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">No. Observations:</td>
+<td>2953</td>
+<td data-quarto-table-cell-role="th">AIC:</td>
+<td>2.507e+04</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Df Residuals:</td>
+<td>2950</td>
+<td data-quarto-table-cell-role="th">BIC:</td>
+<td>2.509e+04</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Df Model:</td>
+<td>2</td>
+<td data-quarto-table-cell-role="th"></td>
+<td></td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Covariance Type:</td>
+<td>nonrobust</td>
+<td data-quarto-table-cell-role="th"></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+
+<table class="simpletable caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<tbody>
+<tr class="odd">
+<td></td>
+<td data-quarto-table-cell-role="th">coef</td>
+<td data-quarto-table-cell-role="th">std err</td>
+<td data-quarto-table-cell-role="th">t</td>
+<td data-quarto-table-cell-role="th">P&gt;|t|</td>
+<td data-quarto-table-cell-role="th">[0.025</td>
+<td data-quarto-table-cell-role="th">0.975]</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">const</td>
+<td>-15.6852</td>
+<td>1.783</td>
+<td>-8.799</td>
+<td>0.000</td>
+<td>-19.180</td>
+<td>-12.190</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">usa_wind</td>
+<td>0.3417</td>
+<td>0.013</td>
+<td>26.261</td>
+<td>0.000</td>
+<td>0.316</td>
+<td>0.367</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">usa_lat_abs</td>
+<td>1.9760</td>
+<td>0.068</td>
+<td>29.077</td>
+<td>0.000</td>
+<td>1.843</td>
+<td>2.109</td>
+</tr>
+</tbody>
+</table>
+
+
+<table class="simpletable caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Omnibus:</td>
+<td>130.622</td>
+<td data-quarto-table-cell-role="th">Durbin-Watson:</td>
+<td>0.169</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Prob(Omnibus):</td>
+<td>0.000</td>
+<td data-quarto-table-cell-role="th">Jarque-Bera (JB):</td>
+<td>161.339</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Skew:</td>
+<td>0.470</td>
+<td data-quarto-table-cell-role="th">Prob(JB):</td>
+<td>9.24e-36</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Kurtosis:</td>
+<td>3.655</td>
+<td data-quarto-table-cell-role="th">Cond. No.</td>
+<td>501.</td>
+</tr>
+</tbody>
+</table>
+<br><br>Notes:<br>[1] Standard Errors assume that the covariance matrix of the errors is correctly specified.
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>['usa_wind_log']</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<table class="simpletable caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<caption>OLS Regression Results</caption>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Dep. Variable:</td>
+<td>usa_r50_mean_log</td>
+<td data-quarto-table-cell-role="th">R-squared:</td>
+<td>0.172</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Model:</td>
+<td>OLS</td>
+<td data-quarto-table-cell-role="th">Adj. R-squared:</td>
+<td>0.171</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Method:</td>
+<td>Least Squares</td>
+<td data-quarto-table-cell-role="th">F-statistic:</td>
+<td>612.0</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Date:</td>
+<td>Tue, 30 Sep 2025</td>
+<td data-quarto-table-cell-role="th">Prob (F-statistic):</td>
+<td>6.06e-123</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Time:</td>
+<td>13:53:32</td>
+<td data-quarto-table-cell-role="th">Log-Likelihood:</td>
+<td>-1763.5</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">No. Observations:</td>
+<td>2953</td>
+<td data-quarto-table-cell-role="th">AIC:</td>
+<td>3531.</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Df Residuals:</td>
+<td>2951</td>
+<td data-quarto-table-cell-role="th">BIC:</td>
+<td>3543.</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Df Model:</td>
+<td>1</td>
+<td data-quarto-table-cell-role="th"></td>
+<td></td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Covariance Type:</td>
+<td>nonrobust</td>
+<td data-quarto-table-cell-role="th"></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+
+<table class="simpletable caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<tbody>
+<tr class="odd">
+<td></td>
+<td data-quarto-table-cell-role="th">coef</td>
+<td data-quarto-table-cell-role="th">std err</td>
+<td data-quarto-table-cell-role="th">t</td>
+<td data-quarto-table-cell-role="th">P&gt;|t|</td>
+<td data-quarto-table-cell-role="th">[0.025</td>
+<td data-quarto-table-cell-role="th">0.975]</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">const</td>
+<td>0.7087</td>
+<td>0.124</td>
+<td>5.720</td>
+<td>0.000</td>
+<td>0.466</td>
+<td>0.952</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">usa_wind_log</td>
+<td>0.7005</td>
+<td>0.028</td>
+<td>24.739</td>
+<td>0.000</td>
+<td>0.645</td>
+<td>0.756</td>
+</tr>
+</tbody>
+</table>
+
+
+<table class="simpletable caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Omnibus:</td>
+<td>120.386</td>
+<td data-quarto-table-cell-role="th">Durbin-Watson:</td>
+<td>0.299</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Prob(Omnibus):</td>
+<td>0.000</td>
+<td data-quarto-table-cell-role="th">Jarque-Bera (JB):</td>
+<td>201.049</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Skew:</td>
+<td>-0.344</td>
+<td data-quarto-table-cell-role="th">Prob(JB):</td>
+<td>2.20e-44</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Kurtosis:</td>
+<td>4.078</td>
+<td data-quarto-table-cell-role="th">Cond. No.</td>
+<td>70.5</td>
+</tr>
+</tbody>
+</table>
+<br><br>Notes:<br>[1] Standard Errors assume that the covariance matrix of the errors is correctly specified.
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>['usa_wind_log', 'usa_lat_abs_log']</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<table class="simpletable caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<caption>OLS Regression Results</caption>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Dep. Variable:</td>
+<td>usa_r50_mean_log</td>
+<td data-quarto-table-cell-role="th">R-squared:</td>
+<td>0.329</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Model:</td>
+<td>OLS</td>
+<td data-quarto-table-cell-role="th">Adj. R-squared:</td>
+<td>0.328</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Method:</td>
+<td>Least Squares</td>
+<td data-quarto-table-cell-role="th">F-statistic:</td>
+<td>721.7</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Date:</td>
+<td>Tue, 30 Sep 2025</td>
+<td data-quarto-table-cell-role="th">Prob (F-statistic):</td>
+<td>7.12e-256</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Time:</td>
+<td>13:53:32</td>
+<td data-quarto-table-cell-role="th">Log-Likelihood:</td>
+<td>-1453.6</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">No. Observations:</td>
+<td>2953</td>
+<td data-quarto-table-cell-role="th">AIC:</td>
+<td>2913.</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Df Residuals:</td>
+<td>2950</td>
+<td data-quarto-table-cell-role="th">BIC:</td>
+<td>2931.</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Df Model:</td>
+<td>2</td>
+<td data-quarto-table-cell-role="th"></td>
+<td></td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Covariance Type:</td>
+<td>nonrobust</td>
+<td data-quarto-table-cell-role="th"></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+
+<table class="simpletable caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<tbody>
+<tr class="odd">
+<td></td>
+<td data-quarto-table-cell-role="th">coef</td>
+<td data-quarto-table-cell-role="th">std err</td>
+<td data-quarto-table-cell-role="th">t</td>
+<td data-quarto-table-cell-role="th">P&gt;|t|</td>
+<td data-quarto-table-cell-role="th">[0.025</td>
+<td data-quarto-table-cell-role="th">0.975]</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">const</td>
+<td>-1.9267</td>
+<td>0.150</td>
+<td>-12.835</td>
+<td>0.000</td>
+<td>-2.221</td>
+<td>-1.632</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">usa_wind_log</td>
+<td>0.8000</td>
+<td>0.026</td>
+<td>31.032</td>
+<td>0.000</td>
+<td>0.749</td>
+<td>0.851</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">usa_lat_abs_log</td>
+<td>0.7699</td>
+<td>0.029</td>
+<td>26.245</td>
+<td>0.000</td>
+<td>0.712</td>
+<td>0.827</td>
+</tr>
+</tbody>
+</table>
+
+
+<table class="simpletable caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Omnibus:</td>
+<td>316.881</td>
+<td data-quarto-table-cell-role="th">Durbin-Watson:</td>
+<td>0.312</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Prob(Omnibus):</td>
+<td>0.000</td>
+<td data-quarto-table-cell-role="th">Jarque-Bera (JB):</td>
+<td>629.490</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Skew:</td>
+<td>-0.687</td>
+<td data-quarto-table-cell-role="th">Prob(JB):</td>
+<td>2.03e-137</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Kurtosis:</td>
+<td>4.797</td>
+<td data-quarto-table-cell-role="th">Cond. No.</td>
+<td>112.</td>
+</tr>
+</tbody>
+</table>
+<br><br>Notes:<br>[1] Standard Errors assume that the covariance matrix of the errors is correctly specified.
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>usa_r64_mean
+['usa_wind']</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<table class="simpletable caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<caption>OLS Regression Results</caption>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Dep. Variable:</td>
+<td>usa_r64_mean</td>
+<td data-quarto-table-cell-role="th">R-squared:</td>
+<td>0.078</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Model:</td>
+<td>OLS</td>
+<td data-quarto-table-cell-role="th">Adj. R-squared:</td>
+<td>0.077</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Method:</td>
+<td>Least Squares</td>
+<td data-quarto-table-cell-role="th">F-statistic:</td>
+<td>152.3</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Date:</td>
+<td>Tue, 30 Sep 2025</td>
+<td data-quarto-table-cell-role="th">Prob (F-statistic):</td>
+<td>1.16e-33</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Time:</td>
+<td>13:53:32</td>
+<td data-quarto-table-cell-role="th">Log-Likelihood:</td>
+<td>-6758.1</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">No. Observations:</td>
+<td>1814</td>
+<td data-quarto-table-cell-role="th">AIC:</td>
+<td>1.352e+04</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Df Residuals:</td>
+<td>1812</td>
+<td data-quarto-table-cell-role="th">BIC:</td>
+<td>1.353e+04</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Df Model:</td>
+<td>1</td>
+<td data-quarto-table-cell-role="th"></td>
+<td></td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Covariance Type:</td>
+<td>nonrobust</td>
+<td data-quarto-table-cell-role="th"></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+
+<table class="simpletable caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<tbody>
+<tr class="odd">
+<td></td>
+<td data-quarto-table-cell-role="th">coef</td>
+<td data-quarto-table-cell-role="th">std err</td>
+<td data-quarto-table-cell-role="th">t</td>
+<td data-quarto-table-cell-role="th">P&gt;|t|</td>
+<td data-quarto-table-cell-role="th">[0.025</td>
+<td data-quarto-table-cell-role="th">0.975]</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">const</td>
+<td>15.3072</td>
+<td>1.113</td>
+<td>13.756</td>
+<td>0.000</td>
+<td>13.125</td>
+<td>17.490</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">usa_wind</td>
+<td>0.1404</td>
+<td>0.011</td>
+<td>12.342</td>
+<td>0.000</td>
+<td>0.118</td>
+<td>0.163</td>
+</tr>
+</tbody>
+</table>
+
+
+<table class="simpletable caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Omnibus:</td>
+<td>71.506</td>
+<td data-quarto-table-cell-role="th">Durbin-Watson:</td>
+<td>0.220</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Prob(Omnibus):</td>
+<td>0.000</td>
+<td data-quarto-table-cell-role="th">Jarque-Bera (JB):</td>
+<td>71.794</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Skew:</td>
+<td>0.452</td>
+<td data-quarto-table-cell-role="th">Prob(JB):</td>
+<td>2.57e-16</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Kurtosis:</td>
+<td>2.635</td>
+<td data-quarto-table-cell-role="th">Cond. No.</td>
+<td>462.</td>
+</tr>
+</tbody>
+</table>
+<br><br>Notes:<br>[1] Standard Errors assume that the covariance matrix of the errors is correctly specified.
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>['usa_wind', 'usa_lat_abs']</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<table class="simpletable caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<caption>OLS Regression Results</caption>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Dep. Variable:</td>
+<td>usa_r64_mean</td>
+<td data-quarto-table-cell-role="th">R-squared:</td>
+<td>0.187</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Model:</td>
+<td>OLS</td>
+<td data-quarto-table-cell-role="th">Adj. R-squared:</td>
+<td>0.186</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Method:</td>
+<td>Least Squares</td>
+<td data-quarto-table-cell-role="th">F-statistic:</td>
+<td>208.2</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Date:</td>
+<td>Tue, 30 Sep 2025</td>
+<td data-quarto-table-cell-role="th">Prob (F-statistic):</td>
+<td>4.09e-82</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Time:</td>
+<td>13:53:32</td>
+<td data-quarto-table-cell-role="th">Log-Likelihood:</td>
+<td>-6643.6</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">No. Observations:</td>
+<td>1814</td>
+<td data-quarto-table-cell-role="th">AIC:</td>
+<td>1.329e+04</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Df Residuals:</td>
+<td>1811</td>
+<td data-quarto-table-cell-role="th">BIC:</td>
+<td>1.331e+04</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Df Model:</td>
+<td>2</td>
+<td data-quarto-table-cell-role="th"></td>
+<td></td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Covariance Type:</td>
+<td>nonrobust</td>
+<td data-quarto-table-cell-role="th"></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+
+<table class="simpletable caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<tbody>
+<tr class="odd">
+<td></td>
+<td data-quarto-table-cell-role="th">coef</td>
+<td data-quarto-table-cell-role="th">std err</td>
+<td data-quarto-table-cell-role="th">t</td>
+<td data-quarto-table-cell-role="th">P&gt;|t|</td>
+<td data-quarto-table-cell-role="th">[0.025</td>
+<td data-quarto-table-cell-role="th">0.975]</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">const</td>
+<td>-3.0654</td>
+<td>1.574</td>
+<td>-1.948</td>
+<td>0.052</td>
+<td>-6.152</td>
+<td>0.021</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">usa_wind</td>
+<td>0.1709</td>
+<td>0.011</td>
+<td>15.738</td>
+<td>0.000</td>
+<td>0.150</td>
+<td>0.192</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">usa_lat_abs</td>
+<td>0.8783</td>
+<td>0.056</td>
+<td>15.610</td>
+<td>0.000</td>
+<td>0.768</td>
+<td>0.989</td>
+</tr>
+</tbody>
+</table>
+
+
+<table class="simpletable caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Omnibus:</td>
+<td>35.723</td>
+<td data-quarto-table-cell-role="th">Durbin-Watson:</td>
+<td>0.224</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Prob(Omnibus):</td>
+<td>0.000</td>
+<td data-quarto-table-cell-role="th">Jarque-Bera (JB):</td>
+<td>32.986</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Skew:</td>
+<td>0.284</td>
+<td data-quarto-table-cell-role="th">Prob(JB):</td>
+<td>6.87e-08</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Kurtosis:</td>
+<td>2.663</td>
+<td data-quarto-table-cell-role="th">Cond. No.</td>
+<td>706.</td>
+</tr>
+</tbody>
+</table>
+<br><br>Notes:<br>[1] Standard Errors assume that the covariance matrix of the errors is correctly specified.
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>['usa_wind_log']</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<table class="simpletable caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<caption>OLS Regression Results</caption>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Dep. Variable:</td>
+<td>usa_r64_mean_log</td>
+<td data-quarto-table-cell-role="th">R-squared:</td>
+<td>0.100</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Model:</td>
+<td>OLS</td>
+<td data-quarto-table-cell-role="th">Adj. R-squared:</td>
+<td>0.099</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Method:</td>
+<td>Least Squares</td>
+<td data-quarto-table-cell-role="th">F-statistic:</td>
+<td>201.2</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Date:</td>
+<td>Tue, 30 Sep 2025</td>
+<td data-quarto-table-cell-role="th">Prob (F-statistic):</td>
+<td>2.22e-43</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Time:</td>
+<td>13:53:32</td>
+<td data-quarto-table-cell-role="th">Log-Likelihood:</td>
+<td>-809.93</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">No. Observations:</td>
+<td>1814</td>
+<td data-quarto-table-cell-role="th">AIC:</td>
+<td>1624.</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Df Residuals:</td>
+<td>1812</td>
+<td data-quarto-table-cell-role="th">BIC:</td>
+<td>1635.</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Df Model:</td>
+<td>1</td>
+<td data-quarto-table-cell-role="th"></td>
+<td></td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Covariance Type:</td>
+<td>nonrobust</td>
+<td data-quarto-table-cell-role="th"></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+
+<table class="simpletable caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<tbody>
+<tr class="odd">
+<td></td>
+<td data-quarto-table-cell-role="th">coef</td>
+<td data-quarto-table-cell-role="th">std err</td>
+<td data-quarto-table-cell-role="th">t</td>
+<td data-quarto-table-cell-role="th">P&gt;|t|</td>
+<td data-quarto-table-cell-role="th">[0.025</td>
+<td data-quarto-table-cell-role="th">0.975]</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">const</td>
+<td>0.6100</td>
+<td>0.189</td>
+<td>3.231</td>
+<td>0.001</td>
+<td>0.240</td>
+<td>0.980</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">usa_wind_log</td>
+<td>0.5895</td>
+<td>0.042</td>
+<td>14.183</td>
+<td>0.000</td>
+<td>0.508</td>
+<td>0.671</td>
+</tr>
+</tbody>
+</table>
+
+
+<table class="simpletable caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Omnibus:</td>
+<td>41.865</td>
+<td data-quarto-table-cell-role="th">Durbin-Watson:</td>
+<td>0.328</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Prob(Omnibus):</td>
+<td>0.000</td>
+<td data-quarto-table-cell-role="th">Jarque-Bera (JB):</td>
+<td>44.192</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Skew:</td>
+<td>-0.376</td>
+<td data-quarto-table-cell-role="th">Prob(JB):</td>
+<td>2.53e-10</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Kurtosis:</td>
+<td>2.860</td>
+<td data-quarto-table-cell-role="th">Cond. No.</td>
+<td>101.</td>
+</tr>
+</tbody>
+</table>
+<br><br>Notes:<br>[1] Standard Errors assume that the covariance matrix of the errors is correctly specified.
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>['usa_wind_log', 'usa_lat_abs_log']</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<table class="simpletable caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<caption>OLS Regression Results</caption>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Dep. Variable:</td>
+<td>usa_r64_mean_log</td>
+<td data-quarto-table-cell-role="th">R-squared:</td>
+<td>0.197</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Model:</td>
+<td>OLS</td>
+<td data-quarto-table-cell-role="th">Adj. R-squared:</td>
+<td>0.196</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Method:</td>
+<td>Least Squares</td>
+<td data-quarto-table-cell-role="th">F-statistic:</td>
+<td>221.8</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Date:</td>
+<td>Tue, 30 Sep 2025</td>
+<td data-quarto-table-cell-role="th">Prob (F-statistic):</td>
+<td>6.82e-87</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Time:</td>
+<td>13:53:32</td>
+<td data-quarto-table-cell-role="th">Log-Likelihood:</td>
+<td>-706.68</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">No. Observations:</td>
+<td>1814</td>
+<td data-quarto-table-cell-role="th">AIC:</td>
+<td>1419.</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Df Residuals:</td>
+<td>1811</td>
+<td data-quarto-table-cell-role="th">BIC:</td>
+<td>1436.</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Df Model:</td>
+<td>2</td>
+<td data-quarto-table-cell-role="th"></td>
+<td></td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Covariance Type:</td>
+<td>nonrobust</td>
+<td data-quarto-table-cell-role="th"></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+
+<table class="simpletable caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<tbody>
+<tr class="odd">
+<td></td>
+<td data-quarto-table-cell-role="th">coef</td>
+<td data-quarto-table-cell-role="th">std err</td>
+<td data-quarto-table-cell-role="th">t</td>
+<td data-quarto-table-cell-role="th">P&gt;|t|</td>
+<td data-quarto-table-cell-role="th">[0.025</td>
+<td data-quarto-table-cell-role="th">0.975]</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">const</td>
+<td>-1.3914</td>
+<td>0.224</td>
+<td>-6.212</td>
+<td>0.000</td>
+<td>-1.831</td>
+<td>-0.952</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">usa_wind_log</td>
+<td>0.6884</td>
+<td>0.040</td>
+<td>17.278</td>
+<td>0.000</td>
+<td>0.610</td>
+<td>0.767</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">usa_lat_abs_log</td>
+<td>0.5464</td>
+<td>0.037</td>
+<td>14.777</td>
+<td>0.000</td>
+<td>0.474</td>
+<td>0.619</td>
+</tr>
+</tbody>
+</table>
+
+
+<table class="simpletable caption-top table table-sm table-striped small" data-quarto-postprocess="true">
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Omnibus:</td>
+<td>74.527</td>
+<td data-quarto-table-cell-role="th">Durbin-Watson:</td>
+<td>0.333</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Prob(Omnibus):</td>
+<td>0.000</td>
+<td data-quarto-table-cell-role="th">Jarque-Bera (JB):</td>
+<td>83.100</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Skew:</td>
+<td>-0.523</td>
+<td data-quarto-table-cell-role="th">Prob(JB):</td>
+<td>9.02e-19</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Kurtosis:</td>
+<td>3.066</td>
+<td data-quarto-table-cell-role="th">Cond. No.</td>
+<td>148.</td>
+</tr>
+</tbody>
+</table>
+<br><br>Notes:<br>[1] Standard Errors assume that the covariance matrix of the errors is correctly specified.
+</div>
+</div>
+<div id="737bf093-11c0-42f7-8a8e-0fb1ff43ca63" class="cell" data-execution_count="179">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb50"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a>df_results <span class="op">=</span> pd.DataFrame(dicts)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<div id="312d33b4-6ee6-49a5-98bf-2441a453e74f" class="cell" data-execution_count="180">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb51"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a>df_results</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-display" data-execution_count="180">
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">col</th>
+<th data-quarto-table-cell-role="th">dof</th>
+<th data-quarto-table-cell-role="th">log</th>
+<th data-quarto-table-cell-role="th">r2adj</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">0</td>
+<td>usa_r34_mean</td>
+<td>1</td>
+<td></td>
+<td>0.143076</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">1</td>
+<td>usa_r34_mean</td>
+<td>2</td>
+<td></td>
+<td>0.316536</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2</td>
+<td>usa_r34_mean</td>
+<td>1</td>
+<td>_log</td>
+<td>0.189163</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">3</td>
+<td>usa_r34_mean</td>
+<td>2</td>
+<td>_log</td>
+<td>0.314823</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">4</td>
+<td>usa_r50_mean</td>
+<td>1</td>
+<td></td>
+<td>0.109584</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">5</td>
+<td>usa_r50_mean</td>
+<td>2</td>
+<td></td>
+<td>0.307701</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">6</td>
+<td>usa_r50_mean</td>
+<td>1</td>
+<td>_log</td>
+<td>0.171486</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">7</td>
+<td>usa_r50_mean</td>
+<td>2</td>
+<td>_log</td>
+<td>0.328087</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">8</td>
+<td>usa_r64_mean</td>
+<td>1</td>
+<td></td>
+<td>0.077041</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">9</td>
+<td>usa_r64_mean</td>
+<td>2</td>
+<td></td>
+<td>0.186051</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">10</td>
+<td>usa_r64_mean</td>
+<td>1</td>
+<td>_log</td>
+<td>0.099429</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">11</td>
+<td>usa_r64_mean</td>
+<td>2</td>
+<td>_log</td>
+<td>0.195881</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</div>
+</div>
+<p>From the results (column <code>r2adj</code> is the adjusted <span class="math inline">\(R^2\)</span> value) above it looks like: 1. Log-log performs better than linear 2. Including latitude (<code>dof=2</code>) is better than only wind So, we’ll go with that.</p>
+</section>
+<section id="make-predictions" class="level3" data-number="1.3.2">
+<h3 data-number="1.3.2" class="anchored" data-anchor-id="make-predictions"><span class="header-section-number">1.3.2</span> Make predictions</h3>
+<div id="775e46db-eb04-4ab6-8cde-f0d6c0b6866c" class="cell" data-scrolled="true" data-execution_count="246">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb52"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a>dicts_params <span class="op">=</span> []</span>
+<span id="cb52-2"><a href="#cb52-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> col <span class="kw">in</span> mean_quad_cols:</span>
+<span id="cb52-3"><a href="#cb52-3" aria-hidden="true" tabindex="-1"></a>    df_reg <span class="op">=</span> df_usa_recent[</span>
+<span id="cb52-4"><a href="#cb52-4" aria-hidden="true" tabindex="-1"></a>        [<span class="st">"sid"</span>, <span class="st">"valid_time"</span>, <span class="st">"usa_wind_log"</span>, <span class="st">"usa_lat_abs_log"</span>, <span class="ss">f"</span><span class="sc">{</span>col<span class="sc">}</span><span class="ss">_log"</span>]</span>
+<span id="cb52-5"><a href="#cb52-5" aria-hidden="true" tabindex="-1"></a>    ].dropna()</span>
+<span id="cb52-6"><a href="#cb52-6" aria-hidden="true" tabindex="-1"></a>    df_reg <span class="op">=</span> df_reg[df_reg[<span class="ss">f"</span><span class="sc">{</span>col<span class="sc">}</span><span class="ss">_log"</span>] <span class="op">&gt;</span> <span class="dv">0</span>]</span>
+<span id="cb52-7"><a href="#cb52-7" aria-hidden="true" tabindex="-1"></a>    X <span class="op">=</span> df_reg[[<span class="st">"usa_wind_log"</span>, <span class="st">"usa_lat_abs_log"</span>]]</span>
+<span id="cb52-8"><a href="#cb52-8" aria-hidden="true" tabindex="-1"></a>    y <span class="op">=</span> df_reg[<span class="ss">f"</span><span class="sc">{</span>col<span class="sc">}</span><span class="ss">_log"</span>]</span>
+<span id="cb52-9"><a href="#cb52-9" aria-hidden="true" tabindex="-1"></a>    X <span class="op">=</span> sm.add_constant(X)</span>
+<span id="cb52-10"><a href="#cb52-10" aria-hidden="true" tabindex="-1"></a>    model <span class="op">=</span> sm.OLS(y, X).fit()</span>
+<span id="cb52-11"><a href="#cb52-11" aria-hidden="true" tabindex="-1"></a>    dicts_params.append({<span class="st">"col"</span>: col, <span class="st">"params"</span>: model.params})</span>
+<span id="cb52-12"><a href="#cb52-12" aria-hidden="true" tabindex="-1"></a>    X_pred <span class="op">=</span> df_usa_recent[[<span class="st">"usa_wind_log"</span>, <span class="st">"usa_lat_abs_log"</span>]]</span>
+<span id="cb52-13"><a href="#cb52-13" aria-hidden="true" tabindex="-1"></a>    X_pred <span class="op">=</span> sm.add_constant(X_pred)</span>
+<span id="cb52-14"><a href="#cb52-14" aria-hidden="true" tabindex="-1"></a>    df_usa_recent[<span class="ss">f"</span><span class="sc">{</span>col<span class="sc">}</span><span class="ss">_log_pred"</span>] <span class="op">=</span> model.predict(X_pred)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<p>Here are the parameters which we will save in <code>src.constants</code> so we can apply them to new forecasts:</p>
+<div id="de19db45-9219-4945-acca-dab160ef9873" class="cell" data-execution_count="256">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb53"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a>dicts_params</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-display" data-execution_count="256">
+<pre><code>[{'col': 'usa_r34_mean',
+  'params': const              0.299034
+  usa_wind_log       0.587814
+  usa_lat_abs_log    0.599866
+  dtype: float64},
+ {'col': 'usa_r50_mean',
+  'params': const             -1.926702
+  usa_wind_log       0.800029
+  usa_lat_abs_log    0.769871
+  dtype: float64},
+ {'col': 'usa_r64_mean',
+  'params': const             -1.391375
+  usa_wind_log       0.688399
+  usa_lat_abs_log    0.546447
+  dtype: float64}]</code></pre>
+</div>
+</div>
+<p>We also just want to set anywhere with a maximum wind speed lower than the buffer speed to a radius of 0.</p>
+<div id="8b7f884b-c495-4868-91b6-372c0b55fc4d" class="cell" data-execution_count="197">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb55"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb55-1"><a href="#cb55-1" aria-hidden="true" tabindex="-1"></a>log_pred_cols <span class="op">=</span> [<span class="ss">f"usa_r</span><span class="sc">{</span>speed<span class="sc">}</span><span class="ss">_mean_log_pred"</span> <span class="cf">for</span> speed <span class="kw">in</span> buffer_speeds]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<div id="60500187-1531-4e75-84a9-4b31d422c6e9" class="cell" data-execution_count="210">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb56"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb56-1"><a href="#cb56-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> speed <span class="kw">in</span> buffer_speeds:</span>
+<span id="cb56-2"><a href="#cb56-2" aria-hidden="true" tabindex="-1"></a>    df_usa_recent[<span class="ss">f"usa_r</span><span class="sc">{</span>speed<span class="sc">}</span><span class="ss">_mean_pred"</span>] <span class="op">=</span> np.exp(</span>
+<span id="cb56-3"><a href="#cb56-3" aria-hidden="true" tabindex="-1"></a>        df_usa_recent[<span class="ss">f"usa_r</span><span class="sc">{</span>speed<span class="sc">}</span><span class="ss">_mean_log_pred"</span>]</span>
+<span id="cb56-4"><a href="#cb56-4" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb56-5"><a href="#cb56-5" aria-hidden="true" tabindex="-1"></a>    df_usa_recent[<span class="ss">f"usa_r</span><span class="sc">{</span>speed<span class="sc">}</span><span class="ss">_mean_pred"</span>] <span class="op">=</span> df_usa_recent.<span class="bu">apply</span>(</span>
+<span id="cb56-6"><a href="#cb56-6" aria-hidden="true" tabindex="-1"></a>        <span class="kw">lambda</span> row: <span class="dv">0</span></span>
+<span id="cb56-7"><a href="#cb56-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> row[<span class="st">"usa_wind"</span>] <span class="op">&lt;</span> speed</span>
+<span id="cb56-8"><a href="#cb56-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">else</span> row[<span class="ss">f"usa_r</span><span class="sc">{</span>speed<span class="sc">}</span><span class="ss">_mean_pred"</span>],</span>
+<span id="cb56-9"><a href="#cb56-9" aria-hidden="true" tabindex="-1"></a>        axis<span class="op">=</span><span class="dv">1</span>,</span>
+<span id="cb56-10"><a href="#cb56-10" aria-hidden="true" tabindex="-1"></a>    )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+</section>
+<section id="plot-results" class="level3" data-number="1.3.3">
+<h3 data-number="1.3.3" class="anchored" data-anchor-id="plot-results"><span class="header-section-number">1.3.3</span> Plot results</h3>
+<p>Here we plot the results - looks ok, although we often predict a non-zero radius when the radius. But this could be from the weird points above where it’s possible that JTWC didn’t calculate a radius.</p>
+<div id="fdd2253f-8703-4d02-befb-840eabb352a9" class="cell" data-execution_count="213">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb57"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> col <span class="kw">in</span> mean_quad_cols:</span>
+<span id="cb57-2"><a href="#cb57-2" aria-hidden="true" tabindex="-1"></a>    df_usa_recent.plot.scatter(</span>
+<span id="cb57-3"><a href="#cb57-3" aria-hidden="true" tabindex="-1"></a>        x<span class="op">=</span><span class="ss">f"</span><span class="sc">{</span>col<span class="sc">}</span><span class="ss">"</span>,</span>
+<span id="cb57-4"><a href="#cb57-4" aria-hidden="true" tabindex="-1"></a>        y<span class="op">=</span><span class="ss">f"</span><span class="sc">{</span>col<span class="sc">}</span><span class="ss">_pred"</span>,</span>
+<span id="cb57-5"><a href="#cb57-5" aria-hidden="true" tabindex="-1"></a>        alpha<span class="op">=</span><span class="fl">0.05</span>,</span>
+<span id="cb57-6"><a href="#cb57-6" aria-hidden="true" tabindex="-1"></a>    )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="usa_radii_modelfit_files/figure-html/cell-43-output-1.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="usa_radii_modelfit_files/figure-html/cell-43-output-2.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="usa_radii_modelfit_files/figure-html/cell-43-output-3.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>We can also calculate the <span class="math inline">\(R^2\)</span> and correlation (including the zeros, so pessimistic estimate).</p>
+<div id="633980d8-1412-4eb7-b192-0272b8e0ae7f" class="cell" data-execution_count="248">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb58"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb58-1"><a href="#cb58-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> calc_r2(y_pred, y_true, k):</span>
+<span id="cb58-2"><a href="#cb58-2" aria-hidden="true" tabindex="-1"></a>    n <span class="op">=</span> <span class="bu">len</span>(y_true)</span>
+<span id="cb58-3"><a href="#cb58-3" aria-hidden="true" tabindex="-1"></a>    ss_res <span class="op">=</span> np.<span class="bu">sum</span>((y_true <span class="op">-</span> y_pred) <span class="op">**</span> <span class="dv">2</span>)</span>
+<span id="cb58-4"><a href="#cb58-4" aria-hidden="true" tabindex="-1"></a>    ss_tot <span class="op">=</span> np.<span class="bu">sum</span>((y_true <span class="op">-</span> np.mean(y_true)) <span class="op">**</span> <span class="dv">2</span>)</span>
+<span id="cb58-5"><a href="#cb58-5" aria-hidden="true" tabindex="-1"></a>    r2 <span class="op">=</span> <span class="dv">1</span> <span class="op">-</span> ss_res <span class="op">/</span> ss_tot</span>
+<span id="cb58-6"><a href="#cb58-6" aria-hidden="true" tabindex="-1"></a>    r2_adj <span class="op">=</span> <span class="dv">1</span> <span class="op">-</span> (<span class="dv">1</span> <span class="op">-</span> r2) <span class="op">*</span> (n <span class="op">-</span> <span class="dv">1</span>) <span class="op">/</span> (n <span class="op">-</span> k <span class="op">-</span> <span class="dv">1</span>)</span>
+<span id="cb58-7"><a href="#cb58-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> r2, r2_adj</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<div id="0d71d228-8c03-4677-9a18-7119d3546df8" class="cell" data-execution_count="253">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb59"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb59-1"><a href="#cb59-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> speed <span class="kw">in</span> buffer_speeds:</span>
+<span id="cb59-2"><a href="#cb59-2" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(speed)</span>
+<span id="cb59-3"><a href="#cb59-3" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">"corr:"</span>)</span>
+<span id="cb59-4"><a href="#cb59-4" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(</span>
+<span id="cb59-5"><a href="#cb59-5" aria-hidden="true" tabindex="-1"></a>        df_usa_recent[[<span class="ss">f"usa_r</span><span class="sc">{</span>speed<span class="sc">}</span><span class="ss">_mean"</span>, <span class="ss">f"usa_r</span><span class="sc">{</span>speed<span class="sc">}</span><span class="ss">_mean_pred"</span>]]</span>
+<span id="cb59-6"><a href="#cb59-6" aria-hidden="true" tabindex="-1"></a>        .corr()</span>
+<span id="cb59-7"><a href="#cb59-7" aria-hidden="true" tabindex="-1"></a>        .iloc[<span class="dv">0</span>, <span class="dv">1</span>]</span>
+<span id="cb59-8"><a href="#cb59-8" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb59-9"><a href="#cb59-9" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">"r2, r2adj:"</span>)</span>
+<span id="cb59-10"><a href="#cb59-10" aria-hidden="true" tabindex="-1"></a>    r2, r2_adj <span class="op">=</span> calc_r2(</span>
+<span id="cb59-11"><a href="#cb59-11" aria-hidden="true" tabindex="-1"></a>        df_usa_recent[<span class="ss">f"usa_r</span><span class="sc">{</span>speed<span class="sc">}</span><span class="ss">_mean_pred"</span>],</span>
+<span id="cb59-12"><a href="#cb59-12" aria-hidden="true" tabindex="-1"></a>        df_usa_recent[<span class="ss">f"usa_r</span><span class="sc">{</span>speed<span class="sc">}</span><span class="ss">_mean"</span>],</span>
+<span id="cb59-13"><a href="#cb59-13" aria-hidden="true" tabindex="-1"></a>        <span class="dv">2</span>,</span>
+<span id="cb59-14"><a href="#cb59-14" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb59-15"><a href="#cb59-15" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(r2, r2_adj)</span>
+<span id="cb59-16"><a href="#cb59-16" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>34
+corr:
+0.81989964048842
+r2, r2adj:
+0.6703863098074991 0.6703261173878146
+
+50
+corr:
+0.7860493517451125
+r2, r2adj:
+0.5824097176915151 0.5823334594222842
+
+64
+corr:
+0.7976896352206827
+r2, r2adj:
+0.589050204675589 0.588975159059204
+</code></pre>
+</div>
+</div>
+</section>
+<section id="plot-examples" class="level3" data-number="1.3.4">
+<h3 data-number="1.3.4" class="anchored" data-anchor-id="plot-examples"><span class="header-section-number">1.3.4</span> Plot examples</h3>
+<p>Plot examples for Winston, Yasa, and Harold. Looks not bad.</p>
+<div id="d10a34b4-0f79-4960-bf17-b5127c52eb01" class="cell" data-execution_count="232">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb61"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb61-1"><a href="#cb61-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> sid <span class="kw">in</span> [WINSTON_SID, YASA_SID, HAROLD_SID]:</span>
+<span id="cb61-2"><a href="#cb61-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> speed <span class="kw">in</span> buffer_speeds:</span>
+<span id="cb61-3"><a href="#cb61-3" aria-hidden="true" tabindex="-1"></a>        df_usa_recent.set_index(<span class="st">"sid"</span>).loc[sid].plot(</span>
+<span id="cb61-4"><a href="#cb61-4" aria-hidden="true" tabindex="-1"></a>            x<span class="op">=</span><span class="st">"valid_time"</span>, y<span class="op">=</span>[<span class="ss">f"usa_r</span><span class="sc">{</span>speed<span class="sc">}</span><span class="ss">_mean"</span>, <span class="ss">f"usa_r</span><span class="sc">{</span>speed<span class="sc">}</span><span class="ss">_mean_pred"</span>]</span>
+<span id="cb61-5"><a href="#cb61-5" aria-hidden="true" tabindex="-1"></a>        )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="usa_radii_modelfit_files/figure-html/cell-46-output-1.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="usa_radii_modelfit_files/figure-html/cell-46-output-2.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="usa_radii_modelfit_files/figure-html/cell-46-output-3.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="usa_radii_modelfit_files/figure-html/cell-46-output-4.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="usa_radii_modelfit_files/figure-html/cell-46-output-5.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="usa_radii_modelfit_files/figure-html/cell-46-output-6.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="usa_radii_modelfit_files/figure-html/cell-46-output-7.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="usa_radii_modelfit_files/figure-html/cell-46-output-8.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="usa_radii_modelfit_files/figure-html/cell-46-output-9.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+
+
+</section>
+</section>
+
+</main> <!-- /main -->
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // For each code cell, group all output nodes into a single wrapper
+  // Quarto uses several output classes; target them all
+  const OUTPUT_SELECTOR =
+    '.cell-output, .cell-output-display, .cell-output-stdout, .cell-output-stderr, .cell-output-error';
+
+  document.querySelectorAll('.cell').forEach(cell => {
+    // Collect direct (or nested) output nodes within the cell
+    const outs = cell.querySelectorAll(OUTPUT_SELECTOR);
+    if (!outs.length) return;
+
+    // Skip if we've already wrapped this cell
+    if (cell.querySelector(':scope > .q-output-wrapper')) return;
+
+    // Create a wrapper and insert it before the first output
+    const wrapper = document.createElement('div');
+    wrapper.className = 'q-output-wrapper';
+
+    const firstOut = outs[0];
+    firstOut.parentNode.insertBefore(wrapper, firstOut);
+
+    // Move all outputs into the wrapper (preserves order)
+    outs.forEach(out => wrapper.appendChild(out));
+  });
+});
+</script>
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {
+        return true;
+      }
+    }
+    return false;
+  }
+  const onCopySuccess = function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button,
+        { trigger: "manual",
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  }
+  const getTextToCopy = function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+    text: getTextToCopy
+  });
+  clipboard.on('success', onCopySuccess);
+  if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+    const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+      text: getTextToCopy,
+      container: window.document.getElementById('quarto-embedded-source-code-modal')
+    });
+    clipboardModal.on('success', onCopySuccess);
+  }
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp('/' + window.location.host + '/');
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config);
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined;
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            }
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          }
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../index.html" class="pagination-link" aria-label="Overview">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">Overview</span>
+      </a>
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../exploration/fms_buffers_regression.html" class="pagination-link" aria-label="Wind buffers - FMS approximation">
+        <span class="nav-page-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Wind buffers - FMS approximation</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+<script src="../site_libs/quarto-html/zenscroll-min.js"></script>
+</body></html>

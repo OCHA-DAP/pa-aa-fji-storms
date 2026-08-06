@@ -1,10 +1,9 @@
-{% extends "base.html" %}
-
-{% block content %}
 <div>
-  <p>Dear Resident Coordinator, dear colleagues,</p>
+  <p>Dear United Nations Resident Coordinator,<br>Dear National Disaster Risk Management Office,<br>Dear Line Ministries,<br>Dear Colleagues,</p>
   <p>
-    The action trigger of the coordinated anticipatory action pilot for tropical cyclones in Fiji has been reached in line with the 72-hour forecast for cyclone {{ name }} produced at {{ pub_time }} on {{ pub_date }} (Fiji local time) by the Fiji Meteorological Service, operators of Regional Specialized Meteorological Centre (RSMC) Nadi.
+  <p>
+    The <b>action trigger</b> of the National Anticipatory Action Framework for Tropical Cyclones in Fiji <b>has been reached</b> in line with the 72-hour forecast for cyclone
+    {{ cyclone_name }} produced at {{ forecast_display_str }} by the Fiji Meteorological Service, operators of Regional Specialized Meteorological Centre (RSMC) Nadi.
   </p>
   <p>
     All activities in line with the <a href="https://reliefweb.int/report/fiji/fiji-tropical-cyclones-2023-anticipatory-action-framework">framework document</a> should now commence. OCHA may convene a meeting of the participating partners.
@@ -12,4 +11,3 @@
   <p>Best wishes and good luck,</p>
   <p>OCHA Centre for Humanitarian Data</p>
 </div>
-{% endblock content %}
