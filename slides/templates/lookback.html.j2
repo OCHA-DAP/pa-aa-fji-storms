@@ -123,7 +123,7 @@
         hurricane-force winds stayed <b>{{ VS.d64 }} km or more</b> offshore.</li>
       <li>Only the uncertainty cone's worst case reached populated areas, on 6–7 April. The trigger uses the
         forecast track itself, so this alone does not activate.</li>
-      <li>Rainfall peaked at <b>72 mm</b> (2-day country average), against {{ rain_threshold }} mm.</li>
+      <li>Rainfall peaked at <b>{{ d.rain | map(attribute='mm') | max }} mm</b> (2-day country average), against {{ rain_threshold }} mm.</li>
     </ul>
   </div>
 </section>

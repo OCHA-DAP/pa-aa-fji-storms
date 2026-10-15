@@ -387,6 +387,7 @@ def build_simex(out: Path):
     rc = rain_check(
         BRAVO, (3, 4), (90, 60), (None, None), adm3, assets, "bravo_rain"
     )
+    assert rc["mm"] < RAIN_THRESHOLD, rc["mm"]
     rc.update({"when": "Day 5, 12:00", "status": "notmet"})
     s.append(rc)
     scenarios["bravo"] = {"slides": s, "act": act}

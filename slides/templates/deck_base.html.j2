@@ -243,6 +243,7 @@
   document.getElementById("next").addEventListener("click", () => go(current + 1));
   document.getElementById("fs").addEventListener("click", toggleFullscreen);
   document.addEventListener("keydown", (e) => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
     if (["ArrowRight", "PageDown", " ", "ArrowDown"].includes(e.key)) { e.preventDefault(); go(current + 1); }
     if (["ArrowLeft", "PageUp", "ArrowUp"].includes(e.key)) { e.preventDefault(); go(current - 1); }
     if (e.key === "Home") go(0);

@@ -215,8 +215,9 @@
     <div class="callout grey" style="max-width:720px;margin:22px auto 0">
       ⚠️ <b>Exercise only.</b> Cyclones Alpha, Bravo and Charlie are invented. Their
       forecasts are written in RSMC Nadi's format and checked with the
-      <b>same code</b> that monitors real forecasts, so every number shown is what
-      the system would compute. Times are Fiji time, counted from Day 1.
+      <b>same code</b> that monitors real forecasts, so every wind-exposure number
+      shown is what the system would compute. Rainfall fields are invented for
+      the exercise, and the emails are mock-ups. Times are Fiji time, counted from Day 1.
     </div>
   </div>
 </section>
@@ -304,18 +305,19 @@
 <!-- 5 · What activation means -->
 <section class="slide" data-label="What each activation means">
   <div class="inner">
-    <div class="kicker">From the framework</div>
+    <div class="kicker">Reminder</div>
     <h2>What happens when a trigger activates</h2>
     <ul class="plain">
       <li>📧 <b>Every activation</b>: an automated email from OCHA goes to the trigger
-        distribution list within minutes of the forecast (or rainfall data) arriving.
+        distribution list as soon as the forecast is checked (or at the daily rainfall check).
         A separate information email with maps and numbers follows every forecast.</li>
       <li>🟧 <b>Readiness</b>: CERF sends approval letters and releases funds to the
         agencies. Agencies can spend the readiness share and start readiness activities.</li>
       <li>🟥 <b>Action</b>: the rest of the CERF funds can be used and all anticipatory
         actions start. IFRC transfers the pre-approved DREF funds to Fiji Red Cross.</li>
       <li>🟪 <b>Observational</b>: treated like the action trigger — all anticipatory
-        actions start.</li>
+        actions start. (The framework does not spell this out; this is how it is
+        applied in this exercise.)</li>
       <li>⏸️ For outlier storms that clearly will have minimal impact, the Resident
         Coordinator, in consultation with the government, may pause an activation.</li>
     </ul>
@@ -419,9 +421,10 @@
       <div class="exercise">EXERCISE · FICTIONAL STORM</div>
       <div class="kicker">Cyclone Alpha · Day 1, 12:00</div>
       <h2>The readiness trigger email</h2>
-      <p class="lede">Minutes after the forecast
-        arrives, the monitoring system sends this email automatically to the
+      <p class="lede">As soon as the forecast is checked,
+        the monitoring system sends an email like this automatically to the
         trigger distribution list (framework Annex 4).</p>
+      <p class="note">Mock-up for the exercise, based on the live email template.</p>
       <div class="callout orange"><b>Readiness trigger activated.</b> An automated email goes to the trigger distribution list. CERF sends approval letters to agencies and readiness activities start.</div>
 
     </div>
@@ -516,9 +519,10 @@
       <div class="exercise">EXERCISE · FICTIONAL STORM</div>
       <div class="kicker">Cyclone Alpha · Day 2, 12:00</div>
       <h2>The action trigger email</h2>
-      <p class="lede">Minutes after the forecast
-        arrives, the monitoring system sends this email automatically to the
+      <p class="lede">As soon as the forecast is checked,
+        the monitoring system sends an email like this automatically to the
         trigger distribution list (framework Annex 4).</p>
+      <p class="note">Mock-up for the exercise, based on the live email template.</p>
       <div class="callout red"><b>Action trigger activated.</b> An automated email goes to the trigger distribution list. All anticipatory actions start, and IFRC transfers the pre-approved DREF funds to Fiji Red Cross.</div>
 
     </div>
@@ -666,9 +670,10 @@
       <div class="exercise">EXERCISE · FICTIONAL STORM</div>
       <div class="kicker">Cyclone Bravo · Day 1, 00:00</div>
       <h2>The readiness trigger email</h2>
-      <p class="lede">Minutes after the forecast
-        arrives, the monitoring system sends this email automatically to the
+      <p class="lede">As soon as the forecast is checked,
+        the monitoring system sends an email like this automatically to the
         trigger distribution list (framework Annex 4).</p>
+      <p class="note">Mock-up for the exercise, based on the live email template.</p>
       <div class="callout orange"><b>Readiness trigger activated.</b> An automated email goes to the trigger distribution list. CERF sends approval letters to agencies and readiness activities start.</div>
 
     </div>
@@ -868,7 +873,7 @@ Satellite rainfall for Days 3 and 4, while Bravo was within 250 km of Fiji: <b>5
     <td><span class="pill notmet">Not reached</span></td>
   </tr>
 </table>
-      <p class="note">Storm centre within 250 km of Fiji during these days: ✓ (closest 115 km).</p>
+      <p class="note">Storm centre within 250 km of Fiji during these days (±1 day): ✓ (closest 115 km). Rainfall here is invented for the exercise.</p>
     </div>
     <div class="fig"><img src="assets/bravo_rain.png" alt="Two-day rainfall map, Days 3 and 4"></div>
   </div>
@@ -1095,7 +1100,7 @@ Satellite rainfall for Days 3 and 4, while Bravo was within 250 km of Fiji: <b>5
       <div class="when">Day 4, 12:00</div>
       <div class="rule"></div>
       <p class="lede">
-First rainfall check, covering Days 2 and 3: <b>125 mm</b> averaged over the whole country. Very heavy in places (up to 280 mm), but the country average is below 190 mm.      </p>
+Rainfall check covering Days 2 and 3: <b>125 mm</b> averaged over the whole country. Very heavy in places (up to 280 mm), but the country average is below 190 mm.      </p>
       <table class="trig">
   <tr><th>Trigger</th><th>This rainfall check</th><th>Status</th></tr>
   <tr class="readiness notmet">
@@ -1119,7 +1124,7 @@ First rainfall check, covering Days 2 and 3: <b>125 mm</b> averaged over the who
     <td><span class="pill notmet">Not reached</span></td>
   </tr>
 </table>
-      <p class="note">Storm centre within 250 km of Fiji during these days: ✓ (closest 0 km).</p>
+      <p class="note">Storm centre within 250 km of Fiji during these days (±1 day): ✓ (closest 0 km). Rainfall here is invented for the exercise.</p>
     </div>
     <div class="fig"><img src="assets/charlie_rain_1.png" alt="Two-day rainfall map, Days 2 and 3"></div>
   </div>
@@ -1158,7 +1163,7 @@ Satellite rainfall for Days 3 and 4, with Charlie's centre over Viti Levu: <b>21
 </td>
   </tr>
 </table>
-      <p class="note">Storm centre within 250 km of Fiji during these days: ✓ (closest 0 km).</p>
+      <p class="note">Storm centre within 250 km of Fiji during these days (±1 day): ✓ (closest 0 km). Rainfall here is invented for the exercise.</p>
 <div class="callout purple"><b>Observational trigger activated.</b> An automated email goes to the trigger distribution list. It is treated like the action trigger: all anticipatory actions start.</div>    </div>
     <div class="fig"><img src="assets/charlie_rain_2.png" alt="Two-day rainfall map, Days 3 and 4"></div>
   </div>
@@ -1169,9 +1174,10 @@ Satellite rainfall for Days 3 and 4, with Charlie's centre over Viti Levu: <b>21
       <div class="exercise">EXERCISE · FICTIONAL STORM</div>
       <div class="kicker">Cyclone Charlie · Day 5, 12:00</div>
       <h2>The observational trigger email</h2>
-      <p class="lede">Minutes after the rainfall data
-        arrives, the monitoring system sends this email automatically to the
+      <p class="lede">At the daily rainfall check,
+        the monitoring system sends an email like this automatically to the
         trigger distribution list (framework Annex 4).</p>
+      <p class="note">Mock-up for the exercise.</p>
       <div class="callout purple"><b>Observational trigger activated.</b> An automated email goes to the trigger distribution list. It is treated like the action trigger: all anticipatory actions start.</div>
     </div>
     <div class="fig email"><img src="assets/charlie_email_observational.png" alt="Mock observational trigger email for Cyclone Charlie"></div>
@@ -1301,6 +1307,7 @@ Satellite rainfall for Days 3 and 4, with Charlie's centre over Viti Levu: <b>21
   document.getElementById("next").addEventListener("click", () => go(current + 1));
   document.getElementById("fs").addEventListener("click", toggleFullscreen);
   document.addEventListener("keydown", (e) => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
     if (["ArrowRight", "PageDown", " ", "ArrowDown"].includes(e.key)) { e.preventDefault(); go(current + 1); }
     if (["ArrowLeft", "PageUp", "ArrowUp"].includes(e.key)) { e.preventDefault(); go(current - 1); }
     if (e.key === "Home") go(0);

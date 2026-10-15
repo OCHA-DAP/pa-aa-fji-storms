@@ -51,8 +51,9 @@
     <div class="callout grey" style="max-width:720px;margin:22px auto 0">
       ⚠️ <b>Exercise only.</b> Cyclones Alpha, Bravo and Charlie are invented. Their
       forecasts are written in RSMC Nadi's format and checked with the
-      <b>same code</b> that monitors real forecasts, so every number shown is what
-      the system would compute. Times are Fiji time, counted from Day 1.
+      <b>same code</b> that monitors real forecasts, so every wind-exposure number
+      shown is what the system would compute. Rainfall fields are invented for
+      the exercise, and the emails are mock-ups. Times are Fiji time, counted from Day 1.
     </div>
   </div>
 </section>
@@ -140,18 +141,19 @@
 <!-- 5 · What activation means -->
 <section class="slide" data-label="What each activation means">
   <div class="inner">
-    <div class="kicker">From the framework</div>
+    <div class="kicker">Reminder</div>
     <h2>What happens when a trigger activates</h2>
     <ul class="plain">
       <li>📧 <b>Every activation</b>: an automated email from OCHA goes to the trigger
-        distribution list within minutes of the forecast (or rainfall data) arriving.
+        distribution list as soon as the forecast is checked (or at the daily rainfall check).
         A separate information email with maps and numbers follows every forecast.</li>
       <li>🟧 <b>Readiness</b>: CERF sends approval letters and releases funds to the
         agencies. Agencies can spend the readiness share and start readiness activities.</li>
       <li>🟥 <b>Action</b>: the rest of the CERF funds can be used and all anticipatory
         actions start. IFRC transfers the pre-approved DREF funds to Fiji Red Cross.</li>
       <li>🟪 <b>Observational</b>: treated like the action trigger — all anticipatory
-        actions start.</li>
+        actions start. (The framework does not spell this out; this is how it is
+        applied in this exercise.)</li>
       <li>⏸️ For outlier storms that clearly will have minimal impact, the Resident
         Coordinator, in consultation with the government, may pause an activation.</li>
     </ul>
@@ -198,9 +200,10 @@
       <div class="exercise">EXERCISE · FICTIONAL STORM</div>
       <div class="kicker">Cyclone {{ name }} · {{ x.when }}</div>
       <h2>The {{ x.kind }} trigger email</h2>
-      <p class="lede">Minutes after the {{ 'rainfall data' if x.kind == 'observational' else 'forecast' }}
-        arrives, the monitoring system sends this email automatically to the
+      <p class="lede">{{ 'At the daily rainfall check' if x.kind == 'observational' else 'As soon as the forecast is checked' }},
+        the monitoring system sends an email like this automatically to the
         trigger distribution list (framework Annex 4).</p>
+      <p class="note">Mock-up for the exercise{{ ', based on the live email template' if x.kind != 'observational' else '' }}.</p>
       {{ activation_callout(x.kind) }}
     </div>
     <div class="fig email"><img src="{{ x.img }}" alt="Mock {{ x.kind }} trigger email for Cyclone {{ name }}"></div>
@@ -217,10 +220,10 @@
       <p class="lede">
         {% if key == 'bravo' %}Satellite rainfall for {{ x.days }}, while Bravo was within 250 km of Fiji: <b>{{ x.mm }} mm</b> averaged over the whole country — far below {{ rain_threshold }} mm. Nothing more activates for this storm.
         {% elif x.status == 'new' %}Satellite rainfall for {{ x.days }}, with Charlie's centre over Viti Levu: <b>{{ x.mm }} mm</b> averaged over the whole country (up to {{ x.peak }} mm locally). That is above {{ rain_threshold }} mm.
-        {% else %}First rainfall check, covering {{ x.days }}: <b>{{ x.mm }} mm</b> averaged over the whole country. Very heavy in places (up to {{ x.peak }} mm), but the country average is below {{ rain_threshold }} mm.{% endif %}
+        {% else %}Rainfall check covering {{ x.days }}: <b>{{ x.mm }} mm</b> averaged over the whole country. Very heavy in places (up to {{ x.peak }} mm), but the country average is below {{ rain_threshold }} mm.{% endif %}
       </p>
       {{ m.trig_table(None, None, ns.r, ns.a, ns.rat, ns.aat, x.status, None, x.mm) }}
-      <p class="note">Storm centre within 250 km of Fiji during these days: ✓ (closest {{ x.centre_km }} km).</p>
+      <p class="note">Storm centre within 250 km of Fiji during these days (±1 day): ✓ (closest {{ x.centre_km }} km). Rainfall here is invented for the exercise.</p>
       {% if x.status == 'new' %}{{ activation_callout('observational') }}{% endif %}
     </div>
     <div class="fig"><img src="{{ x.img }}" alt="Two-day rainfall map, {{ x.days }}"></div>

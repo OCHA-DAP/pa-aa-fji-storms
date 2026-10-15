@@ -8,7 +8,7 @@ PDF download:
 | 2025–26 season look-back | `/slides/2025-26-season/` | Every RSMC Nadi forecast for Urmil (Feb 2026) and Vaianu (Apr 2026) against the trigger, plus the observed rainfall. ~5 minutes. |
 | Simulation exercise | `/slides/simex/` | Three fictional cyclones stepped through forecast by forecast: readiness → action (Alpha), readiness → nothing (Bravo), observational only (Charlie). |
 
-Every number on the slides comes from the live trigger code
+Every wind-exposure number on the slides comes from the live trigger code
 (`src/datasources/fms.py`, `src/exposure_calc.py`, the same functions
 `pipelines/monitor_forecast_trigger.py` uses) — `trigger_eval.py` wraps them.
 
@@ -16,10 +16,13 @@ Every number on the slides comes from the live trigger code
 
 - `simex_storms.py` — the three fictional storms: a true track plus forecasts
   whose error shrinks over time, written as RSMC Nadi TC-module CSVs.
-- `simex_injects/` — those CSVs. They also work as injects for a hands-on
-  exercise: base64 them into the `Check Trigger` workflow with `TEST_EMAIL=True`.
+- `simex_injects/` — those CSVs. They parse with the live code, so they could
+  serve as injects for a hands-on exercise through the `Check Trigger` workflow
+  (`TEST_EMAIL=True`) — but the full email path (uncertainty cone, plots) has not
+  been run on them yet; do a `DRY_RUN` first.
 - `rain.py` — synthetic IMERG-like rainfall for the exercise, averaged over the
-  country as in `exploration/rain_plot.md`.
+  country as in `exploration/rain_plot.md`. The observational email is a mock-up
+  (`templates/observational.html`); the live observational check is not in this repo.
 - `figures.py` — forecast and rainfall maps.
 - `build_decks.py` — computes everything and renders `templates/*.j2` to
   `docs/slides/<deck>/index.html`, then prints each deck to PDF with headless Chrome.
