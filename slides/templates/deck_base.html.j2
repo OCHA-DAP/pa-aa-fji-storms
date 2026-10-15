@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}{% endblock %}</title>
+<style>
+  :root {
+    --blue: #1862d8;
+    --orange: #f57c00;
+    --orange-tint: #fde9d4;
+    --red: #c62828;
+    --red-tint: #f9dcdc;
+    --purple: #6a3d9a;
+    --purple-tint: #ece4f5;
+    --ink: #1e2a2b;
+    --muted: #5e6a6b;
+    --bg: #f4f7f9;
+    --card: #ffffff;
+    --line: #dde5e8;
+    --ok: #e7ecee;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+      "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink); background: var(--bg); overflow: hidden;
+  }
+  #deck { height: 100%; position: relative; }
+  .slide {
+    position: absolute; inset: 0; display: none;
+    flex-direction: column; justify-content: center; align-items: center;
+    padding: 4vh 3.5vw 10vh; text-align: center; overflow-y: auto;
+  }
+  .slide.active { display: flex; }
+  .slide .inner { max-width: 1180px; width: 100%; }
+  .slide .inner.split { max-width: 1440px; }
+  .kicker {
+    text-transform: uppercase; letter-spacing: 0.14em; font-size: 0.78rem;
+    font-weight: 700; color: var(--blue); margin-bottom: 10px;
+  }
+  h1 { font-size: clamp(1.7rem, 4.5vw, 2.8rem); line-height: 1.15; margin-bottom: 18px; }
+  h2 { font-size: clamp(1.3rem, 3vw, 1.9rem); line-height: 1.2; margin-bottom: 14px; }
+  p.lead { font-size: clamp(1rem, 2vw, 1.2rem); line-height: 1.5; max-width: 860px; margin: 0 auto; }
+  p.note { font-size: 0.9rem; color: var(--muted); margin-top: 14px; line-height: 1.45; }
+  p.lede { font-size: 1.08rem; line-height: 1.5; margin-bottom: 14px; }
+
+  /* exercise banner */
+  .exercise {
+    display: inline-block; background: #fff3cd; color: #7a5a00;
+    border: 1px solid #e8cf7a; border-radius: 999px; padding: 3px 12px;
+    font-size: 0.72rem; font-weight: 800; letter-spacing: 0.1em;
+    margin-bottom: 10px;
+  }
+
+  /* two-column forecast slides */
+  .split { display: flex; gap: 26px; align-items: center; text-align: left; }
+  .split .panel { flex: 0 0 37%; min-width: 0; }
+  .split .fig { flex: 1 1 63%; min-width: 0; text-align: center; }
+  .split .fig img {
+    max-width: 100%; max-height: 82vh; height: auto; border: 1px solid var(--line);
+    border-radius: 10px; background: #fff;
+  }
+  .when { font-size: clamp(1.5rem, 3.2vw, 2.1rem); font-weight: 800; line-height: 1.1; margin-bottom: 6px; }
+  .rule { height: 4px; background: var(--blue); border-radius: 2px; width: 70%; margin: 10px 0 14px; }
+
+  /* the trigger status table */
+  table.trig {
+    width: 100%; border-collapse: collapse; background: var(--card);
+    border: 1px solid var(--line); border-radius: 12px; overflow: hidden;
+    font-size: 0.96rem; box-shadow: 0 2px 10px rgba(20,40,60,0.06);
+  }
+  table.trig th {
+    background: #eef3f8; color: var(--muted); font-size: 0.7rem;
+    text-transform: uppercase; letter-spacing: 0.06em; padding: 8px 10px;
+    border-bottom: 2px solid var(--line); text-align: left;
+  }
+  table.trig td { padding: 10px; border-bottom: 1px solid var(--line); vertical-align: middle; line-height: 1.3; }
+  table.trig tr:last-child td { border-bottom: none; }
+  table.trig td.name { font-weight: 700; white-space: nowrap; }
+  table.trig td.name small { display: block; font-weight: 400; color: var(--muted); font-size: 0.78rem; }
+  table.trig td.val { white-space: nowrap; }
+  table.trig td.val small { display: block; color: var(--muted); font-size: 0.78rem; }
+  .pill {
+    display: inline-block; border-radius: 999px; padding: 3px 10px;
+    font-size: 0.74rem; font-weight: 800; letter-spacing: 0.04em; white-space: nowrap;
+  }
+  .pill.notmet { background: var(--ok); color: var(--muted); }
+  .pill.na { background: transparent; color: var(--muted); font-weight: 600; }
+  tr.readiness.new td { background: var(--orange-tint); }
+  tr.readiness.new .pill { background: var(--orange); color: #fff; }
+  tr.readiness.done .pill { background: #fff; color: var(--orange); border: 1.5px solid var(--orange); }
+  tr.action.new td { background: var(--red-tint); }
+  tr.action.new .pill { background: var(--red); color: #fff; }
+  tr.action.done .pill { background: #fff; color: var(--red); border: 1.5px solid var(--red); }
+  tr.observational.new td { background: var(--purple-tint); }
+  tr.observational.new .pill { background: var(--purple); color: #fff; }
+  tr.observational.done .pill { background: #fff; color: var(--purple); border: 1.5px solid var(--purple); }
+
+  /* gauge: this forecast vs threshold */
+  .gauge { position: relative; height: 8px; background: #e9eef0; border-radius: 4px; margin: 6px 0 5px; width: 130px; }
+  .gauge span { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: #8a959a; }
+  .gauge i { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--ink); left: 50%; }
+  tr.new .gauge span, tr.done .gauge span { background: var(--ink); }
+
+  .callout {
+    margin-top: 14px; background: #fbf4ea; border-left: 4px solid #c9962a;
+    border-radius: 0 10px 10px 0; padding: 10px 14px; text-align: left;
+    font-size: 0.95rem; line-height: 1.45;
+  }
+  .callout.red { background: #fbeceb; border-color: var(--red); }
+  .callout.orange { background: #fdf1e4; border-color: var(--orange); }
+  .callout.purple { background: #f3eef9; border-color: var(--purple); }
+  .callout.grey { background: #eef2f3; border-color: #9aa6ab; }
+
+  /* cards */
+  .flow { display: flex; gap: 12px; align-items: stretch; justify-content: center; flex-wrap: wrap; }
+  .cond {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 18px 16px; flex: 1 1 220px; max-width: 340px;
+    box-shadow: 0 2px 10px rgba(20,40,60,0.06); text-align: center;
+  }
+  .cond.or { border-top: 5px solid var(--orange); }
+  .cond.rd { border-top: 5px solid var(--red); }
+  .cond.pu { border-top: 5px solid var(--purple); }
+  .cond .emoji { font-size: 2rem; display: block; margin-bottom: 8px; }
+  .cond b { display: block; font-size: 1.05rem; margin-bottom: 6px; }
+  .cond p { font-size: 0.92rem; color: var(--muted); line-height: 1.45; }
+  .cond p strong { color: var(--ink); }
+  .joiner { display: flex; align-items: center; }
+  .joiner span { background: var(--blue); color: #fff; font-weight: 800; border-radius: 999px; padding: 6px 14px; font-size: 0.95rem; }
+
+  ul.plain { list-style: none; text-align: left; max-width: 820px; margin: 0 auto; }
+  ul.plain li {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 12px 16px; margin-bottom: 10px; font-size: 0.98rem; line-height: 1.5;
+    box-shadow: 0 2px 10px rgba(20,40,60,0.05);
+  }
+  table.sum {
+    width: 100%; border-collapse: collapse; background: var(--card);
+    border: 1px solid var(--line); font-size: 0.95rem; text-align: left;
+    box-shadow: 0 2px 10px rgba(20,40,60,0.06);
+  }
+  table.sum th { background: #eef3f8; color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; padding: 9px 12px; border-bottom: 2px solid var(--line); }
+  table.sum td { padding: 10px 12px; border-bottom: 1px solid var(--line); line-height: 1.35; }
+  table.sum td.c { text-align: center; }
+
+  .email img { max-width: 100%; max-height: 80vh; border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 4px 18px rgba(20,40,60,0.12); }
+
+  /* controls */
+  .controls {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    display: flex; align-items: center; justify-content: center; gap: 14px;
+    padding: 10px; background: linear-gradient(transparent, rgba(244,247,249,0.96) 40%);
+    z-index: 10;
+  }
+  .controls button, .controls a.btn {
+    border: 1px solid var(--line); background: var(--card); color: var(--ink);
+    border-radius: 999px; min-width: 40px; height: 40px; font-size: 1.1rem;
+    cursor: pointer; box-shadow: 0 2px 8px rgba(20,40,60,0.08);
+    display: inline-flex; align-items: center; justify-content: center; padding: 0 12px;
+    text-decoration: none; font-family: inherit;
+  }
+  .controls a.btn, .controls button.txt { font-size: 0.82rem; font-weight: 600; }
+  .controls button:hover, .controls a.btn:hover { border-color: var(--blue); color: var(--blue); }
+  .dots { display: flex; gap: 6px; flex-wrap: wrap; max-width: 50vw; justify-content: center; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: #c3ced3; cursor: pointer; }
+  .dot.sec { background: #8fa6c8; }
+  .dot.active { background: var(--blue); transform: scale(1.3); }
+  .pageno { font-size: 0.85rem; color: var(--muted); min-width: 3.6em; }
+  footer.tag { position: fixed; top: 10px; right: 16px; font-size: 0.75rem; color: var(--muted); z-index: 10; }
+  .home-link { position: fixed; top: 6px; left: 8px; z-index: 11; display:inline-block; padding:5px 11px;
+    font:500 12.5px/1 -apple-system,"Segoe UI",Roboto,sans-serif; color:#1862d8;
+    background:#e8f0fc; border:1px solid #cddcf5; border-radius:4px; text-decoration:none; }
+  .home-link:hover { background:#d6e4fa; }
+  :fullscreen .home-link, :fullscreen footer.tag { display: none; }
+
+  @media screen and (max-width: 860px) {
+    .split { flex-direction: column; }
+    .split .panel { flex: none; width: 100%; }
+    body { overflow: auto; }
+    .dots { display: none; }
+  }
+  @page { size: 380mm 214mm; margin: 0; }
+  @media print {
+    body { overflow: visible; background: #fff; }
+    #deck { height: auto; }
+    .slide {
+      position: relative; display: flex !important; width: 100vw; height: 100vh;
+      padding: 3.5vh 3vw; page-break-after: always; break-inside: avoid; overflow: hidden;
+    }
+    .slide:last-child { page-break-after: avoid; }
+    .controls, footer.tag, .home-link { display: none; }
+    .split .fig img, .email img { max-height: 84vh; }
+    .flow { flex-wrap: nowrap; }
+    .split { flex-direction: row; }
+    .split .panel { flex: 0 0 37%; }
+  }
+</style>
+</head>
+<body>
+<a class="home-link" href="../../">← Fiji AA · tropical cyclones</a>
+<footer class="tag">{% block tag %}{% endblock %}</footer>
+<div id="deck">
+{% block slides %}{% endblock %}
+</div>
+
+<div class="controls">
+  <button id="prev" aria-label="Previous slide">‹</button>
+  <div class="dots" id="dots"></div>
+  <span class="pageno" id="pageno"></span>
+  <button id="next" aria-label="Next slide">›</button>
+  <button id="fs" class="txt" aria-label="Full screen" title="Full screen (F)">⛶ Full screen</button>
+  <a class="btn" href="{{ pdf }}" download>⬇ PDF</a>
+</div>
+
+<script>
+  const slides = Array.from(document.querySelectorAll(".slide"));
+  const dotsEl = document.getElementById("dots");
+  const pageno = document.getElementById("pageno");
+  let current = 0;
+  slides.forEach((s, i) => {
+    const d = document.createElement("div");
+    d.className = "dot" + (s.dataset.section ? " sec" : "");
+    d.title = s.dataset.label || ("Slide " + (i + 1));
+    d.addEventListener("click", () => go(i));
+    dotsEl.appendChild(d);
+  });
+  const dots = Array.from(dotsEl.children);
+  function go(i) {
+    current = Math.max(0, Math.min(slides.length - 1, i));
+    slides.forEach((s, j) => s.classList.toggle("active", j === current));
+    dots.forEach((d, j) => d.classList.toggle("active", j === current));
+    pageno.textContent = (current + 1) + " / " + slides.length;
+    history.replaceState(null, "", "#" + (current + 1));
+  }
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+    else document.exitFullscreen();
+  }
+  document.getElementById("prev").addEventListener("click", () => go(current - 1));
+  document.getElementById("next").addEventListener("click", () => go(current + 1));
+  document.getElementById("fs").addEventListener("click", toggleFullscreen);
+  document.addEventListener("keydown", (e) => {
+    if (["ArrowRight", "PageDown", " ", "ArrowDown"].includes(e.key)) { e.preventDefault(); go(current + 1); }
+    if (["ArrowLeft", "PageUp", "ArrowUp"].includes(e.key)) { e.preventDefault(); go(current - 1); }
+    if (e.key === "Home") go(0);
+    if (e.key === "End") go(slides.length - 1);
+    if (e.key === "f" || e.key === "F") toggleFullscreen();
+  });
+  let touchX = null;
+  document.addEventListener("touchstart", (e) => { touchX = e.touches[0].clientX; });
+  document.addEventListener("touchend", (e) => {
+    if (touchX === null) return;
+    const dx = e.changedTouches[0].clientX - touchX;
+    if (dx < -40) go(current + 1);
+    if (dx > 40) go(current - 1);
+    touchX = null;
+  });
+  function goFromHash() {
+    const h = parseInt(location.hash.slice(1), 10);
+    go(h >= 1 && h <= slides.length ? h - 1 : 0);
+  }
+  window.addEventListener("hashchange", goFromHash);
+  goFromHash();
+</script>
+</body>
+</html>

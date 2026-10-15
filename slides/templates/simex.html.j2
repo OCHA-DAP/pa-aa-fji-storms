@@ -1,0 +1,294 @@
+{% extends "deck_base.html.j2" %}
+{% import "macros.html.j2" as m with context %}
+{% block title %}Fiji AA simulation exercise{% endblock %}
+{% block tag %}OCHA Centre for Humanitarian Data · Fiji AA simulation exercise{% endblock %}
+
+{% set NAMES = {'alpha': 'Alpha', 'bravo': 'Bravo', 'charlie': 'Charlie'} %}
+{% set TITLES = {
+  'alpha': 'Readiness, then action',
+  'bravo': 'Readiness, then nothing',
+  'charlie': 'Observational trigger only',
+} %}
+
+{# ---- narrative per forecast (n = forecast number) ---- #}
+{% macro story(key, x) -%}
+{% if key == 'alpha' %}
+  {% if x.n == 1 %}RSMC Nadi issues its first forecast for Cyclone Alpha, west of Vanuatu. It is forecast to reach only Category {{ x.maxcat }}: no hurricane-force (64-kt) winds anywhere, so nobody is in the red or orange zone.
+  {% elif x.n == 2 %}Alpha is now forecast to become a <b>Category {{ x.maxcat }}</b> cyclone and cross Viti Levu in about four days. <b>{{ x.r64 | fmt }} people</b> are in the 64-kt zone of the 120-hour forecast — but none in the first 72 hours.
+  {% elif x.n == 3 %}The track holds. Within the next 72 hours, hurricane-force winds now reach the Yasawa Group: <b>{{ x.a64 | fmt }} people</b> — just below the {{ threshold | fmt }} threshold. Readiness is already activated; action is not reached yet.
+  {% elif x.n == 4 %}Landfall is now about three days away: <b>{{ x.a64 | fmt }} people</b> are in the 64-kt zone within the 72-hour forecast.
+  {% else %}Alpha is a Category {{ x.maxcat }} cyclone, about a day and a half from landfall on Viti Levu. Both forecast triggers have already activated. RSMC Nadi forecasts keep coming, and OCHA keeps sending a forecast information email for each one.{% endif %}
+{% elif key == 'bravo' %}
+  {% if x.n == 1 %}Cyclone Bravo, north of Fiji, is forecast to strengthen to <b>Category {{ x.maxcat }}</b> and pass over Vanua Levu in about four days. <b>{{ x.r64 | fmt }} people</b> are in the 64-kt zone of the 120-hour forecast, all beyond 72 hours.
+  {% elif x.n == 2 %}The forecast shifts east: hurricane-force winds now pass about <b>{{ x.d64 }} km</b> from land, so nobody is in the 64-kt zone. Readiness stays activated.
+  {% elif x.n == 3 %}Bravo is now forecast to curve south-east, away from Fiji. The 64-kt winds stay <b>{{ x.d64 }} km</b> offshore.
+  {% elif x.n == 4 %}Further east again: the closest hurricane-force winds are <b>{{ x.d64 }} km</b> from land. The action threshold is not reached.
+  {% else %}Bravo passes east of the Lau Group, its centre {{ x.dctr }} km from land at the closest. Its hurricane-force winds stay {{ x.d64 }} km offshore.{% endif %}
+{% else %}
+  {% if x.n == 1 %}Cyclone Charlie, west of Fiji, is forecast to move slowly across Viti Levu — but only as a <b>Category {{ x.maxcat }}</b>. No hurricane-force winds are forecast, so nobody is in the 64-kt zone.
+  {% elif x.n == 2 %}Charlie is slowing down. Gale-force winds are forecast over most of Viti Levu ({{ x.r34 | fmt }} people in the 34-kt zone) for the next two to three days — but still no 64-kt winds.
+  {% elif x.n == 3 %}Charlie is almost stationary over western Viti Levu, with very heavy rain. The forecast triggers only look at 64-kt winds, so they do not activate.
+  {% else %}Still Category {{ x.maxcat }}, still no 64-kt winds forecast. For this storm, it is the rainfall that matters.{% endif %}
+{% endif %}
+{%- endmacro %}
+
+{% macro activation_callout(kind) -%}
+{% if kind == 'readiness' %}<div class="callout orange"><b>Readiness trigger activated.</b> An automated email goes to the trigger distribution list. CERF sends approval letters to agencies and readiness activities start.</div>
+{% elif kind == 'action' %}<div class="callout red"><b>Action trigger activated.</b> An automated email goes to the trigger distribution list. All anticipatory actions start, and IFRC transfers the pre-approved DREF funds to Fiji Red Cross.</div>
+{% else %}<div class="callout purple"><b>Observational trigger activated.</b> An automated email goes to the trigger distribution list. It is treated like the action trigger: all anticipatory actions start.</div>{% endif %}
+{%- endmacro %}
+
+{% block slides %}
+
+<!-- 1 · Title -->
+<section class="slide active" data-label="Title">
+  <div class="inner">
+    <div class="kicker">Anticipatory action · Tropical cyclones · Fiji</div>
+    <h1>Simulation exercise:<br>three cyclones that never happened</h1>
+    <p class="lead">We follow three fictional storms forecast by forecast, the way the
+      monitoring system would see them, and stop at each step to see which
+      triggers activate.</p>
+    <div class="callout grey" style="max-width:720px;margin:22px auto 0">
+      ⚠️ <b>Exercise only.</b> Cyclones Alpha, Bravo and Charlie are invented. Their
+      forecasts are written in RSMC Nadi's format and checked with the
+      <b>same code</b> that monitors real forecasts, so every number shown is what
+      the system would compute. Times are Fiji time, counted from Day 1.
+    </div>
+  </div>
+</section>
+
+<!-- 2 · The trigger -->
+<section class="slide" data-label="The trigger">
+  <div class="inner">
+    <div class="kicker">Reminder</div>
+    <h2>Three ways the framework can activate</h2>
+    <div class="flow">
+      <div class="cond or">
+        <span class="emoji">🌀</span>
+        <b>Readiness</b>
+        <p><strong>≥ {{ threshold | fmt }} people</strong> in the zone forecast to get
+          <strong>64-kt</strong> (hurricane-force) winds, anywhere in the
+          <strong>120-hour</strong> forecast</p>
+      </div>
+      <div class="cond rd">
+        <span class="emoji">🌀</span>
+        <b>Action</b>
+        <p>The same, but within the first <strong>72 hours</strong> of the
+          forecast</p>
+      </div>
+      <div class="cond pu">
+        <span class="emoji">🌧️</span>
+        <b>Observational</b>
+        <p><strong>≥ {{ rain_threshold }} mm</strong> of rain over two days,
+          averaged over the whole country (NASA IMERG), while the storm is within
+          250 km of Fiji</p>
+      </div>
+    </div>
+    <p class="note">
+      Every RSMC Nadi forecast is checked automatically as soon as it arrives;
+      rainfall is checked once a day. 64 knots (118 km/h) is the minimum for a
+      Category 3 cyclone. Because the 72-hour forecast is part of the 120-hour
+      forecast, action can only activate together with, or after, readiness.
+    </p>
+  </div>
+</section>
+
+<!-- 3 · How to read -->
+<section class="slide" data-label="How to read the slides">
+  <div class="inner split">
+    <div class="panel">
+      <div class="kicker">How to read the slides</div>
+      <h2 style="font-size:1.5rem">Each slide is one forecast</h2>
+      <ul style="padding-left:18px;line-height:1.5;font-size:0.95rem">
+        <li><b style="color:var(--red)">Red</b>: 64-kt winds in the next 72 hours — counts for <b>action</b> (and readiness).</li>
+        <li><b style="color:var(--orange)">Orange</b>: 64-kt winds 72 to 120 hours ahead — counts for <b>readiness</b> only.</li>
+        <li><b style="color:#5b8fbf">Light blue</b>: gale-force (34-kt) winds — shown for context, not part of the trigger.</li>
+        <li><b>Dots</b>: forecast position every 12 hours (black up to 72 h, grey after); the number is the category.</li>
+        <li><b style="color:#6a51a3">Purple</b>: where people live. The trigger counts the people under the red and orange zones.</li>
+        <li><b>Dashed line</b>: uncertainty cone — for information only, the trigger uses the forecast track.</li>
+      </ul>
+      <table class="trig" style="margin-top:12px">
+        <tr><th>Status in the table</th><th></th></tr>
+        <tr class="notmet"><td><span class="pill notmet">Not reached</span></td><td>below the threshold</td></tr>
+        <tr class="readiness new"><td><span class="pill">ACTIVATED</span></td><td>activates on this forecast</td></tr>
+        <tr class="readiness done"><td><span class="pill">✓ Activated · Day 1</span></td><td>activated earlier</td></tr>
+      </table>
+    </div>
+    <div class="fig"><img src="{{ sc.alpha.slides[3].img }}" alt="Example forecast map"></div>
+  </div>
+</section>
+
+<!-- 4 · Scenarios -->
+<section class="slide" data-label="The three scenarios">
+  <div class="inner">
+    <div class="kicker">The exercise</div>
+    <h2>Three scenarios</h2>
+    <div class="flow">
+      <div class="cond rd"><span class="emoji">1️⃣</span><b>Cyclone Alpha</b>
+        <p><strong>Readiness, then action.</strong> A Category 4 heads straight for
+          Viti Levu. Readiness activates four days out, action three days out.</p></div>
+      <div class="cond or"><span class="emoji">2️⃣</span><b>Cyclone Bravo</b>
+        <p><strong>Readiness, then nothing.</strong> Early forecasts take it over
+          Vanua Levu; it turns away. Readiness activates; action never does.</p></div>
+      <div class="cond pu"><span class="emoji">3️⃣</span><b>Cyclone Charlie</b>
+        <p><strong>Observational only.</strong> A weaker, slow storm that never
+          brings hurricane-force winds, but stalls and floods Viti Levu.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 5 · What activation means -->
+<section class="slide" data-label="What each activation means">
+  <div class="inner">
+    <div class="kicker">From the framework</div>
+    <h2>What happens when a trigger activates</h2>
+    <ul class="plain">
+      <li>📧 <b>Every activation</b>: an automated email from OCHA goes to the trigger
+        distribution list within minutes of the forecast (or rainfall data) arriving.
+        A separate information email with maps and numbers follows every forecast.</li>
+      <li>🟧 <b>Readiness</b>: CERF sends approval letters and releases funds to the
+        agencies. Agencies can spend the readiness share and start readiness activities.</li>
+      <li>🟥 <b>Action</b>: the rest of the CERF funds can be used and all anticipatory
+        actions start. IFRC transfers the pre-approved DREF funds to Fiji Red Cross.</li>
+      <li>🟪 <b>Observational</b>: treated like the action trigger — all anticipatory
+        actions start.</li>
+      <li>⏸️ For outlier storms that clearly will have minimal impact, the Resident
+        Coordinator, in consultation with the government, may pause an activation.</li>
+    </ul>
+  </div>
+</section>
+
+{% for key in ['alpha', 'bravo', 'charlie'] %}
+{% set S = sc[key] %}
+{% set name = NAMES[key] %}
+
+<!-- Scenario divider -->
+<section class="slide" data-section="1" data-label="Scenario {{ loop.index }}: Cyclone {{ name }}">
+  <div class="inner">
+    <div class="exercise">EXERCISE · FICTIONAL STORM</div>
+    <div class="kicker">Scenario {{ loop.index }} of 3</div>
+    <h1>Cyclone {{ name }}</h1>
+    <p class="lead">{{ TITLES[key] }}</p>
+  </div>
+</section>
+
+{% set ns = namespace(r='notmet', a='notmet', rat=None, aat=None) %}
+{% for x in S.slides %}
+{% if x.type == 'forecast' %}
+{% set ns.r = x.readiness %}{% set ns.a = x.action %}{% set ns.rat = x.readiness_at %}{% set ns.aat = x.action_at %}
+<section class="slide" data-label="{{ name }} · {{ x.when }}">
+  <div class="inner split">
+    <div class="panel">
+      <div class="exercise">EXERCISE · FICTIONAL STORM</div>
+      <div class="kicker">Cyclone {{ name }} · forecast {{ x.n }} of {{ x.of }}</div>
+      <div class="when">{{ x.when }}</div>
+      <div class="rule"></div>
+      <p class="lede">{{ story(key, x) }}</p>
+      {{ m.trig_table(x.r64, x.a64, x.readiness, x.action, x.readiness_at, x.action_at, 'na') }}
+      {% if x.readiness == 'new' %}{{ activation_callout('readiness') }}{% endif %}
+      {% if x.action == 'new' %}{{ activation_callout('action') }}{% endif %}
+    </div>
+    <div class="fig"><img src="{{ x.img }}" alt="Forecast map for Cyclone {{ name }}, {{ x.when }}"></div>
+  </div>
+</section>
+{% elif x.type == 'email' %}
+<section class="slide" data-label="{{ name }} · {{ x.kind }} email">
+  <div class="inner split">
+    <div class="panel">
+      <div class="exercise">EXERCISE · FICTIONAL STORM</div>
+      <div class="kicker">Cyclone {{ name }} · {{ x.when }}</div>
+      <h2>The {{ x.kind }} trigger email</h2>
+      <p class="lede">Minutes after the {{ 'rainfall data' if x.kind == 'observational' else 'forecast' }}
+        arrives, the monitoring system sends this email automatically to the
+        trigger distribution list (framework Annex 4).</p>
+      {{ activation_callout(x.kind) }}
+    </div>
+    <div class="fig email"><img src="{{ x.img }}" alt="Mock {{ x.kind }} trigger email for Cyclone {{ name }}"></div>
+  </div>
+</section>
+{% elif x.type == 'rain' %}
+<section class="slide" data-label="{{ name }} · rainfall {{ x.when }}">
+  <div class="inner split">
+    <div class="panel">
+      <div class="exercise">EXERCISE · FICTIONAL STORM</div>
+      <div class="kicker">Cyclone {{ name }} · rainfall check</div>
+      <div class="when">{{ x.when }}</div>
+      <div class="rule"></div>
+      <p class="lede">
+        {% if key == 'bravo' %}Satellite rainfall for {{ x.days }}, while Bravo was within 250 km of Fiji: <b>{{ x.mm }} mm</b> averaged over the whole country — far below {{ rain_threshold }} mm. Nothing more activates for this storm.
+        {% elif x.status == 'new' %}Satellite rainfall for {{ x.days }}, with Charlie's centre over Viti Levu: <b>{{ x.mm }} mm</b> averaged over the whole country (up to {{ x.peak }} mm locally). That is above {{ rain_threshold }} mm.
+        {% else %}First rainfall check, covering {{ x.days }}: <b>{{ x.mm }} mm</b> averaged over the whole country. Very heavy in places (up to {{ x.peak }} mm), but the country average is below {{ rain_threshold }} mm.{% endif %}
+      </p>
+      {{ m.trig_table(None, None, ns.r, ns.a, ns.rat, ns.aat, x.status, None, x.mm) }}
+      <p class="note">Storm centre within 250 km of Fiji during these days: ✓ (closest {{ x.centre_km }} km).</p>
+      {% if x.status == 'new' %}{{ activation_callout('observational') }}{% endif %}
+    </div>
+    <div class="fig"><img src="{{ x.img }}" alt="Two-day rainfall map, {{ x.days }}"></div>
+  </div>
+</section>
+{% endif %}
+{% endfor %}
+
+<!-- Scenario recap -->
+<section class="slide" data-label="{{ name }} · recap">
+  <div class="inner">
+    <div class="exercise">EXERCISE · FICTIONAL STORM</div>
+    <div class="kicker">Cyclone {{ name }} · recap</div>
+    <h2>{{ TITLES[key] }}</h2>
+    <table class="sum" style="max-width:900px;margin:0 auto">
+      <tr><th>When</th><th>What came in</th><th>Result</th></tr>
+      {% for x in S.slides if x.type in ['forecast', 'rain'] %}
+      <tr>
+        <td style="white-space:nowrap"><b>{{ x.when }}</b></td>
+        {% if x.type == 'forecast' %}
+        <td>Forecast {{ x.n }}: {{ x.r64 | fmt }} people in 64-kt zone (120 h), {{ x.a64 | fmt }} (72 h)</td>
+        <td>
+          {% if x.readiness == 'new' %}<span class="pill" style="background:var(--orange);color:#fff">READINESS ACTIVATED</span>{% endif %}
+          {% if x.action == 'new' %}<span class="pill" style="background:var(--red);color:#fff">ACTION ACTIVATED</span>{% endif %}
+          {% if x.readiness != 'new' and x.action != 'new' %}<span style="color:var(--muted)">no new activation</span>{% endif %}
+        </td>
+        {% else %}
+        <td>Rainfall, {{ x.days }}: {{ x.mm }} mm country average</td>
+        <td>{% if x.status == 'new' %}<span class="pill" style="background:var(--purple);color:#fff">OBSERVATIONAL ACTIVATED</span>{% else %}<span style="color:var(--muted)">below {{ rain_threshold }} mm</span>{% endif %}</td>
+        {% endif %}
+      </tr>
+      {% endfor %}
+    </table>
+    {% if key == 'alpha' %}
+    <div class="callout red" style="max-width:900px;margin:16px auto 0">Readiness gave about <b>four days</b> of warning before landfall, and action about <b>three days</b>.</div>
+    {% elif key == 'bravo' %}
+    <div class="callout orange" style="max-width:900px;margin:16px auto 0">Readiness activities went ahead — CERF disburses on a no-regrets basis. Action was never reached, so the action share of the CERF funds is not used and no DREF transfer is made.</div>
+    {% else %}
+    <div class="callout purple" style="max-width:900px;margin:16px auto 0">No forecast trigger activated: Charlie never had hurricane-force winds. The observational trigger is the safety net — it activates <b>after</b> the rain has fallen, so there is no lead time, and it is treated like the action trigger.</div>
+    {% endif %}
+  </div>
+</section>
+{% endfor %}
+
+<!-- Summary -->
+<section class="slide" data-label="Summary">
+  <div class="inner">
+    <div class="kicker">Summary</div>
+    <h2>The three scenarios side by side</h2>
+    <table class="sum" style="max-width:980px;margin:0 auto">
+      <tr><th>Storm</th><th class="c">Readiness</th><th class="c">Action</th><th class="c">Observational</th><th>Emails sent</th></tr>
+      {% for key in ['alpha', 'bravo', 'charlie'] %}
+      {% set act = sc[key].act %}
+      <tr>
+        <td><b>Cyclone {{ NAMES[key] }}</b><br><span style="color:var(--muted);font-size:0.85rem">{{ TITLES[key] }}</span></td>
+        <td class="c">{% if act.readiness %}<span class="pill" style="background:var(--orange);color:#fff">{{ act.readiness }}</span>{% else %}—{% endif %}</td>
+        <td class="c">{% if act.action %}<span class="pill" style="background:var(--red);color:#fff">{{ act.action }}</span>{% else %}—{% endif %}</td>
+        <td class="c">{% if act.observational %}<span class="pill" style="background:var(--purple);color:#fff">{{ act.observational }}</span>{% else %}—{% endif %}</td>
+        <td>{{ sc[key].slides | selectattr('type', 'equalto', 'email') | map(attribute='kind') | join(', ') }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    <p class="note" style="max-width:860px;margin:16px auto 0">
+      The forecast files used here are kept in the repository
+      (<code>slides/simex_injects/</code>) and can be fed to the live monitoring
+      system in test mode for a hands-on exercise.
+    </p>
+  </div>
+</section>
+
+{% endblock %}

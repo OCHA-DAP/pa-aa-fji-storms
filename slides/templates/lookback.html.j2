@@ -1,0 +1,131 @@
+{% extends "deck_base.html.j2" %}
+{% import "macros.html.j2" as m with context %}
+{% block title %}Fiji AA 2025–26 season look-back{% endblock %}
+{% block tag %}OCHA Centre for Humanitarian Data · Fiji AA · 2025–26 season{% endblock %}
+{% set U = d.urmil %}
+{% set VS = d.vaianu_summary %}
+
+{% block slides %}
+
+<!-- 1 · Title -->
+<section class="slide active" data-label="Title">
+  <div class="inner">
+    <div class="kicker">Anticipatory action · Tropical cyclones · Fiji</div>
+    <h1>The 2025–26 cyclone season:<br>how close did the trigger come?</h1>
+    <p class="lead">RSMC Nadi sent forecasts for two cyclones near Fiji:
+      <b>Urmil</b> in February and <b>Vaianu</b> in April. We step through
+      every forecast and check it against the trigger.</p>
+  </div>
+</section>
+
+<!-- 2 · The trigger -->
+<section class="slide" data-label="The trigger">
+  <div class="inner">
+    <div class="kicker">Reminder</div>
+    <h2>What would have activated the framework</h2>
+    <div class="flow">
+      <div class="cond or"><span class="emoji">🌀</span><b>Readiness</b>
+        <p><strong>≥ {{ threshold | fmt }} people</strong> in the zone forecast to get
+          <strong>64-kt</strong> (hurricane-force) winds, in the
+          <strong>120-hour</strong> forecast</p></div>
+      <div class="cond rd"><span class="emoji">🌀</span><b>Action</b>
+        <p>The same, within the first <strong>72 hours</strong></p></div>
+      <div class="cond pu"><span class="emoji">🌧️</span><b>Observational</b>
+        <p><strong>≥ {{ rain_threshold }} mm</strong> of rain over two days,
+          averaged over the whole country</p></div>
+    </div>
+    <p class="note">On each forecast slide: the number of people in the 64-kt zone, and how far
+      the 64-kt winds stayed from land. 64 knots (118 km/h) is the minimum for a Category 3 cyclone.</p>
+  </div>
+</section>
+
+<!-- 3 · Season at a glance -->
+<section class="slide" data-label="The season at a glance">
+  <div class="inner">
+    <div class="kicker">2025–26 season</div>
+    <h2>{{ U.n + VS.n }} forecasts, no activation</h2>
+    <table class="sum" style="max-width:900px;margin:0 auto">
+      <tr><th>Cyclone</th><th>Forecasts</th><th class="c">Strongest forecast</th><th class="c">Closest centre<br>to land</th><th class="c">Most people in<br>64-kt zone</th></tr>
+      <tr><td><b>Urmil</b></td><td>{{ U.n }} · {{ U.first }}–{{ U.last }} Feb</td><td class="c">Category {{ U.maxcat }}</td><td class="c">{{ U.dctr }} km</td><td class="c"><b>{{ U.r64 | fmt }}</b></td></tr>
+      <tr><td><b>Vaianu</b></td><td>{{ VS.n }} · 5–8 Apr</td><td class="c">Category {{ VS.maxcat }}</td><td class="c">{{ VS.dctr }} km</td><td class="c"><b>{{ VS.r64 | fmt }}</b></td></tr>
+    </table>
+    <p class="note">Threshold: {{ threshold | fmt }} people. Times are Fiji time, when the forecast was issued.</p>
+  </div>
+</section>
+
+<!-- 4 · Urmil -->
+<section class="slide" data-label="Urmil">
+  <div class="inner split">
+    <div class="panel">
+      <div class="kicker">Cyclone Urmil · {{ U.first }}–{{ U.last }} February</div>
+      <div class="when">Never close</div>
+      <div class="rule"></div>
+      <p class="lede">All {{ U.n }} forecasts kept Urmil far to the south-west and south of Fiji,
+        at most <b>Category {{ U.maxcat }}</b> — no hurricane-force winds were forecast at all.
+        Its centre stayed at least <b>{{ U.dctr }} km</b> from land.</p>
+      {{ m.trig_table(U.r64, U.r64, 'notmet', 'notmet', None, None, 'na') }}
+      <p class="note">Map: latest forecast in black, earlier forecasts in grey.</p>
+    </div>
+    <div class="fig"><img src="assets/urmil.png" alt="Forecast tracks for Cyclone Urmil"></div>
+  </div>
+</section>
+
+<!-- Vaianu, forecast by forecast -->
+{% for x in d.vaianu %}
+<section class="slide" data-label="Vaianu · {{ x.when }}">
+  <div class="inner split">
+    <div class="panel">
+      <div class="kicker">{{ x.name }} · forecast {{ x.n }} of {{ d.vaianu | length }}</div>
+      <div class="when">{{ x.when }}</div>
+      <div class="rule"></div>
+      <p class="lede">
+        {% if loop.first %}First forecast, before the system was named: forecast to reach Category {{ x.maxcat }} west of Fiji, with no hurricane-force winds.
+        {% elif x.d64 is none %}Forecast to reach Category {{ x.maxcat }}, with no hurricane-force winds.
+        {% else %}Forecast as a <b>Category {{ x.maxcat }}</b> passing west and south of Viti Levu. Its hurricane-force winds stay <b>{{ x.d64 }} km</b> from land.{% endif %}
+      </p>
+      {{ m.trig_table(x.r64, x.a64, 'notmet', 'notmet', None, None, 'na') }}
+      <div class="callout grey">
+        <b>How close?</b>
+        {% if x.d64 is none %}No 64-kt winds forecast.{% else %}64-kt winds <b>{{ x.d64 }} km</b> from land.{% endif %}
+        Storm centre {{ x.dctr }} km from land at its closest.
+      </div>
+    </div>
+    <div class="fig"><img src="{{ x.img }}" alt="Forecast map for Vaianu, {{ x.when }}"></div>
+  </div>
+</section>
+{% endfor %}
+
+<!-- Rainfall -->
+<section class="slide" data-label="Vaianu · rainfall">
+  <div class="inner">
+    <div class="kicker">Vaianu · observational trigger</div>
+    <h2>Heavy rain in western Viti Levu — but far below the threshold</h2>
+    <div class="flow" style="flex-wrap:nowrap">
+      {% for r in d.rain %}
+      <figure style="flex:1 1 0;min-width:0;margin:0">
+        <img src="{{ r.img }}" alt="Observed 2-day rainfall, {{ r.days }}" style="width:100%;border:1px solid var(--line);border-radius:10px;background:#fff">
+        <figcaption style="margin-top:6px"><b>{{ r.days }}: {{ r.mm }} mm</b> country average (threshold {{ rain_threshold }} mm)</figcaption>
+      </figure>
+      {% endfor %}
+    </div>
+    <p class="note">NASA IMERG satellite rainfall, as sent in the observational information emails on 7 and 8 April.</p>
+  </div>
+</section>
+
+<!-- Summary -->
+<section class="slide" data-label="Summary">
+  <div class="inner">
+    <div class="kicker">Summary</div>
+    <h2>Vaianu came closest — and it was not close</h2>
+    <img src="assets/vaianu_distance.png" alt="Distance of Vaianu's forecast 64-kt winds from land, by forecast" style="max-width:860px;width:100%;border:1px solid var(--line);border-radius:10px;background:#fff">
+    <ul class="plain" style="margin-top:12px">
+      <li>Every one of the {{ U.n + VS.n }} forecasts had <b>0 people</b> in the 64-kt zone (threshold {{ threshold | fmt }}). Vaianu's
+        hurricane-force winds stayed <b>{{ VS.d64 }} km or more</b> offshore.</li>
+      <li>Only the uncertainty cone's worst case reached populated areas, on 6–7 April. The trigger uses the
+        forecast track itself, so this alone does not activate.</li>
+      <li>Rainfall peaked at <b>72 mm</b> (2-day country average), against {{ rain_threshold }} mm.</li>
+    </ul>
+  </div>
+</section>
+
+{% endblock %}
