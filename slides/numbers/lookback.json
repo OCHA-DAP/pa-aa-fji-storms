@@ -1,0 +1,141 @@
+{
+ "urmil": {
+  "n": 4,
+  "first": "27",
+  "last": "28",
+  "maxcat": 2,
+  "dctr": 430,
+  "r64": 0,
+  "worst64": 0
+ },
+ "vaianu": [
+  {
+   "n": 1,
+   "name": "Tropical disturbance 11F",
+   "when": "Sun 5 Apr, 18:00",
+   "img": "assets/vaianu_1.png",
+   "r64": 0,
+   "a64": 0,
+   "worst64": 0,
+   "d64": null,
+   "dctr": 200,
+   "maxcat": 2
+  },
+  {
+   "n": 2,
+   "name": "Vaianu",
+   "when": "Mon 6 Apr, 00:00",
+   "img": "assets/vaianu_2.png",
+   "r64": 0,
+   "a64": 0,
+   "worst64": 621863,
+   "d64": 215,
+   "dctr": 260,
+   "maxcat": 3
+  },
+  {
+   "n": 3,
+   "name": "Vaianu",
+   "when": "Mon 6 Apr, 06:00",
+   "img": "assets/vaianu_3.png",
+   "r64": 0,
+   "a64": 0,
+   "worst64": 618847,
+   "d64": 155,
+   "dctr": 200,
+   "maxcat": 3
+  },
+  {
+   "n": 4,
+   "name": "Vaianu",
+   "when": "Mon 6 Apr, 12:00",
+   "img": "assets/vaianu_4.png",
+   "r64": 0,
+   "a64": 0,
+   "worst64": 655915,
+   "d64": 140,
+   "dctr": 195,
+   "maxcat": 3
+  },
+  {
+   "n": 5,
+   "name": "Vaianu",
+   "when": "Mon 6 Apr, 18:00",
+   "img": "assets/vaianu_5.png",
+   "r64": 0,
+   "a64": 0,
+   "worst64": 659703,
+   "d64": 155,
+   "dctr": 220,
+   "maxcat": 3
+  },
+  {
+   "n": 6,
+   "name": "Vaianu",
+   "when": "Tue 7 Apr, 00:00",
+   "img": "assets/vaianu_6.png",
+   "r64": 0,
+   "a64": 0,
+   "worst64": 96320,
+   "d64": 165,
+   "dctr": 230,
+   "maxcat": 3
+  },
+  {
+   "n": 7,
+   "name": "Vaianu",
+   "when": "Tue 7 Apr, 06:00",
+   "img": "assets/vaianu_7.png",
+   "r64": 0,
+   "a64": 0,
+   "worst64": 233090,
+   "d64": 130,
+   "dctr": 195,
+   "maxcat": 3
+  },
+  {
+   "n": 8,
+   "name": "Vaianu",
+   "when": "Tue 7 Apr, 12:00",
+   "img": "assets/vaianu_8.png",
+   "r64": 0,
+   "a64": 0,
+   "worst64": 0,
+   "d64": 190,
+   "dctr": 250,
+   "maxcat": 3
+  },
+  {
+   "n": 9,
+   "name": "Vaianu",
+   "when": "Wed 8 Apr, 06:00",
+   "img": "assets/vaianu_9.png",
+   "r64": 0,
+   "a64": 0,
+   "worst64": 0,
+   "d64": 220,
+   "dctr": 275,
+   "maxcat": 3
+  }
+ ],
+ "vaianu_summary": {
+  "n": 9,
+  "maxcat": 3,
+  "dctr": 195,
+  "d64": 130,
+  "r64": 0,
+  "worst64": 659703
+ },
+ "rain": [
+  {
+   "img": "assets/vaianu_obsv_20260407.png",
+   "days": "6\u20137 Apr",
+   "mm": 72
+  },
+  {
+   "img": "assets/vaianu_obsv_20260408.png",
+   "days": "7\u20138 Apr",
+   "mm": 42
+  }
+ ]
+}

@@ -1,0 +1,1334 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fiji AA simulation exercise</title>
+<style>
+  :root {
+    --blue: #1862d8;
+    --orange: #f57c00;
+    --orange-tint: #fde9d4;
+    --red: #c62828;
+    --red-tint: #f9dcdc;
+    --purple: #6a3d9a;
+    --purple-tint: #ece4f5;
+    --ink: #1e2a2b;
+    --muted: #5e6a6b;
+    --bg: #f4f7f9;
+    --card: #ffffff;
+    --line: #dde5e8;
+    --ok: #e7ecee;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+      "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink); background: var(--bg); overflow: hidden;
+  }
+  #deck { height: 100%; position: relative; }
+  .slide {
+    position: absolute; inset: 0; display: none;
+    flex-direction: column; justify-content: center; align-items: center;
+    padding: 4vh 3.5vw 10vh; text-align: center; overflow-y: auto;
+  }
+  .slide.active { display: flex; }
+  .slide .inner { max-width: 1180px; width: 100%; }
+  .slide .inner.split { max-width: 1440px; }
+  .kicker {
+    text-transform: uppercase; letter-spacing: 0.14em; font-size: 0.78rem;
+    font-weight: 700; color: var(--blue); margin-bottom: 10px;
+  }
+  h1 { font-size: clamp(1.7rem, 4.5vw, 2.8rem); line-height: 1.15; margin-bottom: 18px; }
+  h2 { font-size: clamp(1.3rem, 3vw, 1.9rem); line-height: 1.2; margin-bottom: 14px; }
+  p.lead { font-size: clamp(1rem, 2vw, 1.2rem); line-height: 1.5; max-width: 860px; margin: 0 auto; }
+  p.note { font-size: 0.9rem; color: var(--muted); margin-top: 14px; line-height: 1.45; }
+  p.lede { font-size: 1.08rem; line-height: 1.5; margin-bottom: 14px; }
+
+  /* exercise banner */
+  .exercise {
+    display: inline-block; background: #fff3cd; color: #7a5a00;
+    border: 1px solid #e8cf7a; border-radius: 999px; padding: 3px 12px;
+    font-size: 0.72rem; font-weight: 800; letter-spacing: 0.1em;
+    margin-bottom: 10px;
+  }
+
+  /* two-column forecast slides */
+  .split { display: flex; gap: 26px; align-items: center; text-align: left; }
+  .split .panel { flex: 0 0 37%; min-width: 0; }
+  .split .fig { flex: 1 1 63%; min-width: 0; text-align: center; }
+  .split .fig img {
+    max-width: 100%; max-height: 82vh; height: auto; border: 1px solid var(--line);
+    border-radius: 10px; background: #fff;
+  }
+  .when { font-size: clamp(1.5rem, 3.2vw, 2.1rem); font-weight: 800; line-height: 1.1; margin-bottom: 6px; }
+  .rule { height: 4px; background: var(--blue); border-radius: 2px; width: 70%; margin: 10px 0 14px; }
+
+  /* the trigger status table */
+  table.trig {
+    width: 100%; border-collapse: collapse; background: var(--card);
+    border: 1px solid var(--line); border-radius: 12px; overflow: hidden;
+    font-size: 0.96rem; box-shadow: 0 2px 10px rgba(20,40,60,0.06);
+  }
+  table.trig th {
+    background: #eef3f8; color: var(--muted); font-size: 0.7rem;
+    text-transform: uppercase; letter-spacing: 0.06em; padding: 8px 10px;
+    border-bottom: 2px solid var(--line); text-align: left;
+  }
+  table.trig td { padding: 10px; border-bottom: 1px solid var(--line); vertical-align: middle; line-height: 1.3; }
+  table.trig tr:last-child td { border-bottom: none; }
+  table.trig td.name { font-weight: 700; white-space: nowrap; }
+  table.trig td.name small { display: block; font-weight: 400; color: var(--muted); font-size: 0.78rem; }
+  table.trig td.val { white-space: nowrap; }
+  table.trig td.val small { display: block; color: var(--muted); font-size: 0.78rem; }
+  .pill {
+    display: inline-block; border-radius: 999px; padding: 3px 10px;
+    font-size: 0.74rem; font-weight: 800; letter-spacing: 0.04em; white-space: nowrap;
+  }
+  .pill.notmet { background: var(--ok); color: var(--muted); }
+  .pill.na { background: transparent; color: var(--muted); font-weight: 600; }
+  tr.readiness.new td { background: var(--orange-tint); }
+  tr.readiness.new .pill { background: var(--orange); color: #fff; }
+  tr.readiness.done .pill { background: #fff; color: var(--orange); border: 1.5px solid var(--orange); }
+  tr.action.new td { background: var(--red-tint); }
+  tr.action.new .pill { background: var(--red); color: #fff; }
+  tr.action.done .pill { background: #fff; color: var(--red); border: 1.5px solid var(--red); }
+  tr.observational.new td { background: var(--purple-tint); }
+  tr.observational.new .pill { background: var(--purple); color: #fff; }
+  tr.observational.done .pill { background: #fff; color: var(--purple); border: 1.5px solid var(--purple); }
+
+  /* gauge: this forecast vs threshold */
+  .gauge { position: relative; height: 8px; background: #e9eef0; border-radius: 4px; margin: 6px 0 5px; width: 130px; }
+  .gauge span { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: #8a959a; }
+  .gauge i { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--ink); left: 50%; }
+  tr.new .gauge span, tr.done .gauge span { background: var(--ink); }
+
+  .callout {
+    margin-top: 14px; background: #fbf4ea; border-left: 4px solid #c9962a;
+    border-radius: 0 10px 10px 0; padding: 10px 14px; text-align: left;
+    font-size: 0.95rem; line-height: 1.45;
+  }
+  .callout.red { background: #fbeceb; border-color: var(--red); }
+  .callout.orange { background: #fdf1e4; border-color: var(--orange); }
+  .callout.purple { background: #f3eef9; border-color: var(--purple); }
+  .callout.grey { background: #eef2f3; border-color: #9aa6ab; }
+
+  /* cards */
+  .flow { display: flex; gap: 12px; align-items: stretch; justify-content: center; flex-wrap: wrap; }
+  .cond {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 18px 16px; flex: 1 1 220px; max-width: 340px;
+    box-shadow: 0 2px 10px rgba(20,40,60,0.06); text-align: center;
+  }
+  .cond.or { border-top: 5px solid var(--orange); }
+  .cond.rd { border-top: 5px solid var(--red); }
+  .cond.pu { border-top: 5px solid var(--purple); }
+  .cond .emoji { font-size: 2rem; display: block; margin-bottom: 8px; }
+  .cond b { display: block; font-size: 1.05rem; margin-bottom: 6px; }
+  .cond p { font-size: 0.92rem; color: var(--muted); line-height: 1.45; }
+  .cond p strong { color: var(--ink); }
+  .joiner { display: flex; align-items: center; }
+  .joiner span { background: var(--blue); color: #fff; font-weight: 800; border-radius: 999px; padding: 6px 14px; font-size: 0.95rem; }
+
+  ul.plain { list-style: none; text-align: left; max-width: 820px; margin: 0 auto; }
+  ul.plain li {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 12px 16px; margin-bottom: 10px; font-size: 0.98rem; line-height: 1.5;
+    box-shadow: 0 2px 10px rgba(20,40,60,0.05);
+  }
+  table.sum {
+    width: 100%; border-collapse: collapse; background: var(--card);
+    border: 1px solid var(--line); font-size: 0.95rem; text-align: left;
+    box-shadow: 0 2px 10px rgba(20,40,60,0.06);
+  }
+  table.sum th { background: #eef3f8; color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; padding: 9px 12px; border-bottom: 2px solid var(--line); }
+  table.sum td { padding: 10px 12px; border-bottom: 1px solid var(--line); line-height: 1.35; }
+  table.sum td.c { text-align: center; }
+
+  .email img { max-width: 100%; max-height: 80vh; border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 4px 18px rgba(20,40,60,0.12); }
+
+  /* controls */
+  .controls {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    display: flex; align-items: center; justify-content: center; gap: 14px;
+    padding: 10px; background: linear-gradient(transparent, rgba(244,247,249,0.96) 40%);
+    z-index: 10;
+  }
+  .controls button, .controls a.btn {
+    border: 1px solid var(--line); background: var(--card); color: var(--ink);
+    border-radius: 999px; min-width: 40px; height: 40px; font-size: 1.1rem;
+    cursor: pointer; box-shadow: 0 2px 8px rgba(20,40,60,0.08);
+    display: inline-flex; align-items: center; justify-content: center; padding: 0 12px;
+    text-decoration: none; font-family: inherit;
+  }
+  .controls a.btn, .controls button.txt { font-size: 0.82rem; font-weight: 600; }
+  .controls button:hover, .controls a.btn:hover { border-color: var(--blue); color: var(--blue); }
+  .dots { display: flex; gap: 6px; flex-wrap: wrap; max-width: 50vw; justify-content: center; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: #c3ced3; cursor: pointer; }
+  .dot.sec { background: #8fa6c8; }
+  .dot.active { background: var(--blue); transform: scale(1.3); }
+  .pageno { font-size: 0.85rem; color: var(--muted); min-width: 3.6em; }
+  footer.tag { position: fixed; top: 10px; right: 16px; font-size: 0.75rem; color: var(--muted); z-index: 10; }
+  .home-link { position: fixed; top: 6px; left: 8px; z-index: 11; display:inline-block; padding:5px 11px;
+    font:500 12.5px/1 -apple-system,"Segoe UI",Roboto,sans-serif; color:#1862d8;
+    background:#e8f0fc; border:1px solid #cddcf5; border-radius:4px; text-decoration:none; }
+  .home-link:hover { background:#d6e4fa; }
+  :fullscreen .home-link, :fullscreen footer.tag { display: none; }
+
+  @media screen and (max-width: 860px) {
+    .split { flex-direction: column; }
+    .split .panel { flex: none; width: 100%; }
+    body { overflow: auto; }
+    .dots { display: none; }
+  }
+  @page { size: 380mm 214mm; margin: 0; }
+  @media print {
+    body { overflow: visible; background: #fff; }
+    #deck { height: auto; }
+    .slide {
+      position: relative; display: flex !important; width: 100vw; height: 100vh;
+      padding: 3.5vh 3vw; page-break-after: always; break-inside: avoid; overflow: hidden;
+    }
+    .slide:last-child { page-break-after: avoid; }
+    .controls, footer.tag, .home-link { display: none; }
+    .split .fig img, .email img { max-height: 84vh; }
+    .flow { flex-wrap: nowrap; }
+    .split { flex-direction: row; }
+    .split .panel { flex: 0 0 37%; }
+  }
+</style>
+</head>
+<body>
+<a class="home-link" href="../../">← Fiji AA · tropical cyclones</a>
+<footer class="tag">OCHA Centre for Humanitarian Data · Fiji AA simulation exercise</footer>
+<div id="deck">
+
+<!-- 1 · Title -->
+<section class="slide active" data-label="Title">
+  <div class="inner">
+    <div class="kicker">Anticipatory action · Tropical cyclones · Fiji</div>
+    <h1>Simulation exercise:<br>three cyclones that never happened</h1>
+    <p class="lead">We follow three fictional storms forecast by forecast, the way the
+      monitoring system would see them, and stop at each step to see which
+      triggers activate.</p>
+    <div class="callout grey" style="max-width:720px;margin:22px auto 0">
+      ⚠️ <b>Exercise only.</b> Cyclones Alpha, Bravo and Charlie are invented. Their
+      forecasts are written in RSMC Nadi's format and checked with the
+      <b>same code</b> that monitors real forecasts, so every wind-exposure number
+      shown is what the system would compute. Rainfall fields are invented for
+      the exercise, and the emails are mock-ups. Times are Fiji time, counted from Day 1.
+    </div>
+  </div>
+</section>
+
+<!-- 2 · The trigger -->
+<section class="slide" data-label="The trigger">
+  <div class="inner">
+    <div class="kicker">Reminder</div>
+    <h2>Three ways the framework can activate</h2>
+    <div class="flow">
+      <div class="cond or">
+        <span class="emoji">🌀</span>
+        <b>Readiness</b>
+        <p><strong>≥ 5,000 people</strong> in the zone forecast to get
+          <strong>64-kt</strong> (hurricane-force) winds, anywhere in the
+          <strong>120-hour</strong> forecast</p>
+      </div>
+      <div class="cond rd">
+        <span class="emoji">🌀</span>
+        <b>Action</b>
+        <p>The same, but within the first <strong>72 hours</strong> of the
+          forecast</p>
+      </div>
+      <div class="cond pu">
+        <span class="emoji">🌧️</span>
+        <b>Observational</b>
+        <p><strong>≥ 190 mm</strong> of rain over two days,
+          averaged over the whole country (NASA IMERG), while the storm is within
+          250 km of Fiji</p>
+      </div>
+    </div>
+    <p class="note">
+      Every RSMC Nadi forecast is checked automatically as soon as it arrives;
+      rainfall is checked once a day. 64 knots (118 km/h) is the minimum for a
+      Category 3 cyclone. Because the 72-hour forecast is part of the 120-hour
+      forecast, action can only activate together with, or after, readiness.
+    </p>
+  </div>
+</section>
+
+<!-- 3 · How to read -->
+<section class="slide" data-label="How to read the slides">
+  <div class="inner split">
+    <div class="panel">
+      <div class="kicker">How to read the slides</div>
+      <h2 style="font-size:1.5rem">Each slide is one forecast</h2>
+      <ul style="padding-left:18px;line-height:1.5;font-size:0.95rem">
+        <li><b style="color:var(--red)">Red</b>: 64-kt winds in the next 72 hours — counts for <b>action</b> (and readiness).</li>
+        <li><b style="color:var(--orange)">Orange</b>: 64-kt winds 72 to 120 hours ahead — counts for <b>readiness</b> only.</li>
+        <li><b style="color:#5b8fbf">Light blue</b>: gale-force (34-kt) winds — shown for context, not part of the trigger.</li>
+        <li><b>Dots</b>: forecast position every 12 hours (black up to 72 h, grey after); the number is the category.</li>
+        <li><b style="color:#6a51a3">Purple</b>: where people live. The trigger counts the people under the red and orange zones.</li>
+        <li><b>Dashed line</b>: uncertainty cone — for information only, the trigger uses the forecast track.</li>
+      </ul>
+      <table class="trig" style="margin-top:12px">
+        <tr><th>Status in the table</th><th></th></tr>
+        <tr class="notmet"><td><span class="pill notmet">Not reached</span></td><td>below the threshold</td></tr>
+        <tr class="readiness new"><td><span class="pill">ACTIVATED</span></td><td>activates on this forecast</td></tr>
+        <tr class="readiness done"><td><span class="pill">✓ Activated · Day 1</span></td><td>activated earlier</td></tr>
+      </table>
+    </div>
+    <div class="fig"><img src="assets/alpha_3.png" alt="Example forecast map"></div>
+  </div>
+</section>
+
+<!-- 4 · Scenarios -->
+<section class="slide" data-label="The three scenarios">
+  <div class="inner">
+    <div class="kicker">The exercise</div>
+    <h2>Three scenarios</h2>
+    <div class="flow">
+      <div class="cond rd"><span class="emoji">1️⃣</span><b>Cyclone Alpha</b>
+        <p><strong>Readiness, then action.</strong> A Category 4 heads straight for
+          Viti Levu. Readiness activates four days out, action three days out.</p></div>
+      <div class="cond or"><span class="emoji">2️⃣</span><b>Cyclone Bravo</b>
+        <p><strong>Readiness, then nothing.</strong> Early forecasts take it over
+          Vanua Levu; it turns away. Readiness activates; action never does.</p></div>
+      <div class="cond pu"><span class="emoji">3️⃣</span><b>Cyclone Charlie</b>
+        <p><strong>Observational only.</strong> A weaker, slow storm that never
+          brings hurricane-force winds, but stalls and floods Viti Levu.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 5 · What activation means -->
+<section class="slide" data-label="What each activation means">
+  <div class="inner">
+    <div class="kicker">Reminder</div>
+    <h2>What happens when a trigger activates</h2>
+    <ul class="plain">
+      <li>📧 <b>Every activation</b>: an automated email from OCHA goes to the trigger
+        distribution list as soon as the forecast is checked (or at the daily rainfall check).
+        A separate information email with maps and numbers follows every forecast.</li>
+      <li>🟧 <b>Readiness</b>: CERF sends approval letters and releases funds to the
+        agencies. Agencies can spend the readiness share and start readiness activities.</li>
+      <li>🟥 <b>Action</b>: the rest of the CERF funds can be used and all anticipatory
+        actions start. IFRC transfers the pre-approved DREF funds to Fiji Red Cross.</li>
+      <li>🟪 <b>Observational</b>: treated like the action trigger — all anticipatory
+        actions start. (The framework does not spell this out; this is how it is
+        applied in this exercise.)</li>
+      <li>⏸️ For outlier storms that clearly will have minimal impact, the Resident
+        Coordinator, in consultation with the government, may pause an activation.</li>
+    </ul>
+  </div>
+</section>
+
+
+<!-- Scenario divider -->
+<section class="slide" data-section="1" data-label="Scenario 1: Cyclone Alpha">
+  <div class="inner">
+    <div class="exercise">EXERCISE · FICTIONAL STORM</div>
+    <div class="kicker">Scenario 1 of 3</div>
+    <h1>Cyclone Alpha</h1>
+    <p class="lead">Readiness, then action</p>
+  </div>
+</section>
+
+<section class="slide" data-label="Alpha · Day 1, 00:00">
+  <div class="inner split">
+    <div class="panel">
+      <div class="exercise">EXERCISE · FICTIONAL STORM</div>
+      <div class="kicker">Cyclone Alpha · forecast 1 of 5</div>
+      <div class="when">Day 1, 00:00</div>
+      <div class="rule"></div>
+      <p class="lede">RSMC Nadi issues its first forecast for Cyclone Alpha, west of Vanuatu. It is forecast to reach only Category 2: no hurricane-force (64-kt) winds anywhere, so nobody is in the red or orange zone.
+</p>
+      <table class="trig">
+  <tr><th>Trigger</th><th>This forecast</th><th>Status</th></tr>
+  <tr class="readiness notmet">
+    <td class="name">Readiness<small>120-hour forecast</small></td>
+    <td class="val">
+<b>0</b> people in 64-kt zone
+      <div class="gauge"><span style="width:0.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
+    </td>
+    <td><span class="pill notmet">Not reached</span></td>
+  </tr>
+  <tr class="action notmet">
+    <td class="name">Action<small>72-hour forecast</small></td>
+    <td class="val">
+<b>0</b> people in 64-kt zone
+      <div class="gauge"><span style="width:0.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
+    </td>
+    <td><span class="pill notmet">Not reached</span></td>
+  </tr>
+  <tr class="observational na">
+    <td class="name">Observational<small>2-day rainfall</small></td>
+    <td class="val">
+<span style="color:var(--muted)">IMERG satellite, checked daily</span>    </td>
+    <td><span class="pill na">—</span>
+</td>
+  </tr>
+</table>
+    </div>
+    <div class="fig"><img src="assets/alpha_1.png" alt="Forecast map for Cyclone Alpha, Day 1, 00:00"></div>
+  </div>
+</section>
+<section class="slide" data-label="Alpha · Day 1, 12:00">
+  <div class="inner split">
+    <div class="panel">
+      <div class="exercise">EXERCISE · FICTIONAL STORM</div>
+      <div class="kicker">Cyclone Alpha · forecast 2 of 5</div>
+      <div class="when">Day 1, 12:00</div>
+      <div class="rule"></div>
+      <p class="lede">Alpha is now forecast to become a <b>Category 4</b> cyclone and cross Viti Levu in about four days. <b>649,967 people</b> are in the 64-kt zone of the 120-hour forecast — but none in the first 72 hours.
+</p>
+      <table class="trig">
+  <tr><th>Trigger</th><th>This forecast</th><th>Status</th></tr>
+  <tr class="readiness new">
+    <td class="name">Readiness<small>120-hour forecast</small></td>
+    <td class="val">
+<b>649,967</b> people in 64-kt zone
+      <div class="gauge"><span style="width:100.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
+    </td>
+    <td><span class="pill">ACTIVATED</span>
+</td>
+  </tr>
+  <tr class="action notmet">
+    <td class="name">Action<small>72-hour forecast</small></td>
+    <td class="val">
+<b>0</b> people in 64-kt zone
+      <div class="gauge"><span style="width:0.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
+    </td>
+    <td><span class="pill notmet">Not reached</span></td>
+  </tr>
+  <tr class="observational na">
+    <td class="name">Observational<small>2-day rainfall</small></td>
+    <td class="val">
+<span style="color:var(--muted)">IMERG satellite, checked daily</span>    </td>
+    <td><span class="pill na">—</span>
+</td>
+  </tr>
+</table>
+<div class="callout orange"><b>Readiness trigger activated.</b> An automated email goes to the trigger distribution list. CERF sends approval letters to agencies and readiness activities start.</div>
+    </div>
+    <div class="fig"><img src="assets/alpha_2.png" alt="Forecast map for Cyclone Alpha, Day 1, 12:00"></div>
+  </div>
+</section>
+<section class="slide" data-label="Alpha · readiness email">
+  <div class="inner split">
+    <div class="panel">
+      <div class="exercise">EXERCISE · FICTIONAL STORM</div>
+      <div class="kicker">Cyclone Alpha · Day 1, 12:00</div>
+      <h2>The readiness trigger email</h2>
+      <p class="lede">As soon as the forecast is checked,
+        the monitoring system sends an email like this automatically to the
+        trigger distribution list (framework Annex 4).</p>
+      <p class="note">Mock-up for the exercise, based on the live email template.</p>
+      <div class="callout orange"><b>Readiness trigger activated.</b> An automated email goes to the trigger distribution list. CERF sends approval letters to agencies and readiness activities start.</div>
+
+    </div>
+    <div class="fig email"><img src="assets/alpha_email_readiness.png" alt="Mock readiness trigger email for Cyclone Alpha"></div>
+  </div>
+</section>
+<section class="slide" data-label="Alpha · Day 2, 00:00">
+  <div class="inner split">
+    <div class="panel">
+      <div class="exercise">EXERCISE · FICTIONAL STORM</div>
+      <div class="kicker">Cyclone Alpha · forecast 3 of 5</div>
+      <div class="when">Day 2, 00:00</div>
+      <div class="rule"></div>
+      <p class="lede">The track holds. Within the next 72 hours, hurricane-force winds now reach the Yasawa Group: <b>3,901 people</b> — just below the 5,000 threshold. Readiness is already activated; action is not reached yet.
+</p>
+      <table class="trig">
+  <tr><th>Trigger</th><th>This forecast</th><th>Status</th></tr>
+  <tr class="readiness done">
+    <td class="name">Readiness<small>120-hour forecast</small></td>
+    <td class="val">
+<b>637,137</b> people in 64-kt zone
+      <div class="gauge"><span style="width:100.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
+    </td>
+    <td><span class="pill">✓ Activated · Day 1, 12:00</span>
+</td>
+  </tr>
+  <tr class="action notmet">
+    <td class="name">Action<small>72-hour forecast</small></td>
+    <td class="val">
+<b>3,901</b> people in 64-kt zone
+      <div class="gauge"><span style="width:39.01%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
+    </td>
+    <td><span class="pill notmet">Not reached</span></td>
+  </tr>
+  <tr class="observational na">
+    <td class="name">Observational<small>2-day rainfall</small></td>
+    <td class="val">
+<span style="color:var(--muted)">IMERG satellite, checked daily</span>    </td>
+    <td><span class="pill na">—</span>
+</td>
+  </tr>
+</table>
+    </div>
+    <div class="fig"><img src="assets/alpha_3.png" alt="Forecast map for Cyclone Alpha, Day 2, 00:00"></div>
+  </div>
+</section>
+<section class="slide" data-label="Alpha · Day 2, 12:00">
+  <div class="inner split">
+    <div class="panel">
+      <div class="exercise">EXERCISE · FICTIONAL STORM</div>
+      <div class="kicker">Cyclone Alpha · forecast 4 of 5</div>
+      <div class="when">Day 2, 12:00</div>
+      <div class="rule"></div>
+      <p class="lede">Landfall is now about three days away: <b>658,281 people</b> are in the 64-kt zone within the 72-hour forecast.
+</p>
+      <table class="trig">
+  <tr><th>Trigger</th><th>This forecast</th><th>Status</th></tr>
+  <tr class="readiness done">
+    <td class="name">Readiness<small>120-hour forecast</small></td>
+    <td class="val">
+<b>678,500</b> people in 64-kt zone
+      <div class="gauge"><span style="width:100.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
+    </td>
+    <td><span class="pill">✓ Activated · Day 1, 12:00</span>
+</td>
+  </tr>
+  <tr class="action new">
+    <td class="name">Action<small>72-hour forecast</small></td>
+    <td class="val">
+<b>658,281</b> people in 64-kt zone
+      <div class="gauge"><span style="width:100.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
+    </td>
+    <td><span class="pill">ACTIVATED</span>
+</td>
+  </tr>
+  <tr class="observational na">
+    <td class="name">Observational<small>2-day rainfall</small></td>
+    <td class="val">
+<span style="color:var(--muted)">IMERG satellite, checked daily</span>    </td>
+    <td><span class="pill na">—</span>
+</td>
+  </tr>
+</table>
+<div class="callout red"><b>Action trigger activated.</b> An automated email goes to the trigger distribution list. All anticipatory actions start, and IFRC transfers the pre-approved DREF funds to Fiji Red Cross.</div>
+    </div>
+    <div class="fig"><img src="assets/alpha_4.png" alt="Forecast map for Cyclone Alpha, Day 2, 12:00"></div>
+  </div>
+</section>
+<section class="slide" data-label="Alpha · action email">
+  <div class="inner split">
+    <div class="panel">
+      <div class="exercise">EXERCISE · FICTIONAL STORM</div>
+      <div class="kicker">Cyclone Alpha · Day 2, 12:00</div>
+      <h2>The action trigger email</h2>
+      <p class="lede">As soon as the forecast is checked,
+        the monitoring system sends an email like this automatically to the
+        trigger distribution list (framework Annex 4).</p>
+      <p class="note">Mock-up for the exercise, based on the live email template.</p>
+      <div class="callout red"><b>Action trigger activated.</b> An automated email goes to the trigger distribution list. All anticipatory actions start, and IFRC transfers the pre-approved DREF funds to Fiji Red Cross.</div>
+
+    </div>
+    <div class="fig email"><img src="assets/alpha_email_action.png" alt="Mock action trigger email for Cyclone Alpha"></div>
+  </div>
+</section>
+<section class="slide" data-label="Alpha · Day 4, 00:00">
+  <div class="inner split">
+    <div class="panel">
+      <div class="exercise">EXERCISE · FICTIONAL STORM</div>
+      <div class="kicker">Cyclone Alpha · forecast 5 of 5</div>
+      <div class="when">Day 4, 00:00</div>
+      <div class="rule"></div>
+      <p class="lede">Alpha is a Category 4 cyclone, about a day and a half from landfall on Viti Levu. Both forecast triggers have already activated. RSMC Nadi forecasts keep coming, and OCHA keeps sending a forecast information email for each one.</p>
+      <table class="trig">
+  <tr><th>Trigger</th><th>This forecast</th><th>Status</th></tr>
+  <tr class="readiness done">
+    <td class="name">Readiness<small>120-hour forecast</small></td>
+    <td class="val">
+<b>678,270</b> people in 64-kt zone
+      <div class="gauge"><span style="width:100.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
+    </td>
+    <td><span class="pill">✓ Activated · Day 1, 12:00</span>
+</td>
+  </tr>
+  <tr class="action done">
+    <td class="name">Action<small>72-hour forecast</small></td>
+    <td class="val">
+<b>678,270</b> people in 64-kt zone
+      <div class="gauge"><span style="width:100.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
+    </td>
+    <td><span class="pill">✓ Activated · Day 2, 12:00</span>
+</td>
+  </tr>
+  <tr class="observational na">
+    <td class="name">Observational<small>2-day rainfall</small></td>
+    <td class="val">
+<span style="color:var(--muted)">IMERG satellite, checked daily</span>    </td>
+    <td><span class="pill na">—</span>
+</td>
+  </tr>
+</table>
+    </div>
+    <div class="fig"><img src="assets/alpha_5.png" alt="Forecast map for Cyclone Alpha, Day 4, 00:00"></div>
+  </div>
+</section>
+
+<!-- Scenario recap -->
+<section class="slide" data-label="Alpha · recap">
+  <div class="inner">
+    <div class="exercise">EXERCISE · FICTIONAL STORM</div>
+    <div class="kicker">Cyclone Alpha · recap</div>
+    <h2>Readiness, then action</h2>
+    <table class="sum" style="max-width:900px;margin:0 auto">
+      <tr><th>When</th><th>What came in</th><th>Result</th></tr>
+      <tr>
+        <td style="white-space:nowrap"><b>Day 1, 00:00</b></td>
+        <td>Forecast 1: 0 people in 64-kt zone (120 h), 0 (72 h)</td>
+        <td>
+<span style="color:var(--muted)">no new activation</span>        </td>
+      </tr>
+      <tr>
+        <td style="white-space:nowrap"><b>Day 1, 12:00</b></td>
+        <td>Forecast 2: 649,967 people in 64-kt zone (120 h), 0 (72 h)</td>
+        <td>
+<span class="pill" style="background:var(--orange);color:#fff">READINESS ACTIVATED</span>        </td>
+      </tr>
+      <tr>
+        <td style="white-space:nowrap"><b>Day 2, 00:00</b></td>
+        <td>Forecast 3: 637,137 people in 64-kt zone (120 h), 3,901 (72 h)</td>
+        <td>
+<span style="color:var(--muted)">no new activation</span>        </td>
+      </tr>
+      <tr>
+        <td style="white-space:nowrap"><b>Day 2, 12:00</b></td>
+        <td>Forecast 4: 678,500 people in 64-kt zone (120 h), 658,281 (72 h)</td>
+        <td>
+<span class="pill" style="background:var(--red);color:#fff">ACTION ACTIVATED</span>        </td>
+      </tr>
+      <tr>
+        <td style="white-space:nowrap"><b>Day 4, 00:00</b></td>
+        <td>Forecast 5: 678,270 people in 64-kt zone (120 h), 678,270 (72 h)</td>
+        <td>
+<span style="color:var(--muted)">no new activation</span>        </td>
+      </tr>
+    </table>
+    <div class="callout red" style="max-width:900px;margin:16px auto 0">Readiness gave about <b>four days</b> of warning before landfall, and action about <b>three days</b>.</div>
+  </div>
+</section>
+
+<!-- Scenario divider -->
+<section class="slide" data-section="1" data-label="Scenario 2: Cyclone Bravo">
+  <div class="inner">
+    <div class="exercise">EXERCISE · FICTIONAL STORM</div>
+    <div class="kicker">Scenario 2 of 3</div>
+    <h1>Cyclone Bravo</h1>
+    <p class="lead">Readiness, then nothing</p>
+  </div>
+</section>
+
+<section class="slide" data-label="Bravo · Day 1, 00:00">
+  <div class="inner split">
+    <div class="panel">
+      <div class="exercise">EXERCISE · FICTIONAL STORM</div>
+      <div class="kicker">Cyclone Bravo · forecast 1 of 5</div>
+      <div class="when">Day 1, 00:00</div>
+      <div class="rule"></div>
+      <p class="lede">Cyclone Bravo, north of Fiji, is forecast to strengthen to <b>Category 4</b> and pass over Vanua Levu in about four days. <b>32,817 people</b> are in the 64-kt zone of the 120-hour forecast, all beyond 72 hours.
+</p>
+      <table class="trig">
+  <tr><th>Trigger</th><th>This forecast</th><th>Status</th></tr>
+  <tr class="readiness new">
+    <td class="name">Readiness<small>120-hour forecast</small></td>
+    <td class="val">
+<b>32,817</b> people in 64-kt zone
+      <div class="gauge"><span style="width:100.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
+    </td>
+    <td><span class="pill">ACTIVATED</span>
+</td>
+  </tr>
+  <tr class="action notmet">
+    <td class="name">Action<small>72-hour forecast</small></td>
+    <td class="val">
+<b>0</b> people in 64-kt zone
+      <div class="gauge"><span style="width:0.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
+    </td>
+    <td><span class="pill notmet">Not reached</span></td>
+  </tr>
+  <tr class="observational na">
+    <td class="name">Observational<small>2-day rainfall</small></td>
+    <td class="val">
+<span style="color:var(--muted)">IMERG satellite, checked daily</span>    </td>
+    <td><span class="pill na">—</span>
+</td>
+  </tr>
+</table>
+<div class="callout orange"><b>Readiness trigger activated.</b> An automated email goes to the trigger distribution list. CERF sends approval letters to agencies and readiness activities start.</div>
+    </div>
+    <div class="fig"><img src="assets/bravo_1.png" alt="Forecast map for Cyclone Bravo, Day 1, 00:00"></div>
+  </div>
+</section>
+<section class="slide" data-label="Bravo · readiness email">
+  <div class="inner split">
+    <div class="panel">
+      <div class="exercise">EXERCISE · FICTIONAL STORM</div>
+      <div class="kicker">Cyclone Bravo · Day 1, 00:00</div>
+      <h2>The readiness trigger email</h2>
+      <p class="lede">As soon as the forecast is checked,
+        the monitoring system sends an email like this automatically to the
+        trigger distribution list (framework Annex 4).</p>
+      <p class="note">Mock-up for the exercise, based on the live email template.</p>
+      <div class="callout orange"><b>Readiness trigger activated.</b> An automated email goes to the trigger distribution list. CERF sends approval letters to agencies and readiness activities start.</div>
+
+    </div>
+    <div class="fig email"><img src="assets/bravo_email_readiness.png" alt="Mock readiness trigger email for Cyclone Bravo"></div>
+  </div>
+</section>
+<section class="slide" data-label="Bravo · Day 1, 12:00">
+  <div class="inner split">
+    <div class="panel">
+      <div class="exercise">EXERCISE · FICTIONAL STORM</div>
+      <div class="kicker">Cyclone Bravo · forecast 2 of 5</div>
+      <div class="when">Day 1, 12:00</div>
+      <div class="rule"></div>
+      <p class="lede">The forecast shifts east: hurricane-force winds now pass about <b>20 km</b> from land, so nobody is in the 64-kt zone. Readiness stays activated.
+</p>
+      <table class="trig">
+  <tr><th>Trigger</th><th>This forecast</th><th>Status</th></tr>
+  <tr class="readiness done">
+    <td class="name">Readiness<small>120-hour forecast</small></td>
+    <td class="val">
+<b>0</b> people in 64-kt zone
+      <div class="gauge"><span style="width:0.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
+    </td>
+    <td><span class="pill">✓ Activated · Day 1, 00:00</span>
+</td>
+  </tr>
+  <tr class="action notmet">
+    <td class="name">Action<small>72-hour forecast</small></td>
+    <td class="val">
+<b>0</b> people in 64-kt zone
+      <div class="gauge"><span style="width:0.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
+    </td>
+    <td><span class="pill notmet">Not reached</span></td>
+  </tr>
+  <tr class="observational na">
+    <td class="name">Observational<small>2-day rainfall</small></td>
+    <td class="val">
+<span style="color:var(--muted)">IMERG satellite, checked daily</span>    </td>
+    <td><span class="pill na">—</span>
+</td>
+  </tr>
+</table>
+    </div>
+    <div class="fig"><img src="assets/bravo_2.png" alt="Forecast map for Cyclone Bravo, Day 1, 12:00"></div>
+  </div>
+</section>
+<section class="slide" data-label="Bravo · Day 2, 00:00">
+  <div class="inner split">
+    <div class="panel">
+      <div class="exercise">EXERCISE · FICTIONAL STORM</div>
+      <div class="kicker">Cyclone Bravo · forecast 3 of 5</div>
+      <div class="when">Day 2, 00:00</div>
+      <div class="rule"></div>
+      <p class="lede">Bravo is now forecast to curve south-east, away from Fiji. The 64-kt winds stay <b>65 km</b> offshore.
+</p>
+      <table class="trig">
+  <tr><th>Trigger</th><th>This forecast</th><th>Status</th></tr>
+  <tr class="readiness done">
+    <td class="name">Readiness<small>120-hour forecast</small></td>
+    <td class="val">
+<b>0</b> people in 64-kt zone
+      <div class="gauge"><span style="width:0.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
+    </td>
+    <td><span class="pill">✓ Activated · Day 1, 00:00</span>
+</td>
+  </tr>
+  <tr class="action notmet">
+    <td class="name">Action<small>72-hour forecast</small></td>
+    <td class="val">
+<b>0</b> people in 64-kt zone
+      <div class="gauge"><span style="width:0.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
+    </td>
+    <td><span class="pill notmet">Not reached</span></td>
+  </tr>
+  <tr class="observational na">
+    <td class="name">Observational<small>2-day rainfall</small></td>
+    <td class="val">
+<span style="color:var(--muted)">IMERG satellite, checked daily</span>    </td>
+    <td><span class="pill na">—</span>
+</td>
+  </tr>
+</table>
+    </div>
+    <div class="fig"><img src="assets/bravo_3.png" alt="Forecast map for Cyclone Bravo, Day 2, 00:00"></div>
+  </div>
+</section>
+<section class="slide" data-label="Bravo · Day 2, 12:00">
+  <div class="inner split">
+    <div class="panel">
+      <div class="exercise">EXERCISE · FICTIONAL STORM</div>
+      <div class="kicker">Cyclone Bravo · forecast 4 of 5</div>
+      <div class="when">Day 2, 12:00</div>
+      <div class="rule"></div>
+      <p class="lede">Further east again: the closest hurricane-force winds are <b>85 km</b> from land. The action threshold is not reached.
+</p>
+      <table class="trig">
+  <tr><th>Trigger</th><th>This forecast</th><th>Status</th></tr>
+  <tr class="readiness done">
+    <td class="name">Readiness<small>120-hour forecast</small></td>
+    <td class="val">
+<b>0</b> people in 64-kt zone
+      <div class="gauge"><span style="width:0.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
+    </td>
+    <td><span class="pill">✓ Activated · Day 1, 00:00</span>
+</td>
+  </tr>
+  <tr class="action notmet">
+    <td class="name">Action<small>72-hour forecast</small></td>
+    <td class="val">
+<b>0</b> people in 64-kt zone
+      <div class="gauge"><span style="width:0.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
+    </td>
+    <td><span class="pill notmet">Not reached</span></td>
+  </tr>
+  <tr class="observational na">
+    <td class="name">Observational<small>2-day rainfall</small></td>
+    <td class="val">
+<span style="color:var(--muted)">IMERG satellite, checked daily</span>    </td>
+    <td><span class="pill na">—</span>
+</td>
+  </tr>
+</table>
+    </div>
+    <div class="fig"><img src="assets/bravo_4.png" alt="Forecast map for Cyclone Bravo, Day 2, 12:00"></div>
+  </div>
+</section>
+<section class="slide" data-label="Bravo · Day 3, 12:00">
+  <div class="inner split">
+    <div class="panel">
+      <div class="exercise">EXERCISE · FICTIONAL STORM</div>
+      <div class="kicker">Cyclone Bravo · forecast 5 of 5</div>
+      <div class="when">Day 3, 12:00</div>
+      <div class="rule"></div>
+      <p class="lede">Bravo passes east of the Lau Group, its centre 140 km from land at the closest. Its hurricane-force winds stay 90 km offshore.</p>
+      <table class="trig">
+  <tr><th>Trigger</th><th>This forecast</th><th>Status</th></tr>
+  <tr class="readiness done">
+    <td class="name">Readiness<small>120-hour forecast</small></td>
+    <td class="val">
+<b>0</b> people in 64-kt zone
+      <div class="gauge"><span style="width:0.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
+    </td>
+    <td><span class="pill">✓ Activated · Day 1, 00:00</span>
+</td>
+  </tr>
+  <tr class="action notmet">
+    <td class="name">Action<small>72-hour forecast</small></td>
+    <td class="val">
+<b>0</b> people in 64-kt zone
+      <div class="gauge"><span style="width:0.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
+    </td>
+    <td><span class="pill notmet">Not reached</span></td>
+  </tr>
+  <tr class="observational na">
+    <td class="name">Observational<small>2-day rainfall</small></td>
+    <td class="val">
+<span style="color:var(--muted)">IMERG satellite, checked daily</span>    </td>
+    <td><span class="pill na">—</span>
+</td>
+  </tr>
+</table>
+    </div>
+    <div class="fig"><img src="assets/bravo_5.png" alt="Forecast map for Cyclone Bravo, Day 3, 12:00"></div>
+  </div>
+</section>
+<section class="slide" data-label="Bravo · rainfall Day 5, 12:00">
+  <div class="inner split">
+    <div class="panel">
+      <div class="exercise">EXERCISE · FICTIONAL STORM</div>
+      <div class="kicker">Cyclone Bravo · rainfall check</div>
+      <div class="when">Day 5, 12:00</div>
+      <div class="rule"></div>
+      <p class="lede">
+Satellite rainfall for Days 3 and 4, while Bravo was within 250 km of Fiji: <b>5 mm</b> averaged over the whole country — far below 190 mm. Nothing more activates for this storm.
+      </p>
+      <table class="trig">
+  <tr><th>Trigger</th><th>This rainfall check</th><th>Status</th></tr>
+  <tr class="readiness done">
+    <td class="name">Readiness<small>120-hour forecast</small></td>
+    <td class="val">
+<span style="color:var(--muted)">—</span>    </td>
+    <td><span class="pill">✓ Activated · Day 1, 00:00</span>
+</td>
+  </tr>
+  <tr class="action notmet">
+    <td class="name">Action<small>72-hour forecast</small></td>
+    <td class="val">
+<span style="color:var(--muted)">—</span>    </td>
+    <td><span class="pill notmet">Not reached</span></td>
+  </tr>
+  <tr class="observational notmet">
+    <td class="name">Observational<small>2-day rainfall</small></td>
+    <td class="val">
+<b>5 mm</b> country average
+      <div class="gauge"><span style="width:1.3157894736842104%"></span><i title="threshold"></i></div><small>threshold 190 mm</small>
+    </td>
+    <td><span class="pill notmet">Not reached</span></td>
+  </tr>
+</table>
+      <p class="note">Storm centre within 250 km of Fiji during these days (±1 day): ✓ (closest 115 km). Rainfall here is invented for the exercise.</p>
+    </div>
+    <div class="fig"><img src="assets/bravo_rain.png" alt="Two-day rainfall map, Days 3 and 4"></div>
+  </div>
+</section>
+
+<!-- Scenario recap -->
+<section class="slide" data-label="Bravo · recap">
+  <div class="inner">
+    <div class="exercise">EXERCISE · FICTIONAL STORM</div>
+    <div class="kicker">Cyclone Bravo · recap</div>
+    <h2>Readiness, then nothing</h2>
+    <table class="sum" style="max-width:900px;margin:0 auto">
+      <tr><th>When</th><th>What came in</th><th>Result</th></tr>
+      <tr>
+        <td style="white-space:nowrap"><b>Day 1, 00:00</b></td>
+        <td>Forecast 1: 32,817 people in 64-kt zone (120 h), 0 (72 h)</td>
+        <td>
+<span class="pill" style="background:var(--orange);color:#fff">READINESS ACTIVATED</span>        </td>
+      </tr>
+      <tr>
+        <td style="white-space:nowrap"><b>Day 1, 12:00</b></td>
+        <td>Forecast 2: 0 people in 64-kt zone (120 h), 0 (72 h)</td>
+        <td>
+<span style="color:var(--muted)">no new activation</span>        </td>
+      </tr>
+      <tr>
+        <td style="white-space:nowrap"><b>Day 2, 00:00</b></td>
+        <td>Forecast 3: 0 people in 64-kt zone (120 h), 0 (72 h)</td>
+        <td>
+<span style="color:var(--muted)">no new activation</span>        </td>
+      </tr>
+      <tr>
+        <td style="white-space:nowrap"><b>Day 2, 12:00</b></td>
+        <td>Forecast 4: 0 people in 64-kt zone (120 h), 0 (72 h)</td>
+        <td>
+<span style="color:var(--muted)">no new activation</span>        </td>
+      </tr>
+      <tr>
+        <td style="white-space:nowrap"><b>Day 3, 12:00</b></td>
+        <td>Forecast 5: 0 people in 64-kt zone (120 h), 0 (72 h)</td>
+        <td>
+<span style="color:var(--muted)">no new activation</span>        </td>
+      </tr>
+      <tr>
+        <td style="white-space:nowrap"><b>Day 5, 12:00</b></td>
+        <td>Rainfall, Days 3 and 4: 5 mm country average</td>
+        <td><span style="color:var(--muted)">below 190 mm</span></td>
+      </tr>
+    </table>
+    <div class="callout orange" style="max-width:900px;margin:16px auto 0">Readiness activities went ahead — CERF disburses on a no-regrets basis. Action was never reached, so the action share of the CERF funds is not used and no DREF transfer is made.</div>
+  </div>
+</section>
+
+<!-- Scenario divider -->
+<section class="slide" data-section="1" data-label="Scenario 3: Cyclone Charlie">
+  <div class="inner">
+    <div class="exercise">EXERCISE · FICTIONAL STORM</div>
+    <div class="kicker">Scenario 3 of 3</div>
+    <h1>Cyclone Charlie</h1>
+    <p class="lead">Observational trigger only</p>
+  </div>
+</section>
+
+<section class="slide" data-label="Charlie · Day 1, 00:00">
+  <div class="inner split">
+    <div class="panel">
+      <div class="exercise">EXERCISE · FICTIONAL STORM</div>
+      <div class="kicker">Cyclone Charlie · forecast 1 of 4</div>
+      <div class="when">Day 1, 00:00</div>
+      <div class="rule"></div>
+      <p class="lede">Cyclone Charlie, west of Fiji, is forecast to move slowly across Viti Levu — but only as a <b>Category 2</b>. No hurricane-force winds are forecast, so nobody is in the 64-kt zone.
+</p>
+      <table class="trig">
+  <tr><th>Trigger</th><th>This forecast</th><th>Status</th></tr>
+  <tr class="readiness notmet">
+    <td class="name">Readiness<small>120-hour forecast</small></td>
+    <td class="val">
+<b>0</b> people in 64-kt zone
+      <div class="gauge"><span style="width:0.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
+    </td>
+    <td><span class="pill notmet">Not reached</span></td>
+  </tr>
+  <tr class="action notmet">
+    <td class="name">Action<small>72-hour forecast</small></td>
+    <td class="val">
+<b>0</b> people in 64-kt zone
+      <div class="gauge"><span style="width:0.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
+    </td>
+    <td><span class="pill notmet">Not reached</span></td>
+  </tr>
+  <tr class="observational na">
+    <td class="name">Observational<small>2-day rainfall</small></td>
+    <td class="val">
+<span style="color:var(--muted)">IMERG satellite, checked daily</span>    </td>
+    <td><span class="pill na">—</span>
+</td>
+  </tr>
+</table>
+    </div>
+    <div class="fig"><img src="assets/charlie_1.png" alt="Forecast map for Cyclone Charlie, Day 1, 00:00"></div>
+  </div>
+</section>
+<section class="slide" data-label="Charlie · Day 2, 00:00">
+  <div class="inner split">
+    <div class="panel">
+      <div class="exercise">EXERCISE · FICTIONAL STORM</div>
+      <div class="kicker">Cyclone Charlie · forecast 2 of 4</div>
+      <div class="when">Day 2, 00:00</div>
+      <div class="rule"></div>
+      <p class="lede">Charlie is slowing down. Gale-force winds are forecast over most of Viti Levu (719,509 people in the 34-kt zone) for the next two to three days — but still no 64-kt winds.
+</p>
+      <table class="trig">
+  <tr><th>Trigger</th><th>This forecast</th><th>Status</th></tr>
+  <tr class="readiness notmet">
+    <td class="name">Readiness<small>120-hour forecast</small></td>
+    <td class="val">
+<b>0</b> people in 64-kt zone
+      <div class="gauge"><span style="width:0.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
+    </td>
+    <td><span class="pill notmet">Not reached</span></td>
+  </tr>
+  <tr class="action notmet">
+    <td class="name">Action<small>72-hour forecast</small></td>
+    <td class="val">
+<b>0</b> people in 64-kt zone
+      <div class="gauge"><span style="width:0.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
+    </td>
+    <td><span class="pill notmet">Not reached</span></td>
+  </tr>
+  <tr class="observational na">
+    <td class="name">Observational<small>2-day rainfall</small></td>
+    <td class="val">
+<span style="color:var(--muted)">IMERG satellite, checked daily</span>    </td>
+    <td><span class="pill na">—</span>
+</td>
+  </tr>
+</table>
+    </div>
+    <div class="fig"><img src="assets/charlie_2.png" alt="Forecast map for Cyclone Charlie, Day 2, 00:00"></div>
+  </div>
+</section>
+<section class="slide" data-label="Charlie · Day 3, 00:00">
+  <div class="inner split">
+    <div class="panel">
+      <div class="exercise">EXERCISE · FICTIONAL STORM</div>
+      <div class="kicker">Cyclone Charlie · forecast 3 of 4</div>
+      <div class="when">Day 3, 00:00</div>
+      <div class="rule"></div>
+      <p class="lede">Charlie is almost stationary over western Viti Levu, with very heavy rain. The forecast triggers only look at 64-kt winds, so they do not activate.
+</p>
+      <table class="trig">
+  <tr><th>Trigger</th><th>This forecast</th><th>Status</th></tr>
+  <tr class="readiness notmet">
+    <td class="name">Readiness<small>120-hour forecast</small></td>
+    <td class="val">
+<b>0</b> people in 64-kt zone
+      <div class="gauge"><span style="width:0.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
+    </td>
+    <td><span class="pill notmet">Not reached</span></td>
+  </tr>
+  <tr class="action notmet">
+    <td class="name">Action<small>72-hour forecast</small></td>
+    <td class="val">
+<b>0</b> people in 64-kt zone
+      <div class="gauge"><span style="width:0.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
+    </td>
+    <td><span class="pill notmet">Not reached</span></td>
+  </tr>
+  <tr class="observational na">
+    <td class="name">Observational<small>2-day rainfall</small></td>
+    <td class="val">
+<span style="color:var(--muted)">IMERG satellite, checked daily</span>    </td>
+    <td><span class="pill na">—</span>
+</td>
+  </tr>
+</table>
+    </div>
+    <div class="fig"><img src="assets/charlie_3.png" alt="Forecast map for Cyclone Charlie, Day 3, 00:00"></div>
+  </div>
+</section>
+<section class="slide" data-label="Charlie · Day 4, 00:00">
+  <div class="inner split">
+    <div class="panel">
+      <div class="exercise">EXERCISE · FICTIONAL STORM</div>
+      <div class="kicker">Cyclone Charlie · forecast 4 of 4</div>
+      <div class="when">Day 4, 00:00</div>
+      <div class="rule"></div>
+      <p class="lede">Still Category 2, still no 64-kt winds forecast. For this storm, it is the rainfall that matters.</p>
+      <table class="trig">
+  <tr><th>Trigger</th><th>This forecast</th><th>Status</th></tr>
+  <tr class="readiness notmet">
+    <td class="name">Readiness<small>120-hour forecast</small></td>
+    <td class="val">
+<b>0</b> people in 64-kt zone
+      <div class="gauge"><span style="width:0.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
+    </td>
+    <td><span class="pill notmet">Not reached</span></td>
+  </tr>
+  <tr class="action notmet">
+    <td class="name">Action<small>72-hour forecast</small></td>
+    <td class="val">
+<b>0</b> people in 64-kt zone
+      <div class="gauge"><span style="width:0.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
+    </td>
+    <td><span class="pill notmet">Not reached</span></td>
+  </tr>
+  <tr class="observational na">
+    <td class="name">Observational<small>2-day rainfall</small></td>
+    <td class="val">
+<span style="color:var(--muted)">IMERG satellite, checked daily</span>    </td>
+    <td><span class="pill na">—</span>
+</td>
+  </tr>
+</table>
+    </div>
+    <div class="fig"><img src="assets/charlie_4.png" alt="Forecast map for Cyclone Charlie, Day 4, 00:00"></div>
+  </div>
+</section>
+<section class="slide" data-label="Charlie · rainfall Day 4, 12:00">
+  <div class="inner split">
+    <div class="panel">
+      <div class="exercise">EXERCISE · FICTIONAL STORM</div>
+      <div class="kicker">Cyclone Charlie · rainfall check</div>
+      <div class="when">Day 4, 12:00</div>
+      <div class="rule"></div>
+      <p class="lede">
+Rainfall check covering Days 2 and 3: <b>125 mm</b> averaged over the whole country. Very heavy in places (up to 280 mm), but the country average is below 190 mm.      </p>
+      <table class="trig">
+  <tr><th>Trigger</th><th>This rainfall check</th><th>Status</th></tr>
+  <tr class="readiness notmet">
+    <td class="name">Readiness<small>120-hour forecast</small></td>
+    <td class="val">
+<span style="color:var(--muted)">—</span>    </td>
+    <td><span class="pill notmet">Not reached</span></td>
+  </tr>
+  <tr class="action notmet">
+    <td class="name">Action<small>72-hour forecast</small></td>
+    <td class="val">
+<span style="color:var(--muted)">—</span>    </td>
+    <td><span class="pill notmet">Not reached</span></td>
+  </tr>
+  <tr class="observational notmet">
+    <td class="name">Observational<small>2-day rainfall</small></td>
+    <td class="val">
+<b>125 mm</b> country average
+      <div class="gauge"><span style="width:32.89473684210527%"></span><i title="threshold"></i></div><small>threshold 190 mm</small>
+    </td>
+    <td><span class="pill notmet">Not reached</span></td>
+  </tr>
+</table>
+      <p class="note">Storm centre within 250 km of Fiji during these days (±1 day): ✓ (closest 0 km). Rainfall here is invented for the exercise.</p>
+    </div>
+    <div class="fig"><img src="assets/charlie_rain_1.png" alt="Two-day rainfall map, Days 2 and 3"></div>
+  </div>
+</section>
+<section class="slide" data-label="Charlie · rainfall Day 5, 12:00">
+  <div class="inner split">
+    <div class="panel">
+      <div class="exercise">EXERCISE · FICTIONAL STORM</div>
+      <div class="kicker">Cyclone Charlie · rainfall check</div>
+      <div class="when">Day 5, 12:00</div>
+      <div class="rule"></div>
+      <p class="lede">
+Satellite rainfall for Days 3 and 4, with Charlie's centre over Viti Levu: <b>210 mm</b> averaged over the whole country (up to 380 mm locally). That is above 190 mm.
+      </p>
+      <table class="trig">
+  <tr><th>Trigger</th><th>This rainfall check</th><th>Status</th></tr>
+  <tr class="readiness notmet">
+    <td class="name">Readiness<small>120-hour forecast</small></td>
+    <td class="val">
+<span style="color:var(--muted)">—</span>    </td>
+    <td><span class="pill notmet">Not reached</span></td>
+  </tr>
+  <tr class="action notmet">
+    <td class="name">Action<small>72-hour forecast</small></td>
+    <td class="val">
+<span style="color:var(--muted)">—</span>    </td>
+    <td><span class="pill notmet">Not reached</span></td>
+  </tr>
+  <tr class="observational new">
+    <td class="name">Observational<small>2-day rainfall</small></td>
+    <td class="val">
+<b>210 mm</b> country average
+      <div class="gauge"><span style="width:55.26315789473685%"></span><i title="threshold"></i></div><small>threshold 190 mm</small>
+    </td>
+    <td><span class="pill">ACTIVATED</span>
+</td>
+  </tr>
+</table>
+      <p class="note">Storm centre within 250 km of Fiji during these days (±1 day): ✓ (closest 0 km). Rainfall here is invented for the exercise.</p>
+<div class="callout purple"><b>Observational trigger activated.</b> An automated email goes to the trigger distribution list. It is treated like the action trigger: all anticipatory actions start.</div>    </div>
+    <div class="fig"><img src="assets/charlie_rain_2.png" alt="Two-day rainfall map, Days 3 and 4"></div>
+  </div>
+</section>
+<section class="slide" data-label="Charlie · observational email">
+  <div class="inner split">
+    <div class="panel">
+      <div class="exercise">EXERCISE · FICTIONAL STORM</div>
+      <div class="kicker">Cyclone Charlie · Day 5, 12:00</div>
+      <h2>The observational trigger email</h2>
+      <p class="lede">At the daily rainfall check,
+        the monitoring system sends an email like this automatically to the
+        trigger distribution list (framework Annex 4).</p>
+      <p class="note">Mock-up for the exercise.</p>
+      <div class="callout purple"><b>Observational trigger activated.</b> An automated email goes to the trigger distribution list. It is treated like the action trigger: all anticipatory actions start.</div>
+    </div>
+    <div class="fig email"><img src="assets/charlie_email_observational.png" alt="Mock observational trigger email for Cyclone Charlie"></div>
+  </div>
+</section>
+
+<!-- Scenario recap -->
+<section class="slide" data-label="Charlie · recap">
+  <div class="inner">
+    <div class="exercise">EXERCISE · FICTIONAL STORM</div>
+    <div class="kicker">Cyclone Charlie · recap</div>
+    <h2>Observational trigger only</h2>
+    <table class="sum" style="max-width:900px;margin:0 auto">
+      <tr><th>When</th><th>What came in</th><th>Result</th></tr>
+      <tr>
+        <td style="white-space:nowrap"><b>Day 1, 00:00</b></td>
+        <td>Forecast 1: 0 people in 64-kt zone (120 h), 0 (72 h)</td>
+        <td>
+<span style="color:var(--muted)">no new activation</span>        </td>
+      </tr>
+      <tr>
+        <td style="white-space:nowrap"><b>Day 2, 00:00</b></td>
+        <td>Forecast 2: 0 people in 64-kt zone (120 h), 0 (72 h)</td>
+        <td>
+<span style="color:var(--muted)">no new activation</span>        </td>
+      </tr>
+      <tr>
+        <td style="white-space:nowrap"><b>Day 3, 00:00</b></td>
+        <td>Forecast 3: 0 people in 64-kt zone (120 h), 0 (72 h)</td>
+        <td>
+<span style="color:var(--muted)">no new activation</span>        </td>
+      </tr>
+      <tr>
+        <td style="white-space:nowrap"><b>Day 4, 00:00</b></td>
+        <td>Forecast 4: 0 people in 64-kt zone (120 h), 0 (72 h)</td>
+        <td>
+<span style="color:var(--muted)">no new activation</span>        </td>
+      </tr>
+      <tr>
+        <td style="white-space:nowrap"><b>Day 4, 12:00</b></td>
+        <td>Rainfall, Days 2 and 3: 125 mm country average</td>
+        <td><span style="color:var(--muted)">below 190 mm</span></td>
+      </tr>
+      <tr>
+        <td style="white-space:nowrap"><b>Day 5, 12:00</b></td>
+        <td>Rainfall, Days 3 and 4: 210 mm country average</td>
+        <td><span class="pill" style="background:var(--purple);color:#fff">OBSERVATIONAL ACTIVATED</span></td>
+      </tr>
+    </table>
+    <div class="callout purple" style="max-width:900px;margin:16px auto 0">No forecast trigger activated: Charlie never had hurricane-force winds. The observational trigger is the safety net — it activates <b>after</b> the rain has fallen, so there is no lead time, and it is treated like the action trigger.</div>
+  </div>
+</section>
+
+<!-- Summary -->
+<section class="slide" data-label="Summary">
+  <div class="inner">
+    <div class="kicker">Summary</div>
+    <h2>The three scenarios side by side</h2>
+    <table class="sum" style="max-width:980px;margin:0 auto">
+      <tr><th>Storm</th><th class="c">Readiness</th><th class="c">Action</th><th class="c">Observational</th><th>Emails sent</th></tr>
+      <tr>
+        <td><b>Cyclone Alpha</b><br><span style="color:var(--muted);font-size:0.85rem">Readiness, then action</span></td>
+        <td class="c"><span class="pill" style="background:var(--orange);color:#fff">Day 1, 12:00</span></td>
+        <td class="c"><span class="pill" style="background:var(--red);color:#fff">Day 2, 12:00</span></td>
+        <td class="c">—</td>
+        <td>readiness, action</td>
+      </tr>
+      <tr>
+        <td><b>Cyclone Bravo</b><br><span style="color:var(--muted);font-size:0.85rem">Readiness, then nothing</span></td>
+        <td class="c"><span class="pill" style="background:var(--orange);color:#fff">Day 1, 00:00</span></td>
+        <td class="c">—</td>
+        <td class="c">—</td>
+        <td>readiness</td>
+      </tr>
+      <tr>
+        <td><b>Cyclone Charlie</b><br><span style="color:var(--muted);font-size:0.85rem">Observational trigger only</span></td>
+        <td class="c">—</td>
+        <td class="c">—</td>
+        <td class="c"><span class="pill" style="background:var(--purple);color:#fff">Day 5, 12:00</span></td>
+        <td>observational</td>
+      </tr>
+    </table>
+    <p class="note" style="max-width:860px;margin:16px auto 0">
+      The forecast files used here are kept in the repository
+      (<code>slides/simex_injects/</code>) and can be fed to the live monitoring
+      system in test mode for a hands-on exercise.
+    </p>
+  </div>
+</section>
+
+</div>
+
+<div class="controls">
+  <button id="prev" aria-label="Previous slide">‹</button>
+  <div class="dots" id="dots"></div>
+  <span class="pageno" id="pageno"></span>
+  <button id="next" aria-label="Next slide">›</button>
+  <button id="fs" class="txt" aria-label="Full screen" title="Full screen (F)">⛶ Full screen</button>
+  <a class="btn" href="fiji-aa-simulation-exercise.pdf" download>⬇ PDF</a>
+</div>
+
+<script>
+  const slides = Array.from(document.querySelectorAll(".slide"));
+  const dotsEl = document.getElementById("dots");
+  const pageno = document.getElementById("pageno");
+  let current = 0;
+  slides.forEach((s, i) => {
+    const d = document.createElement("div");
+    d.className = "dot" + (s.dataset.section ? " sec" : "");
+    d.title = s.dataset.label || ("Slide " + (i + 1));
+    d.addEventListener("click", () => go(i));
+    dotsEl.appendChild(d);
+  });
+  const dots = Array.from(dotsEl.children);
+  function go(i) {
+    current = Math.max(0, Math.min(slides.length - 1, i));
+    slides.forEach((s, j) => s.classList.toggle("active", j === current));
+    dots.forEach((d, j) => d.classList.toggle("active", j === current));
+    pageno.textContent = (current + 1) + " / " + slides.length;
+    history.replaceState(null, "", "#" + (current + 1));
+  }
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+    else document.exitFullscreen();
+  }
+  document.getElementById("prev").addEventListener("click", () => go(current - 1));
+  document.getElementById("next").addEventListener("click", () => go(current + 1));
+  document.getElementById("fs").addEventListener("click", toggleFullscreen);
+  document.addEventListener("keydown", (e) => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (["ArrowRight", "PageDown", " ", "ArrowDown"].includes(e.key)) { e.preventDefault(); go(current + 1); }
+    if (["ArrowLeft", "PageUp", "ArrowUp"].includes(e.key)) { e.preventDefault(); go(current - 1); }
+    if (e.key === "Home") go(0);
+    if (e.key === "End") go(slides.length - 1);
+    if (e.key === "f" || e.key === "F") toggleFullscreen();
+  });
+  let touchX = null;
+  document.addEventListener("touchstart", (e) => { touchX = e.touches[0].clientX; });
+  document.addEventListener("touchend", (e) => {
+    if (touchX === null) return;
+    const dx = e.changedTouches[0].clientX - touchX;
+    if (dx < -40) go(current + 1);
+    if (dx > 40) go(current - 1);
+    touchX = null;
+  });
+  function goFromHash() {
+    const h = parseInt(location.hash.slice(1), 10);
+    go(h >= 1 && h <= slides.length ? h - 1 : 0);
+  }
+  window.addEventListener("hashchange", goFromHash);
+  goFromHash();
+</script>
+</body>
+</html>

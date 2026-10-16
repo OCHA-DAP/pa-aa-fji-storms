@@ -33,8 +33,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-        with:
-          ref: initial-2025-trigger
       - uses: actions/setup-python@v6
         with:
           python-version: '3.11'
