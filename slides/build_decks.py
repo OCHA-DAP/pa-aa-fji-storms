@@ -9,7 +9,8 @@
   written as RSMC Nadi-format CSVs to slides/simex_injects/ and evaluated the
   same way.
 
-Each deck is one self-contained HTML page plus its images and a PDF.
+Each deck is one self-contained HTML page plus its images, a PDF and an
+editable PowerPoint file (slides/pptx_export.py).
 """
 
 import argparse
@@ -26,6 +27,7 @@ from jinja2 import Environment, FileSystemLoader
 
 sys.path.insert(0, str(Path(__file__).parent))
 
+import pptx_export  # noqa: E402
 import rain  # noqa: E402
 from figures import RAIN_LEVELS, forecast_map, rain_map  # noqa: E402
 from simex_storms import ALPHA, BRAVO, CHARLIE, day_label  # noqa: E402
@@ -44,6 +46,10 @@ SIMEX_EXTENT = (172.6, 184.2, -21.6, -12.4)
 RAIN_EXTENT = (176.6, 182.2, -19.6, -15.6)
 
 THRESHOLD = EXP_THRESHOLD_64_KNOTS
+TITLES = {
+    "2025-26-season": "Fiji AA 2025–26 season look-back",
+    "simex": "Fiji AA simulation exercise",
+}
 RAIN_THRESHOLD = 190
 
 
@@ -476,6 +482,11 @@ def to_pdf(out: Path, pdf_name: str):
     )
 
 
+def to_pptx(out: Path, pptx_name: str, title: str):
+    """Editable PowerPoint, laid out from the rendered HTML."""
+    pptx_export.export(out / "index.html", out / pptx_name, title, CHROME)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--fms-dir", type=Path, required=False)
@@ -483,7 +494,7 @@ def main():
     ap.add_argument(
         "--render-only",
         action="store_true",
-        help="re-render HTML/PDF from slides/numbers/*.json",
+        help="re-render HTML/PDF/PowerPoint from slides/numbers/*.json",
     )
     args = ap.parse_args()
 
@@ -494,8 +505,10 @@ def main():
         else:
             data = build_lookback(args.fms_dir, out)
         pdf = "fiji-aa-2025-26-season-lookback.pdf"
-        render("lookback.html.j2", out, d=data, pdf=pdf)
+        pptx = "fiji-aa-2025-26-season-lookback.pptx"
+        render("lookback.html.j2", out, d=data, pdf=pdf, pptx=pptx)
         to_pdf(out, pdf)
+        to_pptx(out, pptx, TITLES[out.name])
 
     if args.only in (None, "simex"):
         out = DOCS / "simex"
@@ -504,8 +517,10 @@ def main():
         else:
             data = build_simex(out)
         pdf = "fiji-aa-simulation-exercise.pdf"
-        render("simex.html.j2", out, sc=data, pdf=pdf)
+        pptx = "fiji-aa-simulation-exercise.pptx"
+        render("simex.html.j2", out, sc=data, pdf=pdf, pptx=pptx)
         to_pdf(out, pdf)
+        to_pptx(out, pptx, TITLES[out.name])
 
 
 if __name__ == "__main__":
