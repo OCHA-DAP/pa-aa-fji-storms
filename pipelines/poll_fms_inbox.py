@@ -1,4 +1,4 @@
-"""Poll the FMS relay inbox and dispatch each new CSV to Check Trigger.
+"""Poll the FMS relay inbox and hand each new CSV to the monitoring.
 
 RSMC Nadi (FMS) emails its official forecast track CSV to
 ocha-datascience@un.org, which forwards it to a personal un.org mailbox. A
@@ -33,6 +33,20 @@ sent again. SEED_STATE=True records every CSV currently in the window as
 handled without dispatching (run it once before going live). The repo is
 public, so the log only ever shows filenames, short hashes, event types and
 counts.
+
+Where each CSV goes is set by FMS_TARGETS (a repo variable):
+- ``gha`` (default): repository_dispatch to Check Trigger, as above;
+- ``gha,dbx-shadow``: also run the Databricks job (Fiji Cyclone
+  Monitoring) on it, with every email forced to the test list;
+- ``dbx``: the Databricks job is the live monitoring; no dispatch.
+Exactly one live target (``gha`` or ``dbx``) is always set, so switching
+over or back is one variable change. For the Databricks job the CSV is
+staged in the dev blob and the run started through the Jobs API as the
+fji-fms-relay service principal (DATABRICKS_CLIENT_ID / _SECRET), with an
+idempotency token so a lost response can't start a second run. State is
+kept per target; a CSV either live target handled counts as handled for
+both, so switching never re-sends recent forecasts. A failed shadow run
+only logs a warning.
 """
 
 import base64
@@ -45,6 +59,7 @@ import logging
 import os
 import re
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -68,6 +83,7 @@ STATE_COLS = [
     "message_id",
     "filename",
     "dispatched_at_utc",
+    "target",
 ]
 CHECK_TRIGGER_WORKFLOW = "run_monitor_forecast_trigger.yml"
 # Check Trigger's run-name for a dispatch is "FMS <short hash> <event type>"
@@ -78,6 +94,14 @@ RELAY_SUBJECT_PREFIX = "[fji-relay] "
 EVENT_FORECAST = "fms_forecast"
 EVENT_TEST = "fms_forecast_test"
 EVENTS = (EVENT_FORECAST, EVENT_TEST)
+
+TARGET_GHA = "gha"
+TARGET_DBX = "dbx"
+TARGET_DBX_SHADOW = "dbx-shadow"
+LIVE_TARGETS = (TARGET_GHA, TARGET_DBX)
+DBX_TARGETS = (TARGET_DBX, TARGET_DBX_SHADOW)
+# Must match databricks/run_ingest.py, which refuses anything else
+INBOX_PREFIX = "pa-aa-fji-storms/raw/fms/inbox/"
 
 _QUOTED_WITH_SEMICOLON = re.compile(r'"(?:[^"\\]|\\.)*;(?:[^"\\]|\\.)*"')
 _DMARC_PASS = re.compile(r"dmarc=pass\b", re.IGNORECASE)
@@ -96,6 +120,24 @@ def load_boolean_env(name: str, default: bool) -> bool:
     if value == "False":
         return False
     raise ValueError(f"{name} must be 'True' or 'False', got {value!r}")
+
+
+def parse_targets(raw: str | None) -> tuple[str, ...]:
+    """FMS_TARGETS -> targets, live one first. Default: ("gha",)."""
+    names = [t.strip() for t in (raw or TARGET_GHA).split(",") if t.strip()]
+    allowed = {TARGET_GHA, TARGET_DBX, TARGET_DBX_SHADOW}
+    unknown = set(names) - allowed
+    if unknown:
+        raise ValueError(f"Unknown FMS_TARGETS {sorted(unknown)}")
+    live = [t for t in names if t in LIVE_TARGETS]
+    if len(live) != 1:
+        raise ValueError(
+            f"FMS_TARGETS needs exactly one of {LIVE_TARGETS}, got {names}"
+        )
+    if TARGET_DBX in names and TARGET_DBX_SHADOW in names:
+        raise ValueError("dbx and dbx-shadow together make no sense")
+    shadow = [t for t in names if t == TARGET_DBX_SHADOW]
+    return tuple(live + shadow[:1])
 
 
 def short_hash(value: str) -> str:
@@ -382,6 +424,170 @@ def recent_run_titles(repo: str, token: str, since: dt.date) -> set[str]:
     return {r.get("display_title") or "" for r in runs}
 
 
+def staged_blob_name(content_sha256: str, filename: str) -> str:
+    """Dev-blob name for a staged CSV: no '/' and no '..' (the job's ingest
+    task refuses names with either outside the inbox prefix)."""
+    safe = re.sub(r"[^A-Za-z0-9._-]", "_", filename)
+    safe = re.sub(r"\.{2,}", ".", safe)[-120:]
+    return f"{INBOX_PREFIX}{content_sha256[:12]}_{safe}"
+
+
+def test_email_for(target: str, event_type: str) -> str:
+    """The Databricks job's test_email: real lists only for a live
+    fms_forecast; shadow runs and test events always go to the test list."""
+    live = target == TARGET_DBX and event_type == EVENT_FORECAST
+    return "False" if live else "True"
+
+
+_TOKEN_CODES = {
+    TARGET_DBX: "l",
+    TARGET_DBX_SHADOW: "s",
+    EVENT_FORECAST: "f",
+    EVENT_TEST: "t",
+}
+
+
+def idempotency_token(
+    content_sha256: str, target: str, event_type: str
+) -> str:
+    """Same CSV + target + event -> same token; Databricks allows 64 chars."""
+    codes = _TOKEN_CODES[target] + _TOKEN_CODES[event_type]
+    return f"fji-{content_sha256[:48]}-{codes}"
+
+
+class DbxError(RuntimeError):
+    """A Databricks API call failed (message carries no response body)."""
+
+
+class DbxClient:
+    """The two Databricks REST calls the hand-off needs, OAuth M2M."""
+
+    def __init__(self, host: str, client_id: str, secret: str, job_id: int):
+        self.host = host.rstrip("/")
+        if not self.host.startswith("https://"):
+            self.host = "https://" + self.host
+        self.client_id = client_id
+        self.secret = secret
+        self.job_id = job_id
+        self._token = None
+        self._token_expiry = 0.0
+
+    def _access_token(self) -> str:
+        if self._token and time.monotonic() < self._token_expiry:
+            return self._token
+        basic = base64.b64encode(
+            f"{self.client_id}:{self.secret}".encode("utf-8")
+        ).decode("ascii")
+        request = urllib.request.Request(
+            f"{self.host}/oidc/v1/token",
+            data=urllib.parse.urlencode(
+                {"grant_type": "client_credentials", "scope": "all-apis"}
+            ).encode("ascii"),
+            method="POST",
+            headers={
+                "Authorization": f"Basic {basic}",
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=30) as response:
+                body = json.load(response)
+        except urllib.error.HTTPError as e:
+            raise DbxError(f"token request: HTTP {e.code}") from None
+        except (urllib.error.URLError, OSError) as e:
+            raise DbxError(f"token request: {type(e).__name__}") from None
+        self._token = body["access_token"]
+        self._token_expiry = (
+            time.monotonic() + int(body.get("expires_in", 300)) - 60
+        )
+        return self._token
+
+    def run_now(self, job_parameters: dict, token: str) -> int:
+        """Start the job; returns its run id."""
+        request = urllib.request.Request(
+            f"{self.host}/api/2.2/jobs/run-now",
+            data=json.dumps(
+                {
+                    "job_id": self.job_id,
+                    "idempotency_token": token,
+                    "job_parameters": job_parameters,
+                }
+            ).encode("utf-8"),
+            method="POST",
+            headers={
+                "Authorization": f"Bearer {self._access_token()}",
+                "Content-Type": "application/json",
+            },
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=30) as response:
+                return int(json.load(response)["run_id"])
+        except urllib.error.HTTPError as e:
+            raise DbxError(f"run-now: HTTP {e.code}") from None
+        except (urllib.error.URLError, OSError) as e:
+            raise DbxError(f"run-now: {type(e).__name__}") from None
+
+
+def stage_csv(data: bytes, blob_name: str) -> None:
+    try:
+        stratus.upload_blob_data(
+            data, blob_name, stage="dev", content_type="text/csv"
+        )
+    except Exception as e:
+        # the SDK's message can carry the request URL (and its SAS)
+        raise DbxError(f"staging the CSV: {type(e).__name__}") from None
+
+
+def make_handoff(
+    client: DbxClient,
+    stage_fn: Callable[[bytes, str], None] = stage_csv,
+) -> Callable[[str, str, str, bytes, str], bool]:
+    """Stage a CSV and start the Databricks job on it; True if started."""
+
+    def handoff(
+        target: str, event_type: str, filename: str, data: bytes, sha: str
+    ) -> bool:
+        blob = staged_blob_name(sha, filename)
+        try:
+            stage_fn(data, blob)
+            run_id = client.run_now(
+                {
+                    "csv_blob": blob,
+                    "event": event_type,
+                    "test_email": test_email_for(target, event_type),
+                },
+                idempotency_token(sha, target, event_type),
+            )
+        except DbxError as e:
+            logger.error("Databricks hand-off failed: %s", e)
+            return False
+        logger.info("Databricks run %s started", run_id)
+        return True
+
+    return handoff
+
+
+def dbx_client_from_env() -> DbxClient | None:
+    """A client from the DATABRICKS_* / FMS_DBX_JOB_ID env, or None."""
+    names = (
+        "DATABRICKS_HOST",
+        "DATABRICKS_CLIENT_ID",
+        "DATABRICKS_CLIENT_SECRET",
+        "FMS_DBX_JOB_ID",
+    )
+    values = {n: os.getenv(n) or "" for n in names}
+    missing = [n for n, v in values.items() if not v]
+    if missing:
+        logger.warning("Databricks hand-off not configured: %s unset", missing)
+        return None
+    return DbxClient(
+        values["DATABRICKS_HOST"],
+        values["DATABRICKS_CLIENT_ID"],
+        values["DATABRICKS_CLIENT_SECRET"],
+        int(values["FMS_DBX_JOB_ID"]),
+    )
+
+
 def load_state() -> pd.DataFrame:
     try:
         df = stratus.load_csv_from_blob(STATE_BLOB, stage="dev", dtype=str)
@@ -415,18 +621,36 @@ def run(
     run_titles: set[str] | None = None,
     seed: bool = False,
     now_fn: Callable[[], dt.datetime] = lambda: dt.datetime.now(dt.UTC),
+    targets: tuple[str, ...] = (TARGET_GHA,),
+    handoff_fn: Callable[[str, str, str, bytes, str], bool] | None = None,
 ) -> tuple[int, int]:
-    """Dispatch every unhandled CSV. Returns (n_dispatched, n_failed).
+    """Send every unhandled CSV to each target. Returns (n_sent, n_failed).
 
-    State is saved after each successful dispatch. If saving fails we stop
+    n_failed counts live targets only: a failed shadow run is a warning.
+    State is saved after each successful send. If saving fails we stop
     straight away: carrying on would risk the next tick re-dispatching (and
     re-emailing) everything sent since the last good save.
     """
-    done = set(zip(state["content_sha256"], state["event_type"]))
+    # Rows from before targets existed were all Check Trigger dispatches.
+    row_targets = state["target"].fillna(TARGET_GHA).replace("", TARGET_GHA)
+    done = {
+        "live": set(),
+        "shadow": set(),
+    }
+    for sha, event_type, target in zip(
+        state["content_sha256"], state["event_type"], row_targets
+    ):
+        role = "shadow" if target == TARGET_DBX_SHADOW else "live"
+        done[role].add((sha, event_type))
     run_titles = run_titles or set()
     n_dispatched = n_failed = 0
 
-    def record(sha: str, event_type: str, key: str, filename: str) -> None:
+    def role_of(target: str) -> str:
+        return "shadow" if target == TARGET_DBX_SHADOW else "live"
+
+    def record(
+        sha: str, event_type: str, key: str, filename: str, target: str
+    ) -> None:
         nonlocal state
         row = {
             "content_sha256": sha,
@@ -434,9 +658,10 @@ def run(
             "message_id": key,
             "filename": filename,
             "dispatched_at_utc": now_fn().strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "target": target,
         }
         state = pd.concat([state, pd.DataFrame([row])], ignore_index=True)
-        done.add((sha, event_type))
+        done[role_of(target)].add((sha, event_type))
         save_fn(state)
 
     for msg in messages:
@@ -449,34 +674,55 @@ def run(
             logger.info("Message %s has no CSV attachment", short_hash(key))
         for filename, data in attachments:
             sha = hashlib.sha256(data).hexdigest()
-            if (sha, event_type) in done:
-                continue
-            label = f"{filename} ({event_type}, csv {sha[:12]})"
-            if dry_run:
-                action = "seed" if seed else "dispatch"
-                logger.info("DRY RUN: would %s %s", action, label)
-                continue
-            if seed:
-                logger.info("Seeding %s as handled", label)
-                record(sha, event_type, key, filename)
-                continue
-            if run_title(sha, event_type) in run_titles:
-                logger.info("Already dispatched (run found): %s", label)
-                record(sha, event_type, key, filename)
-                continue
-            payload = {
-                "csv": base64.b64encode(data).decode("ascii"),
-                "filename": filename,
-                "content_sha": sha[:12],
-            }
-            status = dispatch_fn(event_type, payload)
-            if status != 204:
-                logger.error("Dispatch of %s failed: HTTP %s", label, status)
-                n_failed += 1
-                continue
-            logger.info("Dispatched %s", label)
-            n_dispatched += 1
-            record(sha, event_type, key, filename)
+            for target in targets:
+                if (sha, event_type) in done[role_of(target)]:
+                    continue
+                label = f"{filename} ({event_type}, csv {sha[:12]})"
+                if target != TARGET_GHA:
+                    label = f"{label} to {target}"
+                if dry_run:
+                    action = "seed" if seed else "dispatch"
+                    logger.info("DRY RUN: would %s %s", action, label)
+                    continue
+                if seed:
+                    logger.info("Seeding %s as handled", label)
+                    record(sha, event_type, key, filename, target)
+                    continue
+                if target == TARGET_GHA:
+                    if run_title(sha, event_type) in run_titles:
+                        logger.info(
+                            "Already dispatched (run found): %s", label
+                        )
+                        record(sha, event_type, key, filename, target)
+                        continue
+                    payload = {
+                        "csv": base64.b64encode(data).decode("ascii"),
+                        "filename": filename,
+                        "content_sha": sha[:12],
+                    }
+                    status = dispatch_fn(event_type, payload)
+                    if status != 204:
+                        logger.error(
+                            "Dispatch of %s failed: HTTP %s", label, status
+                        )
+                        n_failed += 1
+                        continue
+                else:
+                    ok = handoff_fn is not None and handoff_fn(
+                        target, event_type, filename, data, sha
+                    )
+                    if not ok:
+                        if target == TARGET_DBX_SHADOW:
+                            logger.warning(
+                                "Shadow run of %s not started", label
+                            )
+                        else:
+                            logger.error("Hand-off of %s failed", label)
+                            n_failed += 1
+                        continue
+                logger.info("Dispatched %s", label)
+                n_dispatched += 1
+                record(sha, event_type, key, filename, target)
     return n_dispatched, n_failed
 
 
@@ -489,6 +735,17 @@ def main() -> int:
             "REQUIRE_DMARC_PASS=False is only allowed in dry runs"
         )
     lookback_days = int(os.getenv("LOOKBACK_DAYS", "3"))
+    targets = parse_targets(os.getenv("FMS_TARGETS"))
+    handoff_fn = None
+    if any(t in DBX_TARGETS for t in targets):
+        client = dbx_client_from_env()
+        if client is not None:
+            handoff_fn = make_handoff(client)
+        elif TARGET_DBX in targets:
+            raise ValueError("FMS_TARGETS has dbx but Databricks is unset")
+        else:
+            # never let a shadow misconfiguration touch the live path
+            targets = tuple(t for t in targets if t != TARGET_DBX_SHADOW)
     senders = relay_senders()
     authserv_id = os.getenv("FMS_AUTHSERV_ID") or DEFAULT_AUTHSERV_ID
     relay_token = os.getenv("FMS_RELAY_TOKEN") or ""
@@ -497,7 +754,7 @@ def main() -> int:
     logger.info(
         f"Polling FMS relay inbox: {dry_run=}, {seed=}, {require_dmarc=}, "
         f"{lookback_days=}, n_senders={len(senders)}, {authserv_id=}, "
-        f"relay_token_set={bool(relay_token)}"
+        f"relay_token_set={bool(relay_token)}, {targets=}"
     )
 
     messages = fetch_messages(
@@ -513,7 +770,7 @@ def main() -> int:
     repo = os.environ["GITHUB_REPOSITORY"]
     gh_token = os.environ["GITHUB_TOKEN"]
     run_titles = set()
-    if messages and not dry_run and not seed:
+    if messages and not dry_run and not seed and TARGET_GHA in targets:
         try:
             run_titles = recent_run_titles(
                 repo, gh_token, today - dt.timedelta(days=lookback_days + 1)
@@ -538,6 +795,8 @@ def main() -> int:
         ),
         run_titles=run_titles,
         seed=seed,
+        targets=targets,
+        handoff_fn=handoff_fn,
     )
     logger.info("Dispatched %d, failed %d", n_dispatched, n_failed)
     return 1 if n_failed else 0

@@ -98,6 +98,30 @@ Going live:
    skipped until then) and `POLL_DRY_RUN` to `False` (until then scheduled
    runs only log what they would dispatch).
 
+### Where the CSVs go: `FMS_TARGETS`
+
+The repo variable `FMS_TARGETS` picks the monitoring each new CSV is sent to.
+Exactly one live target is always set, so switching over, or back, is one
+`gh variable set`:
+
+| `FMS_TARGETS` | Live monitoring | Also |
+|---|---|---|
+| `gha` (default, or unset) | Check Trigger (GitHub Actions) | — |
+| `gha,dbx-shadow` | Check Trigger | the Databricks job, all emails to the test list |
+| `dbx` | the Databricks job (Fiji Cyclone Monitoring) | — |
+
+For Databricks the poller stages the CSV in the dev blob
+(`pa-aa-fji-storms/raw/fms/inbox/`) and starts the job through the Jobs API as
+the `fji-fms-relay` service principal, passing `test_email=False` only for a
+live `fms_forecast` on `dbx`. It needs the repo variables `DATABRICKS_HOST`,
+`DATABRICKS_CLIENT_ID` (the principal's application id) and `FMS_DBX_JOB_ID`,
+and the secret `DATABRICKS_CLIENT_SECRET` (an OAuth secret of the principal).
+The state file records the target of each send; a CSV that either live target
+handled counts as handled for both, so switching never re-sends recent
+forecasts. A failed shadow run only logs a warning. If `dbx-shadow` is set
+but Databricks isn't configured, the shadow is dropped and Check Trigger
+runs as usual.
+
 ## Overview of analysis
 
 Key analysis in `analysis/`:
