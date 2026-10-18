@@ -1,0 +1,189 @@
+# Fiji tropical cyclone AA monitoring on Databricks.
+#
+# One job, two tasks on one cluster (one start-up per forecast):
+#   ingest   ds-storms-pipeline's FMS ingest: archives the raw CSV and writes
+#            storms.fms_forecasts / storms.fms_tracks_geo
+#            (databricks/run_ingest.py)
+#   monitor  pipelines/monitor_forecast_trigger.py --from-db: the trigger
+#            check and the Listmonk emails (databricks/run_monitor.py)
+#
+# No schedule. The FMS inbox poller (pipelines/poll_fms_inbox.py, GitHub
+# Actions) stages each new CSV in the dev blob and starts a run through the
+# Jobs API as the fji-fms-relay service principal.
+#
+#   databricks bundle validate -t prod -p DEFAULT
+#   databricks bundle deploy -t prod -p DEFAULT
+#   databricks bundle run fji_monitoring -t prod -p DEFAULT \
+#     --params csv_blob=pa-aa-fji-storms/raw/fms/inbox/<file>,event=fms_forecast_test
+#
+# Send modes: test_email defaults to "True" (test list 5 only); the poller
+# passes test_email per run, "False" only once monitoring is flipped live.
+# event=fms_forecast_test always forces test_email=True and the dev
+# database. dry_run=True sends and records nothing.
+
+bundle:
+  name: pa-aa-fji-storms
+
+sync:
+  exclude:
+    - analysis/**
+    - docs/**
+    - exploration/**
+    - quarto_assets/**
+    - slides/**
+
+variables:
+  git_branch:
+    description: Branch the cluster pulls this repo's code from
+    default: main
+  storms_pipeline_ref:
+    description: >-
+      ds-storms-pipeline branch or tag the ingest task runs
+      (src/pipelines/fms.py). main once the FMS ingest PR is merged.
+    default: main
+  ingest_mode:
+    description: >-
+      Database + raw-CSV archive for live forecasts (dev | prod). Test
+      events always use dev.
+    default: dev
+  test_email:
+    description: Default for runs started without parameters (safe test list)
+    default: "True"
+  dry_run:
+    default: "False"
+  relay_sp_application_id:
+    description: >-
+      Application id of the fji-fms-relay service principal the poller
+      authenticates as; it may only run this job.
+    default: "234c8389-9862-4587-a050-21bab013f56c"
+
+targets:
+  prod:
+    mode: production
+    default: true
+    workspace:
+      profile: DEFAULT
+      root_path: /Workspace/Users/adm.tdowning@global.un.org/.bundle/${bundle.name}/${bundle.target}
+    run_as:
+      user_name: adm.tdowning@global.un.org
+  dev:
+    mode: development
+    workspace:
+      profile: DEFAULT
+
+resources:
+  jobs:
+    fji_monitoring:
+      name: Fiji Cyclone Monitoring
+      description: >-
+        Ingests each RSMC Nadi (FMS) forecast CSV into storms.fms_* and runs
+        the Fiji tropical cyclone anticipatory action trigger monitor
+        (readiness / action / info emails via Listmonk). Started per
+        forecast by the FMS inbox poller in OCHA-DAP/pa-aa-fji-storms.
+      # Job-scoped permissions: directory ACLs are disabled on this
+      # workspace tier, so bundle-level permissions fail.
+      permissions:
+        - group_name: dsci
+          level: CAN_MANAGE
+        - service_principal_name: ${var.relay_sp_application_id}
+          level: CAN_MANAGE_RUN
+      git_source:
+        git_url: https://github.com/OCHA-DAP/pa-aa-fji-storms.git
+        git_provider: gitHub
+        git_branch: ${var.git_branch}
+      # One forecast at a time, in arrival order; never skip a run.
+      max_concurrent_runs: 1
+      queue:
+        enabled: true
+      tags:
+        databricks: job
+        type: monitoring
+        hazard: tropical-cyclone
+        kb: fji-storms-monitoring
+        output_schema: storms.fms_storms,storms.fms_forecasts,storms.fms_tracks_geo
+        output_blob: projects/pa-aa-fji-storms/monitoring
+      email_notifications:
+        on_failure:
+          - tristan.downing@un.org
+        no_alert_for_skipped_runs: true
+      parameters:
+        - name: csv_blob       # dev-blob name the poller staged
+          default: ""
+        - name: event          # fms_forecast | fms_forecast_test
+          default: fms_forecast_test
+        - name: mode           # dev | prod database for live forecasts
+          default: ${var.ingest_mode}
+        - name: storms_ref     # ds-storms-pipeline branch or tag
+          default: ${var.storms_pipeline_ref}
+        - name: test_email
+          default: ${var.test_email}
+        - name: dry_run
+          default: ${var.dry_run}
+        - name: simulate_trigger
+          default: "False"
+      job_clusters:
+        - job_cluster_key: fji_cluster
+          new_cluster:
+            # Job Compute (single node): injects the dsci DB/blob env vars,
+            # fixes num_workers=0. Listmonk creds come from the dsci scope
+            # in run_monitor.py. DBR 15.4 LTS = Python 3.11, the version the
+            # monitor's pins (numpy 1.25.1, shapely 2.0.1) were made for.
+            policy_id: "0017962FF5D1E3B9"
+            apply_policy_default_values: true
+            spark_version: "15.4.x-scala2.12"
+            node_type_id: "Standard_DS3_v2"
+            num_workers: 0
+            data_security_mode: SINGLE_USER
+      tasks:
+        - task_key: ingest
+          job_cluster_key: fji_cluster
+          timeout_seconds: 1800
+          spark_python_task:
+            python_file: databricks/run_ingest.py
+            source: GIT
+            parameters:
+              - "{{job.parameters.csv_blob}}"
+              - "{{job.parameters.event}}"
+              - "{{job.parameters.mode}}"
+              - "{{job.parameters.storms_ref}}"
+          # The cluster's whole non-DBR environment, pinned: an unpinned
+          # pyarrow broke the info email in Oct 2026. Same versions as
+          # monitoring-requirements.txt resolves to on GitHub Actions.
+          libraries: &fji_libs
+            - pypi: { package: "azure-storage-blob==12.31.0" }
+            - pypi: { package: "fiona==1.9.6" }
+            - pypi: { package: "frictionless==5.15.6" }
+            - pypi: { package: "geopandas==1.1.4" }
+            - pypi: { package: "html2text==2020.1.16" }
+            - pypi: { package: "Jinja2==3.1.6" }
+            - pypi: { package: "kaleido==0.2.1" }
+            - pypi: { package: "matplotlib==3.11.2" }
+            - pypi: { package: "numpy==1.25.1" }
+            - pypi: { package: "ocha-lens==0.6.2" }
+            - pypi: { package: "ocha-stratus==0.1.9" }
+            - pypi: { package: "pandas==2.3.3" }
+            - pypi: { package: "plotly==5.17.0" }
+            - pypi: { package: "psycopg2-binary==2.9.13" }
+            - pypi: { package: "pyarrow==25.0.0" }
+            - pypi: { package: "python-dotenv==1.0.0" }
+            - pypi: { package: "rasterio==1.4.4" }
+            - pypi: { package: "rioxarray==0.19.0" }
+            - pypi: { package: "scipy==1.15.3" }
+            - pypi: { package: "shapely==2.0.1" }
+            - pypi: { package: "sqlalchemy==2.1.5" }
+            - pypi: { package: "tqdm==4.70.1" }
+            - pypi: { package: "xarray==2025.6.1" }
+        - task_key: monitor
+          depends_on:
+            - task_key: ingest
+          job_cluster_key: fji_cluster
+          timeout_seconds: 3600
+          spark_python_task:
+            python_file: databricks/run_monitor.py
+            source: GIT
+            parameters:
+              - "{{job.parameters.event}}"
+              - "{{job.parameters.test_email}}"
+              - "{{job.parameters.dry_run}}"
+              - "{{job.parameters.simulate_trigger}}"
+          libraries: *fji_libs
