@@ -1,0 +1,60 @@
+name: Poll FMS inbox
+
+# Reads the humdata.org relay inbox that the fji_trigger_monitoring Power
+# Automate flow sends FMS (RSMC Nadi) forecast CSVs to, and sends each new CSV
+# to Check Trigger as a repository_dispatch. See pipelines/poll_fms_inbox.py.
+# Scheduled runs stay in DRY_RUN until the repo variable POLL_DRY_RUN is set
+# to 'False'.
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'DRY_RUN: If True, only log what would be dispatched'
+        type: choice
+        default: 'True'
+        options:
+          - 'True'
+          - 'False'
+
+# contents: write lets GITHUB_TOKEN send repository_dispatch (which, unlike
+# most GITHUB_TOKEN events, does start a new workflow run).
+permissions:
+  contents: write
+
+concurrency:
+  group: poll-fms-inbox
+  cancel-in-progress: false
+
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: poll-requirements.txt
+      - name: Install dependencies
+        run: python -m pip install -r poll-requirements.txt
+      - name: Poll inbox and dispatch new forecasts
+        # Public repo: GHA prints this env block in the log, so anything that
+        # identifies a person (inbox address, sender allowlist) is a secret.
+        env:
+          FMS_IMAP_HOST: ${{ vars.FMS_IMAP_HOST || 'imappro.zoho.com' }}
+          FMS_IMAP_USER: ${{ secrets.FMS_IMAP_USER }}
+          FMS_IMAP_PASSWORD: ${{ secrets.FMS_IMAP_PASSWORD }}
+          FMS_IMAP_FOLDER: ${{ vars.FMS_IMAP_FOLDER || 'INBOX' }}
+          FMS_RELAY_SENDERS: ${{ secrets.FMS_RELAY_SENDERS }}
+          FMS_RELAY_TOKEN: ${{ secrets.FMS_RELAY_TOKEN }}
+          FMS_AUTHSERV_ID: ${{ vars.FMS_AUTHSERV_ID }}
+          REQUIRE_DMARC_PASS: ${{ vars.REQUIRE_DMARC_PASS || 'True' }}
+          DSCI_AZ_BLOB_DEV_SAS: ${{ secrets.DSCI_AZ_BLOB_DEV_SAS }}
+          DSCI_AZ_BLOB_DEV_SAS_WRITE: ${{ secrets.DSCI_AZ_BLOB_DEV_SAS_WRITE }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DRY_RUN: ${{ inputs.dry_run || vars.POLL_DRY_RUN || 'True' }}
+        run: python pipelines/poll_fms_inbox.py

@@ -40,6 +40,46 @@ The trigger is continuously monitored with the process:
     2. If either the _readiness_ or _action_ triggers have been met, send an email to activate the framework.
     3. Produces basic plots of the forecast, and sends them in an informational email (regardless of whether the trigger has been met).
 
+### FMS relay inbox poller
+
+The Power Automate flow can no longer call GitHub directly (the HTTP
+connector is premium and the GitHub connector is blocked by the UN data
+policy). Instead:
+
+1. FMS emails the forecast CSV to ocha-datascience@un.org, which forwards it
+   to a personal un.org mailbox.
+2. The `fji_trigger_monitoring` flow there (standard Outlook connector only)
+   sends a new email to a humdata.org (Zoho) relay inbox, with the CSV
+   attached and the subject `[fji-relay] fms_forecast`
+   (`[fji-relay] fms_forecast_test` for `fji_test` emails).
+3. `.github/workflows/poll_fms_inbox.yml` runs every 10 minutes. It reads the
+   relay inbox over IMAP (read-only, nothing is flagged or moved) and sends
+   each new CSV to Check Trigger as a `repository_dispatch`. Handled
+   attachments are recorded in
+   `pa-aa-fji-storms/monitoring/fms_inbox_processed.csv` on the dev blob.
+
+A relay email is accepted only if the sender is in `FMS_RELAY_SENDERS`, the
+subject is exactly one of the two above, and the topmost
+`Authentication-Results` header comes from `FMS_AUTHSERV_ID` and says
+`dmarc=pass`. If the first real relay email is skipped because the
+authserv-id differs, the run log shows the id that was seen: set
+`FMS_AUTHSERV_ID` to it.
+
+Repo variables: `FMS_IMAP_HOST` (default `imappro.zoho.com`),
+`FMS_IMAP_FOLDER` (default `INBOX`), `FMS_AUTHSERV_ID` (default
+`mx.zohomail.com`), `REQUIRE_DMARC_PASS` (default `True`) and
+`POLL_DRY_RUN`. Repo secrets: `FMS_IMAP_USER`, `FMS_IMAP_PASSWORD` (a Zoho
+app-specific password), `FMS_RELAY_SENDERS` (comma-separated addresses) and,
+optionally, `FMS_RELAY_TOKEN` (if set, the email body must contain it). The
+inbox address and the senders are secrets because the repo is public and
+GitHub prints the step's environment in the log.
+
+We recommend a Zoho filter that moves `[fji-relay]` mail into its own folder
+(e.g. `fji-relay`), with `FMS_IMAP_FOLDER` set to that folder.
+
+Scheduled runs are dry runs (they only log what they would dispatch) until
+`POLL_DRY_RUN` is set to `False`.
+
 ## Overview of analysis
 
 Key analysis in `analysis/`:
