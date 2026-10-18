@@ -227,8 +227,9 @@ function visit(el, out) {
   if (d) out.push({kind: "box", rect: r, deco: d, text: null, name: el.className || el.tagName});
   if (!d && flow && hasText(el) && (!hasBlockChild(el) || ["UL", "OL"].includes(el.tagName))) {
     const tb = textBlock(el, cs);
-    const pad = tb.pad;  // text box = content box
-    out.push({kind: "text", rect: {x: r.x + pad[3], y: r.y + pad[0], w: r.w - pad[1] - pad[3], h: r.h - pad[0] - pad[2]},
+    const pad = tb.pad;  // text box = content box (lists keep their indent as bullet margin)
+    const left = ["UL", "OL"].includes(el.tagName) ? 0 : pad[3];
+    out.push({kind: "text", rect: {x: r.x + left, y: r.y + pad[0], w: r.w - pad[1] - left, h: r.h - pad[0] - pad[2]},
               text: {...tb, pad: [0, 0, 0, 0]}, name: el.className || el.tagName.toLowerCase()});
     return;
   }
@@ -469,10 +470,13 @@ def add_table(shapes, item: dict):
     tbl = gf.table
     tbl.first_row = tbl.horz_banding = False
     tbl._tbl.tblPr.find(qn("a:tableStyleId")).text = NO_STYLE_TABLE
-    # column widths from the widest row
-    full = next(r for r in rows if len(r["cells"]) == ncols)
-    for j, c in enumerate(full["cells"]):
-        tbl.columns[j].width = _emu(c["rect"]["w"])
+    # column widths from the row with the most cells (spanned cells split evenly)
+    full = max(rows, key=lambda r: len(r["cells"]))
+    j = 0
+    for c in full["cells"]:
+        for k in range(c["span"]):
+            tbl.columns[j + k].width = _emu(c["rect"]["w"] / c["span"])
+        j += c["span"]
     tb = item["borders"]
     for i, r in enumerate(rows):
         tbl.rows[i].height = _emu(r["rect"]["h"])
