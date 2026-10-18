@@ -1,6 +1,8 @@
 import base64
 import datetime as dt
+import hashlib
 import importlib.util
+import urllib.error
 from email.message import EmailMessage
 from pathlib import Path
 
@@ -22,6 +24,7 @@ REAL_CSV = (
 FAKE_CSV = (
     b"# trackType=Official Forecast Track,baseTime=2026-04-07T00:00:00Z\n"
 )
+FAKE_SHA = hashlib.sha256(FAKE_CSV).hexdigest()
 NOW = dt.datetime(2026, 10, 18, 12, 0, tzinfo=dt.UTC)
 SENDERS = {"relay.sender@un.org"}
 ZOHO_AR = (
@@ -88,7 +91,15 @@ class Recorder:
         self.saved.append(df.copy())
 
 
-def run(messages, state=None, dry_run=False, rec=None, **classify_kw):
+def run(
+    messages,
+    state=None,
+    dry_run=False,
+    rec=None,
+    run_titles=None,
+    seed=False,
+    **classify_kw,
+):
     rec = rec or Recorder()
     result = poll.run(
         messages,
@@ -97,6 +108,8 @@ def run(messages, state=None, dry_run=False, rec=None, **classify_kw):
         dispatch_fn=rec.dispatch,
         save_fn=rec.save,
         classify_fn=lambda msg: classify(msg, **classify_kw),
+        run_titles=run_titles,
+        seed=seed,
         now_fn=lambda: NOW,
     )
     return result, rec
@@ -223,9 +236,9 @@ def test_dispatches_accepted_and_skips_others():
     assert (final["dispatched_at_utc"] == "2026-10-18T12:00:00Z").all()
 
 
-def test_already_processed_pair_is_skipped():
+def test_already_processed_csv_is_skipped():
     state = pd.DataFrame(
-        [["<abc123@un.org>", "forecast.CSV", "fms_forecast", "x"]],
+        [[FAKE_SHA, "fms_forecast", "<other@un.org>", "other.csv", "x"]],
         columns=poll.STATE_COLS,
     )
     (n_ok, n_fail), rec = run([make_msg()], state=state)
@@ -235,10 +248,12 @@ def test_already_processed_pair_is_skipped():
 
 def test_second_csv_in_same_message_still_dispatched():
     state = pd.DataFrame(
-        [["<abc123@un.org>", "a.csv", "fms_forecast", "x"]],
+        [[FAKE_SHA, "fms_forecast", "<abc123@un.org>", "a.csv", "x"]],
         columns=poll.STATE_COLS,
     )
-    msg = make_msg(attachments=(("a.csv", FAKE_CSV), ("b.csv", FAKE_CSV)))
+    msg = make_msg(
+        attachments=(("a.csv", FAKE_CSV), ("b.csv", FAKE_CSV + b"1,2\n"))
+    )
     (n_ok, _), rec = run([msg], state=state)
     assert n_ok == 1
     assert rec.dispatched[0][1]["filename"] == "b.csv"
@@ -318,18 +333,11 @@ def test_real_fms_csv_survives_rfc822_round_trip():
 # --- helpers + main --------------------------------------------------------
 
 
-def test_search_criteria_filters_on_server():
+def test_search_criteria_filters_sender_on_server_not_subject():
     one = poll.search_criteria("15-Oct-2026", {"a@un.org"})
-    assert one == [
-        "SINCE",
-        "15-Oct-2026",
-        "SUBJECT",
-        '"[fji-relay]"',
-        "FROM",
-        '"a@un.org"',
-    ]
+    assert one == ["SINCE", "15-Oct-2026", "FROM", '"a@un.org"']
     two = poll.search_criteria("15-Oct-2026", {"b@un.org", "a@un.org"})
-    assert two[4:] == ["OR", "FROM", '"a@un.org"', "FROM", '"b@un.org"']
+    assert two[2:] == ["OR", "FROM", '"a@un.org"', "FROM", '"b@un.org"']
 
 
 def test_imap_since_uses_english_months():
@@ -356,8 +364,11 @@ def _main_env(monkeypatch):
     monkeypatch.setenv("FMS_RELAY_SENDERS", "relay.sender@un.org")
     for var in ("FMS_RELAY_TOKEN", "FMS_AUTHSERV_ID", "REQUIRE_DMARC_PASS"):
         monkeypatch.delenv(var, raising=False)
+    for var in ("SEED_STATE", "LOOKBACK_DAYS"):
+        monkeypatch.delenv(var, raising=False)
     monkeypatch.setattr(poll, "load_state", empty_state)
     monkeypatch.setattr(poll, "save_state", lambda df: None)
+    monkeypatch.setattr(poll, "recent_run_titles", lambda *a: set())
 
 
 def test_main_exits_nonzero_on_failed_dispatch(monkeypatch):
@@ -404,3 +415,128 @@ def test_main_uses_relay_token_not_github_token(monkeypatch):
     )
     assert poll.main() == 0
     assert sent == ["x"]  # one dispatch, authenticated with GITHUB_TOKEN
+
+
+# --- review fixes: spoofing, duplicates, going live -------------------------
+
+
+def _parse(raw: bytes):
+    return poll.email.message_from_bytes(raw, policy=poll.policy.default)
+
+
+def _raw(from_lines, ar=ZOHO_AR):
+    head = "".join(f"From: {f}\r\n" for f in from_lines)
+    return (
+        f"Authentication-Results: {ar}\r\n{head}"
+        "To: relay@humdata.org\r\nSubject: [fji-relay] fms_forecast\r\n"
+        "Message-ID: <raw@un.org>\r\n\r\nbody\r\n"
+    ).encode()
+
+
+def test_obsolete_from_syntax_spoof_is_skipped():
+    # policy.default reads this as relay.sender@un.org, Zoho judges DMARC on
+    # the angle-addr domain
+    ar = "mx.zohomail.com; dmarc=pass header.from=evil.com"
+    msg = _parse(_raw(["relay.sender@un.org <attacker@evil.com>"], ar=ar))
+    assert poll.sender_address(msg) is None
+    assert classify(msg) is None
+
+
+def test_multiple_from_headers_or_addresses_are_skipped():
+    two_headers = _parse(_raw(["relay.sender@un.org", "x@evil.com"]))
+    assert classify(two_headers) is None
+    two_addrs = _parse(_raw(["relay.sender@un.org, x@evil.com"]))
+    assert classify(two_addrs) is None
+    good = _parse(_raw(["Relay Sender <relay.sender@un.org>"]))
+    assert classify(good) == poll.EVENT_FORECAST
+
+
+def test_dmarc_pass_for_another_domain_is_skipped():
+    ar = "mx.zohomail.com; dmarc=pass header.from=evil.com"
+    assert classify(make_msg(auth_results=(ar,))) is None
+
+
+def test_dmarc_pass_substring_elsewhere_is_skipped():
+    ar = (
+        "mx.zohomail.com; spf=pass smtp.mailfrom=dmarc=pass@evil.com; "
+        "dmarc=fail header.from=un.org"
+    )
+    assert classify(make_msg(auth_results=(ar,))) is None
+
+
+def test_dmarc_pass_with_comment_and_quotes_is_accepted():
+    ar = (
+        "mx.zohomail.com; dmarc=pass (p=quarantine dis=none) "
+        'header.from="un.org"'
+    )
+    assert classify(make_msg(auth_results=(ar,))) == poll.EVENT_FORECAST
+
+
+def test_same_csv_relayed_twice_is_sent_once_per_event_type():
+    messages = [
+        make_msg(message_id="<first@un.org>"),
+        make_msg(message_id="<resend@un.org>"),
+        make_msg(
+            subject="[fji-relay] fms_forecast_test",
+            message_id="<test@un.org>",
+        ),
+    ]
+    (n_ok, _), rec = run(messages)
+    assert n_ok == 2
+    assert [e for e, _ in rec.dispatched] == [
+        poll.EVENT_FORECAST,
+        poll.EVENT_TEST,
+    ]
+    assert rec.dispatched[0][1]["content_sha"] == FAKE_SHA[:12]
+
+
+def test_csv_with_existing_check_trigger_run_is_recorded_not_resent():
+    titles = {poll.run_title(FAKE_SHA, poll.EVENT_FORECAST)}
+    (n_ok, n_fail), rec = run([make_msg()], run_titles=titles)
+    assert (n_ok, n_fail) == (0, 0)
+    assert rec.dispatched == []
+    assert list(rec.saved[-1]["content_sha256"]) == [FAKE_SHA]
+
+
+def test_network_error_counts_as_failed(monkeypatch):
+    def boom(*a, **k):
+        raise urllib.error.URLError("timed out")
+
+    monkeypatch.setattr(poll.urllib.request, "urlopen", boom)
+    assert poll.dispatch("o/r", "t", poll.EVENT_FORECAST, {}) == -1
+    monkeypatch.setattr(
+        poll.urllib.request,
+        "urlopen",
+        lambda *a, **k: (_ for _ in ()).throw(TimeoutError()),
+    )
+    assert poll.dispatch("o/r", "t", poll.EVENT_FORECAST, {}) == -1
+
+
+def test_seed_records_without_dispatching():
+    (n_ok, n_fail), rec = run([make_msg()], seed=True)
+    assert (n_ok, n_fail) == (0, 0)
+    assert rec.dispatched == []
+    assert list(rec.saved[-1]["content_sha256"]) == [FAKE_SHA]
+    (_, _), rec = run([make_msg()], seed=True, dry_run=True)
+    assert rec.saved == []
+
+
+def test_main_refuses_dmarc_off_outside_dry_run(monkeypatch):
+    _main_env(monkeypatch)
+    monkeypatch.setenv("REQUIRE_DMARC_PASS", "False")
+    with pytest.raises(ValueError):
+        poll.main()
+    monkeypatch.setenv("DRY_RUN", "True")
+    monkeypatch.setattr(poll, "fetch_messages", lambda **kw: [])
+    assert poll.main() == 0
+
+
+def test_check_trigger_run_name_matches_run_title():
+    wf = (
+        Path(__file__).resolve().parents[1]
+        / ".github/workflows/run_monitor_forecast_trigger.yml"
+    ).read_text()
+    assert (
+        "format('FMS {0} {1}', github.event.client_payload.content_sha" in wf
+    )
+    assert poll.run_title("ab" * 32, "x") == "FMS " + "ab" * 6 + " x"

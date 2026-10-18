@@ -54,16 +54,26 @@ policy). Instead:
    (`[fji-relay] fms_forecast_test` for `fji_test` emails).
 3. `.github/workflows/poll_fms_inbox.yml` runs every 10 minutes. It reads the
    relay inbox over IMAP (read-only, nothing is flagged or moved) and sends
-   each new CSV to Check Trigger as a `repository_dispatch`. Handled
-   attachments are recorded in
-   `pa-aa-fji-storms/monitoring/fms_inbox_processed.csv` on the dev blob.
+   each new CSV to Check Trigger as a `repository_dispatch`. A CSV is
+   identified by the sha256 of its bytes plus the event type, so the same
+   file relayed twice goes out once. Handled CSVs are recorded in
+   `pa-aa-fji-storms/monitoring/fms_inbox_processed.csv` on the dev blob,
+   and each Check Trigger run is titled `FMS <csv short hash> <event>`; the
+   poller checks recent run titles before sending, so a dispatch whose
+   response was lost is not sent twice.
 
-A relay email is accepted only if the sender is in `FMS_RELAY_SENDERS`, the
-subject is exactly one of the two above, and the topmost
-`Authentication-Results` header comes from `FMS_AUTHSERV_ID` and says
-`dmarc=pass`. If the first real relay email is skipped because the
-authserv-id differs, the run log shows the id that was seen: set
-`FMS_AUTHSERV_ID` to it.
+A relay email is accepted only if:
+
+- it has one `From` header with one address, parsed without defects, and
+  that address is in `FMS_RELAY_SENDERS`;
+- the subject is exactly one of the two above;
+- the topmost `Authentication-Results` header comes from `FMS_AUTHSERV_ID`
+  and has `dmarc=pass` with `header.from` equal to the sender's domain
+  (un.org publishes DMARC `p=quarantine`, so forged un.org senders fail).
+
+If the first real relay email is skipped because the authserv-id differs,
+the run log shows the id that was seen: set `FMS_AUTHSERV_ID` to it.
+`REQUIRE_DMARC_PASS=False` is refused outside dry runs.
 
 Repo variables: `FMS_IMAP_HOST` (default `imappro.zoho.com`),
 `FMS_IMAP_FOLDER` (default `INBOX`), `FMS_AUTHSERV_ID` (default
@@ -77,8 +87,15 @@ GitHub prints the step's environment in the log.
 We recommend a Zoho filter that moves `[fji-relay]` mail into its own folder
 (e.g. `fji-relay`), with `FMS_IMAP_FOLDER` set to that folder.
 
-Scheduled runs are dry runs (they only log what they would dispatch) until
-`POLL_DRY_RUN` is set to `False`.
+Going live:
+
+1. Run the workflow by hand with `dry_run: True` and check the log lists
+   the expected relay emails (and no authserv-id warnings).
+2. Run it once with `dry_run: False`, `seed_state: True`. This records every
+   CSV already in the 3-day window as handled, so switching on doesn't send
+   old forecasts.
+3. Set the repo variable `POLL_DRY_RUN` to `False`. Until then scheduled
+   runs only log what they would dispatch.
 
 ## Overview of analysis
 

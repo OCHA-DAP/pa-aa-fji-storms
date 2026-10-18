@@ -18,11 +18,20 @@ on:
         options:
           - 'True'
           - 'False'
+      seed_state:
+        description: 'SEED_STATE: record every CSV now in the window as handled, without dispatching (run once, with dry_run False, before going live)'
+        type: choice
+        default: 'False'
+        options:
+          - 'False'
+          - 'True'
 
 # contents: write lets GITHUB_TOKEN send repository_dispatch (which, unlike
-# most GITHUB_TOKEN events, does start a new workflow run).
+# most GITHUB_TOKEN events, does start a new workflow run); actions: read
+# lists recent Check Trigger runs so a CSV is never dispatched twice.
 permissions:
   contents: write
+  actions: read
 
 concurrency:
   group: poll-fms-inbox
@@ -57,4 +66,5 @@ jobs:
           DSCI_AZ_BLOB_DEV_SAS_WRITE: ${{ secrets.DSCI_AZ_BLOB_DEV_SAS_WRITE }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DRY_RUN: ${{ inputs.dry_run || vars.POLL_DRY_RUN || 'True' }}
+          SEED_STATE: ${{ inputs.seed_state || 'False' }}
         run: python pipelines/poll_fms_inbox.py
