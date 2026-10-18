@@ -1,0 +1,28 @@
+# Top-level packages of the Databricks job's cluster (DBR 15.4 LTS, Python 3.11).
+# The same versions monitoring-requirements.txt resolves to on GitHub Actions.
+# Lock it into requirements-dbx.txt after any change:
+#   uv venv -p 3.11 /tmp/lock && uv pip install -p /tmp/lock -r requirements-dbx.in
+#   uv pip freeze -p /tmp/lock > requirements-dbx.txt  (then re-add this header)
+azure-storage-blob==12.31.0
+fiona==1.9.6
+frictionless==5.15.6
+geopandas==1.1.4
+html2text==2020.1.16
+Jinja2==3.1.6
+kaleido==0.2.1
+matplotlib==3.11.2
+numpy==1.25.1
+ocha-lens==0.6.2
+ocha-stratus==0.1.9
+pandas==2.3.3
+plotly==5.17.0
+psycopg2-binary==2.9.13
+pyarrow==25.0.0
+python-dotenv==1.0.0
+rasterio==1.4.4
+rioxarray==0.19.0
+scipy==1.15.3
+shapely==2.0.1
+sqlalchemy==2.1.5
+tqdm==4.70.1
+xarray==2025.6.1

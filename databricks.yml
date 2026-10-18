@@ -151,33 +151,12 @@ resources:
               - "{{job.parameters.event}}"
               - "${var.ingest_mode}"
               - "${var.storms_pipeline_ref}"
-          # The cluster's whole non-DBR environment, pinned: an unpinned
-          # pyarrow broke the info email in Oct 2026. Same versions as
-          # monitoring-requirements.txt resolves to on GitHub Actions.
-          libraries: &fji_libs
-            - pypi: { package: "azure-storage-blob==12.31.0" }
-            - pypi: { package: "fiona==1.9.6" }
-            - pypi: { package: "frictionless==5.15.6" }
-            - pypi: { package: "geopandas==1.1.4" }
-            - pypi: { package: "html2text==2020.1.16" }
-            - pypi: { package: "Jinja2==3.1.6" }
-            - pypi: { package: "kaleido==0.2.1" }
-            - pypi: { package: "matplotlib==3.11.2" }
-            - pypi: { package: "numpy==1.25.1" }
-            - pypi: { package: "ocha-lens==0.6.2" }
-            - pypi: { package: "ocha-stratus==0.1.9" }
-            - pypi: { package: "pandas==2.3.3" }
-            - pypi: { package: "plotly==5.17.0" }
-            - pypi: { package: "psycopg2-binary==2.9.13" }
-            - pypi: { package: "pyarrow==25.0.0" }
-            - pypi: { package: "python-dotenv==1.0.0" }
-            - pypi: { package: "rasterio==1.4.4" }
-            - pypi: { package: "rioxarray==0.19.0" }
-            - pypi: { package: "scipy==1.15.3" }
-            - pypi: { package: "shapely==2.0.1" }
-            - pypi: { package: "sqlalchemy==2.1.5" }
-            - pypi: { package: "tqdm==4.70.1" }
-            - pypi: { package: "xarray==2025.6.1" }
+          # The cluster's whole non-DBR environment, installed in one pip
+          # resolve from a full lock: as separate libraries a transitive
+          # dependency upgraded numpy to 2.x and broke shapely (and an
+          # unpinned pyarrow broke the info email in Oct 2026).
+          libraries:
+            - requirements: ${workspace.file_path}/requirements-dbx.txt
         - task_key: monitor
           depends_on:
             - task_key: ingest
@@ -196,4 +175,5 @@ resources:
               - "${var.dry_run}"
               - "${var.simulate_trigger}"
               - "${var.max_forecast_age_hours}"
-          libraries: *fji_libs
+          libraries:
+            - requirements: ${workspace.file_path}/requirements-dbx.txt
