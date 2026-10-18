@@ -9,11 +9,14 @@
   written as RSMC Nadi-format CSVs to slides/simex_injects/ and evaluated the
   same way.
 
-Each deck is one self-contained HTML page plus its images and a PDF.
+Each deck is one self-contained HTML page plus its images, a PDF and a
+PowerPoint file (one picture per slide, made from the PDF).
 """
 
 import argparse
+import html
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -22,7 +25,10 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pymupdf
 from jinja2 import Environment, FileSystemLoader
+from pptx import Presentation
+from pptx.util import Emu, Inches
 
 sys.path.insert(0, str(Path(__file__).parent))
 
@@ -476,6 +482,40 @@ def to_pdf(out: Path, pdf_name: str):
     )
 
 
+def to_pptx(out: Path, pdf_name: str, pptx_name: str):
+    """One full-slide picture per PDF page, so the PowerPoint matches the PDF."""
+    pdf = pymupdf.open(out / pdf_name)
+    labels = [
+        html.unescape(x)
+        for x in re.findall(
+            r'<section class="slide[^"]*"[^>]* data-label="([^"]*)"',
+            (out / "index.html").read_text(),
+        )
+    ]
+    assert len(labels) == pdf.page_count, (len(labels), pdf.page_count)
+
+    prs = Presentation()
+    page = pdf[0].rect
+    prs.slide_width = Inches(13.333)
+    prs.slide_height = Emu(round(prs.slide_width * page.height / page.width))
+    prs.core_properties.title = pdf.metadata.get("title") or ""
+    prs.core_properties.author = "OCHA Centre for Humanitarian Data"
+    blank = prs.slide_layouts[6]
+    zoom = 2400 / page.width  # ~2400 px wide
+    with tempfile.TemporaryDirectory() as tmp:
+        for i, (pg, label) in enumerate(zip(pdf, labels)):
+            img = Path(tmp) / f"{i:02d}.jpg"
+            pg.get_pixmap(matrix=pymupdf.Matrix(zoom, zoom)).save(
+                img, jpg_quality=88
+            )
+            pic = prs.slides.add_slide(blank).shapes.add_picture(
+                str(img), 0, 0, prs.slide_width, prs.slide_height
+            )
+            pic.name = f"Slide {i + 1}"
+            pic._element.nvPicPr.cNvPr.set("descr", label)
+        prs.save(out / pptx_name)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--fms-dir", type=Path, required=False)
@@ -483,7 +523,7 @@ def main():
     ap.add_argument(
         "--render-only",
         action="store_true",
-        help="re-render HTML/PDF from slides/numbers/*.json",
+        help="re-render HTML/PDF/PowerPoint from slides/numbers/*.json",
     )
     args = ap.parse_args()
 
@@ -494,8 +534,10 @@ def main():
         else:
             data = build_lookback(args.fms_dir, out)
         pdf = "fiji-aa-2025-26-season-lookback.pdf"
-        render("lookback.html.j2", out, d=data, pdf=pdf)
+        pptx = "fiji-aa-2025-26-season-lookback.pptx"
+        render("lookback.html.j2", out, d=data, pdf=pdf, pptx=pptx)
         to_pdf(out, pdf)
+        to_pptx(out, pdf, pptx)
 
     if args.only in (None, "simex"):
         out = DOCS / "simex"
@@ -504,8 +546,10 @@ def main():
         else:
             data = build_simex(out)
         pdf = "fiji-aa-simulation-exercise.pdf"
-        render("simex.html.j2", out, sc=data, pdf=pdf)
+        pptx = "fiji-aa-simulation-exercise.pptx"
+        render("simex.html.j2", out, sc=data, pdf=pdf, pptx=pptx)
         to_pdf(out, pdf)
+        to_pptx(out, pdf, pptx)
 
 
 if __name__ == "__main__":
