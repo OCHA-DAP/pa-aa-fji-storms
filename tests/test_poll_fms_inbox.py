@@ -540,3 +540,18 @@ def test_check_trigger_run_name_matches_run_title():
         "format('FMS {0} {1}', github.event.client_payload.content_sha" in wf
     )
     assert poll.run_title("ab" * 32, "x") == "FMS " + "ab" * 6 + " x"
+
+
+def test_quoted_mailfrom_cannot_inject_a_dmarc_clause():
+    ar = (
+        'mx.zohomail.com; spf=pass smtp.mailfrom="; dmarc=pass '
+        'header.from=un.org "@evil.com; dmarc=fail header.from=un.org'
+    )
+    assert classify(make_msg(auth_results=(ar,))) is None
+
+
+def test_dmarc_pass_followed_directly_by_comment_is_accepted():
+    ar = "mx.zohomail.com; dmarc=pass(p=quarantine) header.from=un.org"
+    assert classify(make_msg(auth_results=(ar,))) == poll.EVENT_FORECAST
+    ar = "mx.zohomail.com; dmarc=passed header.from=un.org"
+    assert classify(make_msg(auth_results=(ar,))) is None

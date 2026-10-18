@@ -79,6 +79,9 @@ EVENT_FORECAST = "fms_forecast"
 EVENT_TEST = "fms_forecast_test"
 EVENTS = (EVENT_FORECAST, EVENT_TEST)
 
+_QUOTED_WITH_SEMICOLON = re.compile(r'"(?:[^"\\]|\\.)*;(?:[^"\\]|\\.)*"')
+_DMARC_PASS = re.compile(r"dmarc=pass\b", re.IGNORECASE)
+
 # imaplib wants English month abbreviations regardless of locale
 _MONTHS = "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split()
 
@@ -174,9 +177,14 @@ def dmarc_passed_for(msg: EmailMessage, domain: str) -> bool:
     headers = msg.get_all("Authentication-Results") or []
     if not headers:
         return False
-    for clause in str(headers[0]).split(";")[1:]:
+    # A quoted string (e.g. a quoted MAIL FROM local part echoed into
+    # smtp.mailfrom=) could smuggle in a fake "; dmarc=pass ..." clause, so
+    # drop quoted strings that contain a ';' before splitting.
+    value = _QUOTED_WITH_SEMICOLON.sub('""', str(headers[0]))
+    for clause in value.split(";")[1:]:
         tokens = clause.split()
-        if not tokens or tokens[0].lower() != "dmarc=pass":
+        # "dmarc=pass" may be followed directly by a "(comment)"
+        if not tokens or not _DMARC_PASS.match(tokens[0]):
             continue
         for token in tokens[1:]:
             name, _, value = token.partition("=")
