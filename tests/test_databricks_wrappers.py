@@ -78,3 +78,43 @@ def test_env_flag(value, expected):
 def test_env_flag_strict(value):
     with pytest.raises(ValueError):
         run_monitor.env_flag("x", value)
+
+
+INGESTED = {
+    "status": "ingested",
+    "stage": "prod",
+    "disturbance_id": "2526-11F",
+    "track_type": "Official Forecast Track",
+    "issued_time": "2026-04-07T00:00:00",
+    "content_sha256": "ab" * 32,
+}
+
+
+def test_monitor_reads_db_after_ingest():
+    args = run_monitor.monitor_input(INGESTED, BLOB)
+    assert args[:2] == ["--from-db", "--disturbance-id"]
+    assert "2526-11F" in args and "prod" in args
+    assert args[-2:] == ["--content-sha", "ab" * 32]
+
+
+def test_monitor_monitors_any_forecast_track_type():
+    values = {**INGESTED, "track_type": "GP Forecast Track"}
+    args = run_monitor.monitor_input(values, BLOB)
+    assert "GP Forecast Track" in args
+
+
+def test_monitor_quiet_only_for_skipped_file():
+    assert run_monitor.monitor_input({"status": "skipped"}, BLOB) is None
+
+
+@pytest.mark.parametrize("values", [{}, {"status": ""}, {"status": "weird"}])
+def test_monitor_falls_back_to_staged_csv(values):
+    assert run_monitor.monitor_input(values, BLOB) == ["--csv-blob", BLOB]
+
+
+@pytest.mark.parametrize(
+    "blob", ["", "pa-aa-fji-storms/monitoring/x.csv", BLOB + "/../../x"]
+)
+def test_fallback_refuses_blobs_outside_inbox(blob):
+    with pytest.raises(ValueError):
+        run_monitor.monitor_input({}, blob)

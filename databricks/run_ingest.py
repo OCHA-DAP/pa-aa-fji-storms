@@ -130,6 +130,7 @@ def main() -> None:
         "disturbance_id": result.get("disturbance_id", ""),
         "track_type": result.get("track_type", ""),
         "issued_time": result.get("issued_time", ""),
+        "content_sha256": result.get("content_sha256", ""),
     }
     set_task_values(values)
     print(f"[run_ingest] {json.dumps(values)}", flush=True)

@@ -1,5 +1,8 @@
 import argparse
+import base64
+import hashlib
 import os
+from datetime import datetime, timezone
 from io import BytesIO
 
 import geopandas as gpd
@@ -57,6 +60,12 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--track-type", default=OFFICIAL_TRACK)
     parser.add_argument("--db-stage", choices=["dev", "prod"], default="prod")
+    parser.add_argument(
+        "--content-sha", default="", help="SHA-256 of the forecast's CSV"
+    )
+    # Databricks fallback when the ingest task failed: the CSV the poller
+    # staged in the dev blob.
+    parser.add_argument("--csv-blob", default="")
     return parser.parse_known_args()[0]
 
 
@@ -76,21 +85,35 @@ TRIGGER_LIST_IDS = TEST_LIST_IDS if TEST_EMAIL else PROD_TRIGGER_LIST_IDS
 IS_TEST_SEND = TEST_EMAIL or SIMULATE_TRIGGER
 SUBJECT_PREFIX = "[TEST] " if IS_TEST_SEND else ""
 
+# Refuse to email the real lists about a forecast older than this (hours);
+# unset = no limit. Stops an old CSV being replayed to partners.
+MAX_FORECAST_AGE_HOURS = os.getenv("MAX_FORECAST_AGE_HOURS", "")
+
 # enable/disable tqdm progress bars for running locally
 DISABLE_TQDM = load_boolean_env("DISABLE_TQDM", True)
 
 
-def send_once(record, email_type: str, forecast_id: str, **campaign):
-    """Send unless this forecast's email of this type already went out."""
-    if email_record.already_sent(record, forecast_id, email_type):
+def send_once(
+    record, email_type: str, forecast_id: str, content_sha12: str, **campaign
+):
+    """Send unless this CSV's email of this type already went out."""
+    if email_record.already_sent(
+        record, forecast_id, content_sha12, email_type
+    ):
         logger.info(
-            f"{email_type} email for {forecast_id} already sent; skipping."
+            f"{email_type} email for {forecast_id} ({content_sha12}) "
+            "already sent; skipping."
         )
         return record
     campaign_id = create_and_send_campaign(**campaign)
     logger.info(f"Sent {email_type} email (Listmonk campaign {campaign_id}).")
     return email_record.add_sent(
-        record, IS_TEST_SEND, forecast_id, email_type, campaign_id
+        record,
+        IS_TEST_SEND,
+        forecast_id,
+        content_sha12,
+        email_type,
+        campaign_id,
     )
 
 
@@ -112,6 +135,7 @@ if __name__ == "__main__":
         )
     args = parse_args()
     csv_str = args.csv
+    content_sha = args.content_sha
     if args.from_db:
         if not (args.disturbance_id and args.issued_time):
             raise SystemExit(
@@ -122,8 +146,16 @@ if __name__ == "__main__":
             f"{args.issued_time} from the {args.db_stage} database."
         )
         decoded_csv = None
+    elif args.csv_blob:
+        logger.info(f"Loading the forecast CSV {args.csv_blob}.")
+        csv_bytes = stratus.load_blob_data(args.csv_blob, stage="dev")
+        content_sha = hashlib.sha256(csv_bytes).hexdigest()
+        decoded_csv = BytesIO(csv_bytes)
     elif csv_str:
         decoded_csv = decode_b64_string(csv_str)
+        content_sha = hashlib.sha256(
+            base64.b64decode(csv_str.encode("ascii") + b"==")
+        ).hexdigest()
     elif SIMULATE_TRIGGER:
         decoded_csv = BytesIO(stratus.load_blob_data(YASA_TEST_BLOB_NAME))
     elif TEST_FORECAST_BLOB_NAME:
@@ -156,6 +188,17 @@ if __name__ == "__main__":
     )
 
     logger.info(f"Forecast ID: {forecast_id=}")
+    content_sha12 = content_sha[:12]
+
+    if MAX_FORECAST_AGE_HOURS and not IS_TEST_SEND and not DRY_RUN:
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        age_hours = (now - issued_time).total_seconds() / 3600
+        if age_hours > float(MAX_FORECAST_AGE_HOURS):
+            raise SystemExit(
+                f"Forecast issued {issued_time} is {age_hours:.0f} h old "
+                f"(limit {MAX_FORECAST_AGE_HOURS} h): not emailing the "
+                "real lists about it."
+            )
 
     gdf_readiness = gdf_forecast[gdf_forecast["leadtime"] <= 120].copy()
     gdf_action = gdf_forecast[gdf_forecast["leadtime"] <= 72].copy()
@@ -198,7 +241,12 @@ if __name__ == "__main__":
     email_base_name = email_base_name + forecast_id
 
     # Send trigger emails
-    sent_record = None if DRY_RUN else email_record.load_record(IS_TEST_SEND)
+    sent_record = None
+    if not DRY_RUN:
+        sent_record = email_record.load_record(IS_TEST_SEND)
+        # Prove the record is writable before anything is sent, so a
+        # failed write after a send can't lead to a repeat on retry.
+        email_record.save_record(sent_record, IS_TEST_SEND)
     if not DRY_RUN:
         if trigger_readiness:
             logger.info("Readiness trigger condition met; sending email.")
@@ -214,6 +262,7 @@ if __name__ == "__main__":
                 sent_record,
                 "readiness",
                 forecast_id,
+                content_sha12,
                 subject=subject,
                 name=f"{email_base_name}_readiness",
                 list_ids=TRIGGER_LIST_IDS,
@@ -237,6 +286,7 @@ if __name__ == "__main__":
                 sent_record,
                 "action",
                 forecast_id,
+                content_sha12,
                 subject=subject,
                 name=f"{email_base_name}_action",
                 list_ids=TRIGGER_LIST_IDS,
@@ -456,6 +506,7 @@ if __name__ == "__main__":
             sent_record,
             "forecast_info",
             forecast_id,
+            content_sha12,
             subject=subject,
             name=f"{email_base_name}_forecast_info",
             list_ids=INFO_LIST_IDS,
