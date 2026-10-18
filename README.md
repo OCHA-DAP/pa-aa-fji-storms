@@ -94,8 +94,9 @@ Going live:
 2. Run it once with `dry_run: False`, `seed_state: True`. This records every
    CSV already in the 3-day window as handled, so switching on doesn't send
    old forecasts.
-3. Set the repo variable `POLL_DRY_RUN` to `False`. Until then scheduled
-   runs only log what they would dispatch.
+3. Set the repo variables `POLL_ENABLED` to `True` (scheduled runs are
+   skipped until then) and `POLL_DRY_RUN` to `False` (until then scheduled
+   runs only log what they would dispatch).
 
 ## Overview of analysis
 

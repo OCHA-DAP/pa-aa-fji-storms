@@ -39,6 +39,9 @@ concurrency:
 
 jobs:
   poll:
+    # Scheduled runs do nothing until the repo variable POLL_ENABLED is
+    # 'True' (set it once the IMAP secrets exist); manual runs always run.
+    if: ${{ github.event_name == 'workflow_dispatch' || vars.POLL_ENABLED == 'True' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
