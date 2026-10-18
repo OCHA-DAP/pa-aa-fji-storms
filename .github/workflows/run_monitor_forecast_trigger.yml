@@ -64,7 +64,11 @@ jobs:
         run: |
           if [ "$GITHUB_EVENT_NAME" = "repository_dispatch" ]; then
             CSV_B64="$(jq -r '.client_payload.csv // ""' "$GITHUB_EVENT_PATH")"
+            if [ -z "$CSV_B64" ]; then
+              echo "::error::repository_dispatch arrived with an empty client_payload.csv"
+              exit 1
+            fi
           else
             CSV_B64="${{ inputs.csv }}"
           fi
-          python pipelines/monitor_forecast_trigger.py $CSV_B64
+          python pipelines/monitor_forecast_trigger.py "$CSV_B64"
