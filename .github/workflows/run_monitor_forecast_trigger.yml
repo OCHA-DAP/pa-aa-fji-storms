@@ -1,4 +1,7 @@
 name: Check Trigger
+# Dispatches from poll_fms_inbox.py are titled "FMS <csv short hash> <event>";
+# the poller lists recent runs by this title so a dispatch is never sent twice.
+run-name: ${{ github.event_name == 'repository_dispatch' && format('FMS {0} {1}', github.event.client_payload.content_sha, github.event.action) || 'Check Trigger' }}
 
 on:
   workflow_dispatch:
