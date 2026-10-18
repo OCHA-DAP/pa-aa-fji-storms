@@ -27,6 +27,11 @@ on:
       test_forecast_blob_name:
         description: 'Blob name of test forecast file to use instead of input CSV (optional)'
         type: string
+  # Sent by the fji_trigger_monitoring Power Automate flow (GitHub connector,
+  # "Create a repository dispatch event"), with client_payload.csv = base64 CSV.
+  # fms_forecast_test (from a "fji_test" email) forces TEST_EMAIL=True.
+  repository_dispatch:
+    types: [fms_forecast, fms_forecast_test]
 
 jobs:
   build:
@@ -51,8 +56,19 @@ jobs:
           DSCI_AZ_BLOB_DEV_SAS_WRITE: ${{ secrets.DSCI_AZ_BLOB_DEV_SAS_WRITE }}
           DSCI_LISTMONK_API_USERNAME: ${{ vars.DSCI_LISTMONK_API_USERNAME }}
           DSCI_LISTMONK_API_KEY: ${{ secrets.DSCI_LISTMONK_API_KEY }}
-          TEST_EMAIL: ${{ inputs.test_email || vars.TEST_EMAIL || 'True'}}
+          TEST_EMAIL: ${{ github.event.action == 'fms_forecast_test' && 'True' || inputs.test_email || vars.TEST_EMAIL || 'True'}}
           SIMULATE_TRIGGER: ${{ inputs.simulate_trigger || vars.SIMULATE_TRIGGER || 'False'}}
           DRY_RUN: ${{ inputs.dry_run || vars.DRY_RUN || 'True'}}
           TEST_FORECAST_BLOB_NAME: ${{ inputs.test_forecast_blob_name }}
-        run: python pipelines/monitor_forecast_trigger.py ${{ inputs.csv }}
+        # The dispatch CSV is read from the event file so it is not echoed in the log.
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "repository_dispatch" ]; then
+            CSV_B64="$(jq -r '.client_payload.csv // ""' "$GITHUB_EVENT_PATH")"
+            if [ -z "$CSV_B64" ]; then
+              echo "::error::repository_dispatch arrived with an empty client_payload.csv"
+              exit 1
+            fi
+          else
+            CSV_B64="${{ inputs.csv }}"
+          fi
+          python pipelines/monitor_forecast_trigger.py "$CSV_B64"
