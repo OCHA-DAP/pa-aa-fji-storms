@@ -122,6 +122,12 @@ forecasts. A failed shadow run only logs a warning. If `dbx-shadow` is set
 but Databricks isn't configured, the shadow is dropped and Check Trigger
 runs as usual.
 
+A send is recorded once GitHub or Databricks accepts it, not when the run
+finishes. Failed Databricks runs email the job's failure address; when
+switching back from `dbx` to `gha` after one, re-send that forecast by hand
+(Check Trigger's `workflow_dispatch` with the base64 CSV), because the
+poller counts it as handled.
+
 ## Overview of analysis
 
 Key analysis in `analysis/`:

@@ -561,6 +561,9 @@ def make_handoff(
         except DbxError as e:
             logger.error("Databricks hand-off failed: %s", e)
             return False
+        except Exception as e:  # noqa: BLE001 — e.g. an unexpected reply
+            logger.error("Databricks hand-off failed: %s", type(e).__name__)
+            return False
         logger.info("Databricks run %s started", run_id)
         return True
 
@@ -580,11 +583,18 @@ def dbx_client_from_env() -> DbxClient | None:
     if missing:
         logger.warning("Databricks hand-off not configured: %s unset", missing)
         return None
+    try:
+        job_id = int(values["FMS_DBX_JOB_ID"])
+    except ValueError:
+        logger.warning(
+            "Databricks hand-off not configured: bad FMS_DBX_JOB_ID"
+        )
+        return None
     return DbxClient(
         values["DATABRICKS_HOST"],
         values["DATABRICKS_CLIENT_ID"],
         values["DATABRICKS_CLIENT_SECRET"],
-        int(values["FMS_DBX_JOB_ID"]),
+        job_id,
     )
 
 
@@ -742,7 +752,9 @@ def main() -> int:
         if client is not None:
             handoff_fn = make_handoff(client)
         elif TARGET_DBX in targets:
-            raise ValueError("FMS_TARGETS has dbx but Databricks is unset")
+            raise ValueError(
+                "FMS_TARGETS has dbx but Databricks is unset or invalid"
+            )
         else:
             # never let a shadow misconfiguration touch the live path
             targets = tuple(t for t in targets if t != TARGET_DBX_SHADOW)

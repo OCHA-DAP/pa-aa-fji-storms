@@ -870,3 +870,31 @@ def test_main_default_targets_unchanged(monkeypatch):
     monkeypatch.setattr(poll, "dispatch", lambda *a: sent.append(a) or 204)
     assert poll.main() == 0
     assert len(sent) == 1
+
+
+def test_make_handoff_unexpected_error_returns_false():
+    class Broken:
+        def run_now(self, job_parameters, token):
+            raise KeyError("run_id")
+
+    handoff = poll.make_handoff(Broken(), stage_fn=lambda data, blob: None)
+    assert not handoff(
+        "dbx-shadow", "fms_forecast", "f.csv", FAKE_CSV, FAKE_SHA
+    )
+
+
+def test_bad_job_id_drops_shadow_but_not_live(monkeypatch):
+    _main_env(monkeypatch)
+    monkeypatch.setenv("DATABRICKS_HOST", "https://h")
+    monkeypatch.setenv("DATABRICKS_CLIENT_ID", "id")
+    monkeypatch.setenv("DATABRICKS_CLIENT_SECRET", "s")
+    monkeypatch.setenv("FMS_DBX_JOB_ID", "not-a-number")
+    monkeypatch.setenv("FMS_TARGETS", "gha,dbx-shadow")
+    monkeypatch.setattr(poll, "fetch_messages", lambda **kw: [make_msg()])
+    sent = []
+    monkeypatch.setattr(poll, "dispatch", lambda *a: sent.append(a) or 204)
+    assert poll.main() == 0
+    assert len(sent) == 1
+    monkeypatch.setenv("FMS_TARGETS", "dbx")
+    with pytest.raises(ValueError):
+        poll.main()
