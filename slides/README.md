@@ -26,8 +26,11 @@ Every wind-exposure number on the slides comes from the live trigger code
 - `figures.py` — forecast and rainfall maps.
 - `build_decks.py` — computes everything and renders `templates/*.j2` to
   `docs/slides/<deck>/index.html`, prints each deck to PDF with headless Chrome,
-  then makes the PowerPoint from the PDF (one full-slide picture per page, so the
-  text is not editable in PowerPoint).
+  and writes an editable PowerPoint with `pptx_export.py`.
+- `pptx_export.py` — reads the rendered HTML back in Chrome (Arial forced, so
+  lines break as they will in PowerPoint) and rebuilds each slide as native
+  PowerPoint objects: text boxes, tables, shapes with text, pictures. The
+  wording therefore only lives in the templates.
 - `numbers/*.json` — the computed numbers, so the HTML, PDF and PowerPoint can be re-rendered
   without recomputing.
 - `lookback_inputs/` — the two IMERG maps from the observational emails sent
@@ -37,7 +40,7 @@ Every wind-exposure number on the slides comes from the live trigger code
 
 ```bash
 uv venv -p 3.11 .venv
-uv pip install -p .venv/bin/python -r monitoring-requirements.txt jinja2 python-pptx pymupdf
+uv pip install -p .venv/bin/python -r monitoring-requirements.txt jinja2 python-pptx playwright
 uv pip install -p .venv/bin/python -e . --no-deps
 
 # everything (needs the RSMC Nadi CSVs — saved by the Power Automate flow to

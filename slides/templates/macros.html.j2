@@ -4,7 +4,7 @@
 
 {% macro pill(state, at=None) -%}
 {% if state == 'new' %}<span class="pill">ACTIVATED</span>
-{% elif state == 'done' %}<span class="pill">✓ Activated · {{ at }}</span>
+{% elif state == 'done' %}<span class="pill">✓ Activated</span><small>{{ at }}</small>
 {% elif state == 'na' %}<span class="pill na">—</span>
 {% else %}<span class="pill notmet">Not reached</span>{% endif %}
 {%- endmacro %}
@@ -20,7 +20,7 @@
       {{ gauge(r64, threshold) }}<small>threshold {{ threshold | fmt }}</small>
       {% else %}<span style="color:var(--muted)">—</span>{% endif %}
     </td>
-    <td>{{ pill(rstate, rat) }}</td>
+    <td class="st">{{ pill(rstate, rat) }}</td>
   </tr>
   <tr class="action {{ astate }}">
     <td class="name">Action<small>72-hour forecast</small></td>
@@ -29,7 +29,7 @@
       {{ gauge(a64, threshold) }}<small>threshold {{ threshold | fmt }}</small>
       {% else %}<span style="color:var(--muted)">—</span>{% endif %}
     </td>
-    <td>{{ pill(astate, aat) }}</td>
+    <td class="st">{{ pill(astate, aat) }}</td>
   </tr>
   <tr class="observational {{ ostate }}">
     <td class="name">Observational<small>2-day rainfall</small></td>
@@ -38,7 +38,7 @@
       {{ gauge(omm, rain_threshold) }}<small>threshold {{ rain_threshold }} mm</small>
       {% else %}<span style="color:var(--muted)">IMERG satellite, checked daily</span>{% endif %}
     </td>
-    <td>{{ pill(ostate, oat) }}</td>
+    <td class="st">{{ pill(ostate, oat) }}</td>
   </tr>
 </table>
 {%- endmacro %}

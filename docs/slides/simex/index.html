@@ -82,6 +82,7 @@
   table.trig td.name small { display: block; font-weight: 400; color: var(--muted); font-size: 0.78rem; }
   table.trig td.val { white-space: nowrap; }
   table.trig td.val small { display: block; color: var(--muted); font-size: 0.78rem; }
+  table.trig td.st small { display: block; color: var(--muted); font-size: 0.78rem; margin-top: 4px; }
   .pill {
     display: inline-block; border-radius: 999px; padding: 3px 10px;
     font-size: 0.74rem; font-weight: 800; letter-spacing: 0.04em; white-space: nowrap;
@@ -276,7 +277,7 @@
         <tr><th>Status in the table</th><th></th></tr>
         <tr class="notmet"><td><span class="pill notmet">Not reached</span></td><td>below the threshold</td></tr>
         <tr class="readiness new"><td><span class="pill">ACTIVATED</span></td><td>activates on this forecast</td></tr>
-        <tr class="readiness done"><td><span class="pill">✓ Activated · Day 1</span></td><td>activated earlier</td></tr>
+        <tr class="readiness done"><td class="st"><span class="pill">✓ Activated</span><small>Day 1</small></td><td>activated earlier</td></tr>
       </table>
     </div>
     <div class="fig"><img src="assets/alpha_3.png" alt="Example forecast map"></div>
@@ -352,7 +353,7 @@
 <b>0</b> people in 64-kt zone
       <div class="gauge"><span style="width:0.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
     </td>
-    <td><span class="pill notmet">Not reached</span></td>
+    <td class="st"><span class="pill notmet">Not reached</span></td>
   </tr>
   <tr class="action notmet">
     <td class="name">Action<small>72-hour forecast</small></td>
@@ -360,13 +361,13 @@
 <b>0</b> people in 64-kt zone
       <div class="gauge"><span style="width:0.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
     </td>
-    <td><span class="pill notmet">Not reached</span></td>
+    <td class="st"><span class="pill notmet">Not reached</span></td>
   </tr>
   <tr class="observational na">
     <td class="name">Observational<small>2-day rainfall</small></td>
     <td class="val">
 <span style="color:var(--muted)">IMERG satellite, checked daily</span>    </td>
-    <td><span class="pill na">—</span>
+    <td class="st"><span class="pill na">—</span>
 </td>
   </tr>
 </table>
@@ -391,7 +392,7 @@
 <b>649,967</b> people in 64-kt zone
       <div class="gauge"><span style="width:100.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
     </td>
-    <td><span class="pill">ACTIVATED</span>
+    <td class="st"><span class="pill">ACTIVATED</span>
 </td>
   </tr>
   <tr class="action notmet">
@@ -400,13 +401,13 @@
 <b>0</b> people in 64-kt zone
       <div class="gauge"><span style="width:0.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
     </td>
-    <td><span class="pill notmet">Not reached</span></td>
+    <td class="st"><span class="pill notmet">Not reached</span></td>
   </tr>
   <tr class="observational na">
     <td class="name">Observational<small>2-day rainfall</small></td>
     <td class="val">
 <span style="color:var(--muted)">IMERG satellite, checked daily</span>    </td>
-    <td><span class="pill na">—</span>
+    <td class="st"><span class="pill na">—</span>
 </td>
   </tr>
 </table>
@@ -448,7 +449,7 @@
 <b>637,137</b> people in 64-kt zone
       <div class="gauge"><span style="width:100.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
     </td>
-    <td><span class="pill">✓ Activated · Day 1, 12:00</span>
+    <td class="st"><span class="pill">✓ Activated</span><small>Day 1, 12:00</small>
 </td>
   </tr>
   <tr class="action notmet">
@@ -457,13 +458,13 @@
 <b>3,901</b> people in 64-kt zone
       <div class="gauge"><span style="width:39.01%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
     </td>
-    <td><span class="pill notmet">Not reached</span></td>
+    <td class="st"><span class="pill notmet">Not reached</span></td>
   </tr>
   <tr class="observational na">
     <td class="name">Observational<small>2-day rainfall</small></td>
     <td class="val">
 <span style="color:var(--muted)">IMERG satellite, checked daily</span>    </td>
-    <td><span class="pill na">—</span>
+    <td class="st"><span class="pill na">—</span>
 </td>
   </tr>
 </table>
@@ -488,7 +489,7 @@
 <b>678,500</b> people in 64-kt zone
       <div class="gauge"><span style="width:100.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
     </td>
-    <td><span class="pill">✓ Activated · Day 1, 12:00</span>
+    <td class="st"><span class="pill">✓ Activated</span><small>Day 1, 12:00</small>
 </td>
   </tr>
   <tr class="action new">
@@ -497,14 +498,14 @@
 <b>658,281</b> people in 64-kt zone
       <div class="gauge"><span style="width:100.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
     </td>
-    <td><span class="pill">ACTIVATED</span>
+    <td class="st"><span class="pill">ACTIVATED</span>
 </td>
   </tr>
   <tr class="observational na">
     <td class="name">Observational<small>2-day rainfall</small></td>
     <td class="val">
 <span style="color:var(--muted)">IMERG satellite, checked daily</span>    </td>
-    <td><span class="pill na">—</span>
+    <td class="st"><span class="pill na">—</span>
 </td>
   </tr>
 </table>
@@ -545,7 +546,7 @@
 <b>678,270</b> people in 64-kt zone
       <div class="gauge"><span style="width:100.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
     </td>
-    <td><span class="pill">✓ Activated · Day 1, 12:00</span>
+    <td class="st"><span class="pill">✓ Activated</span><small>Day 1, 12:00</small>
 </td>
   </tr>
   <tr class="action done">
@@ -554,14 +555,14 @@
 <b>678,270</b> people in 64-kt zone
       <div class="gauge"><span style="width:100.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
     </td>
-    <td><span class="pill">✓ Activated · Day 2, 12:00</span>
+    <td class="st"><span class="pill">✓ Activated</span><small>Day 2, 12:00</small>
 </td>
   </tr>
   <tr class="observational na">
     <td class="name">Observational<small>2-day rainfall</small></td>
     <td class="val">
 <span style="color:var(--muted)">IMERG satellite, checked daily</span>    </td>
-    <td><span class="pill na">—</span>
+    <td class="st"><span class="pill na">—</span>
 </td>
   </tr>
 </table>
@@ -640,7 +641,7 @@
 <b>32,817</b> people in 64-kt zone
       <div class="gauge"><span style="width:100.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
     </td>
-    <td><span class="pill">ACTIVATED</span>
+    <td class="st"><span class="pill">ACTIVATED</span>
 </td>
   </tr>
   <tr class="action notmet">
@@ -649,13 +650,13 @@
 <b>0</b> people in 64-kt zone
       <div class="gauge"><span style="width:0.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
     </td>
-    <td><span class="pill notmet">Not reached</span></td>
+    <td class="st"><span class="pill notmet">Not reached</span></td>
   </tr>
   <tr class="observational na">
     <td class="name">Observational<small>2-day rainfall</small></td>
     <td class="val">
 <span style="color:var(--muted)">IMERG satellite, checked daily</span>    </td>
-    <td><span class="pill na">—</span>
+    <td class="st"><span class="pill na">—</span>
 </td>
   </tr>
 </table>
@@ -697,7 +698,7 @@
 <b>0</b> people in 64-kt zone
       <div class="gauge"><span style="width:0.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
     </td>
-    <td><span class="pill">✓ Activated · Day 1, 00:00</span>
+    <td class="st"><span class="pill">✓ Activated</span><small>Day 1, 00:00</small>
 </td>
   </tr>
   <tr class="action notmet">
@@ -706,13 +707,13 @@
 <b>0</b> people in 64-kt zone
       <div class="gauge"><span style="width:0.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
     </td>
-    <td><span class="pill notmet">Not reached</span></td>
+    <td class="st"><span class="pill notmet">Not reached</span></td>
   </tr>
   <tr class="observational na">
     <td class="name">Observational<small>2-day rainfall</small></td>
     <td class="val">
 <span style="color:var(--muted)">IMERG satellite, checked daily</span>    </td>
-    <td><span class="pill na">—</span>
+    <td class="st"><span class="pill na">—</span>
 </td>
   </tr>
 </table>
@@ -737,7 +738,7 @@
 <b>0</b> people in 64-kt zone
       <div class="gauge"><span style="width:0.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
     </td>
-    <td><span class="pill">✓ Activated · Day 1, 00:00</span>
+    <td class="st"><span class="pill">✓ Activated</span><small>Day 1, 00:00</small>
 </td>
   </tr>
   <tr class="action notmet">
@@ -746,13 +747,13 @@
 <b>0</b> people in 64-kt zone
       <div class="gauge"><span style="width:0.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
     </td>
-    <td><span class="pill notmet">Not reached</span></td>
+    <td class="st"><span class="pill notmet">Not reached</span></td>
   </tr>
   <tr class="observational na">
     <td class="name">Observational<small>2-day rainfall</small></td>
     <td class="val">
 <span style="color:var(--muted)">IMERG satellite, checked daily</span>    </td>
-    <td><span class="pill na">—</span>
+    <td class="st"><span class="pill na">—</span>
 </td>
   </tr>
 </table>
@@ -777,7 +778,7 @@
 <b>0</b> people in 64-kt zone
       <div class="gauge"><span style="width:0.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
     </td>
-    <td><span class="pill">✓ Activated · Day 1, 00:00</span>
+    <td class="st"><span class="pill">✓ Activated</span><small>Day 1, 00:00</small>
 </td>
   </tr>
   <tr class="action notmet">
@@ -786,13 +787,13 @@
 <b>0</b> people in 64-kt zone
       <div class="gauge"><span style="width:0.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
     </td>
-    <td><span class="pill notmet">Not reached</span></td>
+    <td class="st"><span class="pill notmet">Not reached</span></td>
   </tr>
   <tr class="observational na">
     <td class="name">Observational<small>2-day rainfall</small></td>
     <td class="val">
 <span style="color:var(--muted)">IMERG satellite, checked daily</span>    </td>
-    <td><span class="pill na">—</span>
+    <td class="st"><span class="pill na">—</span>
 </td>
   </tr>
 </table>
@@ -816,7 +817,7 @@
 <b>0</b> people in 64-kt zone
       <div class="gauge"><span style="width:0.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
     </td>
-    <td><span class="pill">✓ Activated · Day 1, 00:00</span>
+    <td class="st"><span class="pill">✓ Activated</span><small>Day 1, 00:00</small>
 </td>
   </tr>
   <tr class="action notmet">
@@ -825,13 +826,13 @@
 <b>0</b> people in 64-kt zone
       <div class="gauge"><span style="width:0.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
     </td>
-    <td><span class="pill notmet">Not reached</span></td>
+    <td class="st"><span class="pill notmet">Not reached</span></td>
   </tr>
   <tr class="observational na">
     <td class="name">Observational<small>2-day rainfall</small></td>
     <td class="val">
 <span style="color:var(--muted)">IMERG satellite, checked daily</span>    </td>
-    <td><span class="pill na">—</span>
+    <td class="st"><span class="pill na">—</span>
 </td>
   </tr>
 </table>
@@ -855,14 +856,14 @@ Satellite rainfall for Days 3 and 4, while Bravo was within 250 km of Fiji: <b>5
     <td class="name">Readiness<small>120-hour forecast</small></td>
     <td class="val">
 <span style="color:var(--muted)">—</span>    </td>
-    <td><span class="pill">✓ Activated · Day 1, 00:00</span>
+    <td class="st"><span class="pill">✓ Activated</span><small>Day 1, 00:00</small>
 </td>
   </tr>
   <tr class="action notmet">
     <td class="name">Action<small>72-hour forecast</small></td>
     <td class="val">
 <span style="color:var(--muted)">—</span>    </td>
-    <td><span class="pill notmet">Not reached</span></td>
+    <td class="st"><span class="pill notmet">Not reached</span></td>
   </tr>
   <tr class="observational notmet">
     <td class="name">Observational<small>2-day rainfall</small></td>
@@ -870,7 +871,7 @@ Satellite rainfall for Days 3 and 4, while Bravo was within 250 km of Fiji: <b>5
 <b>5 mm</b> country average
       <div class="gauge"><span style="width:1.3157894736842104%"></span><i title="threshold"></i></div><small>threshold 190 mm</small>
     </td>
-    <td><span class="pill notmet">Not reached</span></td>
+    <td class="st"><span class="pill notmet">Not reached</span></td>
   </tr>
 </table>
       <p class="note">Storm centre within 250 km of Fiji during these days (±1 day): ✓ (closest 115 km). Rainfall here is invented for the exercise.</p>
@@ -954,7 +955,7 @@ Satellite rainfall for Days 3 and 4, while Bravo was within 250 km of Fiji: <b>5
 <b>0</b> people in 64-kt zone
       <div class="gauge"><span style="width:0.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
     </td>
-    <td><span class="pill notmet">Not reached</span></td>
+    <td class="st"><span class="pill notmet">Not reached</span></td>
   </tr>
   <tr class="action notmet">
     <td class="name">Action<small>72-hour forecast</small></td>
@@ -962,13 +963,13 @@ Satellite rainfall for Days 3 and 4, while Bravo was within 250 km of Fiji: <b>5
 <b>0</b> people in 64-kt zone
       <div class="gauge"><span style="width:0.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
     </td>
-    <td><span class="pill notmet">Not reached</span></td>
+    <td class="st"><span class="pill notmet">Not reached</span></td>
   </tr>
   <tr class="observational na">
     <td class="name">Observational<small>2-day rainfall</small></td>
     <td class="val">
 <span style="color:var(--muted)">IMERG satellite, checked daily</span>    </td>
-    <td><span class="pill na">—</span>
+    <td class="st"><span class="pill na">—</span>
 </td>
   </tr>
 </table>
@@ -993,7 +994,7 @@ Satellite rainfall for Days 3 and 4, while Bravo was within 250 km of Fiji: <b>5
 <b>0</b> people in 64-kt zone
       <div class="gauge"><span style="width:0.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
     </td>
-    <td><span class="pill notmet">Not reached</span></td>
+    <td class="st"><span class="pill notmet">Not reached</span></td>
   </tr>
   <tr class="action notmet">
     <td class="name">Action<small>72-hour forecast</small></td>
@@ -1001,13 +1002,13 @@ Satellite rainfall for Days 3 and 4, while Bravo was within 250 km of Fiji: <b>5
 <b>0</b> people in 64-kt zone
       <div class="gauge"><span style="width:0.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
     </td>
-    <td><span class="pill notmet">Not reached</span></td>
+    <td class="st"><span class="pill notmet">Not reached</span></td>
   </tr>
   <tr class="observational na">
     <td class="name">Observational<small>2-day rainfall</small></td>
     <td class="val">
 <span style="color:var(--muted)">IMERG satellite, checked daily</span>    </td>
-    <td><span class="pill na">—</span>
+    <td class="st"><span class="pill na">—</span>
 </td>
   </tr>
 </table>
@@ -1032,7 +1033,7 @@ Satellite rainfall for Days 3 and 4, while Bravo was within 250 km of Fiji: <b>5
 <b>0</b> people in 64-kt zone
       <div class="gauge"><span style="width:0.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
     </td>
-    <td><span class="pill notmet">Not reached</span></td>
+    <td class="st"><span class="pill notmet">Not reached</span></td>
   </tr>
   <tr class="action notmet">
     <td class="name">Action<small>72-hour forecast</small></td>
@@ -1040,13 +1041,13 @@ Satellite rainfall for Days 3 and 4, while Bravo was within 250 km of Fiji: <b>5
 <b>0</b> people in 64-kt zone
       <div class="gauge"><span style="width:0.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
     </td>
-    <td><span class="pill notmet">Not reached</span></td>
+    <td class="st"><span class="pill notmet">Not reached</span></td>
   </tr>
   <tr class="observational na">
     <td class="name">Observational<small>2-day rainfall</small></td>
     <td class="val">
 <span style="color:var(--muted)">IMERG satellite, checked daily</span>    </td>
-    <td><span class="pill na">—</span>
+    <td class="st"><span class="pill na">—</span>
 </td>
   </tr>
 </table>
@@ -1070,7 +1071,7 @@ Satellite rainfall for Days 3 and 4, while Bravo was within 250 km of Fiji: <b>5
 <b>0</b> people in 64-kt zone
       <div class="gauge"><span style="width:0.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
     </td>
-    <td><span class="pill notmet">Not reached</span></td>
+    <td class="st"><span class="pill notmet">Not reached</span></td>
   </tr>
   <tr class="action notmet">
     <td class="name">Action<small>72-hour forecast</small></td>
@@ -1078,13 +1079,13 @@ Satellite rainfall for Days 3 and 4, while Bravo was within 250 km of Fiji: <b>5
 <b>0</b> people in 64-kt zone
       <div class="gauge"><span style="width:0.0%"></span><i title="threshold"></i></div><small>threshold 5,000</small>
     </td>
-    <td><span class="pill notmet">Not reached</span></td>
+    <td class="st"><span class="pill notmet">Not reached</span></td>
   </tr>
   <tr class="observational na">
     <td class="name">Observational<small>2-day rainfall</small></td>
     <td class="val">
 <span style="color:var(--muted)">IMERG satellite, checked daily</span>    </td>
-    <td><span class="pill na">—</span>
+    <td class="st"><span class="pill na">—</span>
 </td>
   </tr>
 </table>
@@ -1107,13 +1108,13 @@ Rainfall check covering Days 2 and 3: <b>125 mm</b> averaged over the whole coun
     <td class="name">Readiness<small>120-hour forecast</small></td>
     <td class="val">
 <span style="color:var(--muted)">—</span>    </td>
-    <td><span class="pill notmet">Not reached</span></td>
+    <td class="st"><span class="pill notmet">Not reached</span></td>
   </tr>
   <tr class="action notmet">
     <td class="name">Action<small>72-hour forecast</small></td>
     <td class="val">
 <span style="color:var(--muted)">—</span>    </td>
-    <td><span class="pill notmet">Not reached</span></td>
+    <td class="st"><span class="pill notmet">Not reached</span></td>
   </tr>
   <tr class="observational notmet">
     <td class="name">Observational<small>2-day rainfall</small></td>
@@ -1121,7 +1122,7 @@ Rainfall check covering Days 2 and 3: <b>125 mm</b> averaged over the whole coun
 <b>125 mm</b> country average
       <div class="gauge"><span style="width:32.89473684210527%"></span><i title="threshold"></i></div><small>threshold 190 mm</small>
     </td>
-    <td><span class="pill notmet">Not reached</span></td>
+    <td class="st"><span class="pill notmet">Not reached</span></td>
   </tr>
 </table>
       <p class="note">Storm centre within 250 km of Fiji during these days (±1 day): ✓ (closest 0 km). Rainfall here is invented for the exercise.</p>
@@ -1145,13 +1146,13 @@ Satellite rainfall for Days 3 and 4, with Charlie's centre over Viti Levu: <b>21
     <td class="name">Readiness<small>120-hour forecast</small></td>
     <td class="val">
 <span style="color:var(--muted)">—</span>    </td>
-    <td><span class="pill notmet">Not reached</span></td>
+    <td class="st"><span class="pill notmet">Not reached</span></td>
   </tr>
   <tr class="action notmet">
     <td class="name">Action<small>72-hour forecast</small></td>
     <td class="val">
 <span style="color:var(--muted)">—</span>    </td>
-    <td><span class="pill notmet">Not reached</span></td>
+    <td class="st"><span class="pill notmet">Not reached</span></td>
   </tr>
   <tr class="observational new">
     <td class="name">Observational<small>2-day rainfall</small></td>
@@ -1159,7 +1160,7 @@ Satellite rainfall for Days 3 and 4, with Charlie's centre over Viti Levu: <b>21
 <b>210 mm</b> country average
       <div class="gauge"><span style="width:55.26315789473685%"></span><i title="threshold"></i></div><small>threshold 190 mm</small>
     </td>
-    <td><span class="pill">ACTIVATED</span>
+    <td class="st"><span class="pill">ACTIVATED</span>
 </td>
   </tr>
 </table>

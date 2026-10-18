@@ -9,14 +9,12 @@
   written as RSMC Nadi-format CSVs to slides/simex_injects/ and evaluated the
   same way.
 
-Each deck is one self-contained HTML page plus its images, a PDF and a
-PowerPoint file (one picture per slide, made from the PDF).
+Each deck is one self-contained HTML page plus its images, a PDF and an
+editable PowerPoint file (slides/pptx_export.py).
 """
 
 import argparse
-import html
 import json
-import re
 import shutil
 import subprocess
 import sys
@@ -25,13 +23,11 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
-import pymupdf
 from jinja2 import Environment, FileSystemLoader
-from pptx import Presentation
-from pptx.util import Emu, Inches
 
 sys.path.insert(0, str(Path(__file__).parent))
 
+import pptx_export  # noqa: E402
 import rain  # noqa: E402
 from figures import RAIN_LEVELS, forecast_map, rain_map  # noqa: E402
 from simex_storms import ALPHA, BRAVO, CHARLIE, day_label  # noqa: E402
@@ -50,6 +46,10 @@ SIMEX_EXTENT = (172.6, 184.2, -21.6, -12.4)
 RAIN_EXTENT = (176.6, 182.2, -19.6, -15.6)
 
 THRESHOLD = EXP_THRESHOLD_64_KNOTS
+TITLES = {
+    "2025-26-season": "Fiji AA 2025–26 season look-back",
+    "simex": "Fiji AA simulation exercise",
+}
 RAIN_THRESHOLD = 190
 
 
@@ -482,38 +482,9 @@ def to_pdf(out: Path, pdf_name: str):
     )
 
 
-def to_pptx(out: Path, pdf_name: str, pptx_name: str):
-    """One full-slide picture per PDF page, so the PowerPoint matches the PDF."""
-    pdf = pymupdf.open(out / pdf_name)
-    labels = [
-        html.unescape(x)
-        for x in re.findall(
-            r'<section class="slide[^"]*"[^>]* data-label="([^"]*)"',
-            (out / "index.html").read_text(),
-        )
-    ]
-    assert len(labels) == pdf.page_count, (len(labels), pdf.page_count)
-
-    prs = Presentation()
-    page = pdf[0].rect
-    prs.slide_width = Inches(13.333)
-    prs.slide_height = Emu(round(prs.slide_width * page.height / page.width))
-    prs.core_properties.title = pdf.metadata.get("title") or ""
-    prs.core_properties.author = "OCHA Centre for Humanitarian Data"
-    blank = prs.slide_layouts[6]
-    zoom = 2400 / page.width  # ~2400 px wide
-    with tempfile.TemporaryDirectory() as tmp:
-        for i, (pg, label) in enumerate(zip(pdf, labels)):
-            img = Path(tmp) / f"{i:02d}.jpg"
-            pg.get_pixmap(matrix=pymupdf.Matrix(zoom, zoom)).save(
-                img, jpg_quality=88
-            )
-            pic = prs.slides.add_slide(blank).shapes.add_picture(
-                str(img), 0, 0, prs.slide_width, prs.slide_height
-            )
-            pic.name = f"Slide {i + 1}"
-            pic._element.nvPicPr.cNvPr.set("descr", label)
-        prs.save(out / pptx_name)
+def to_pptx(out: Path, pptx_name: str, title: str):
+    """Editable PowerPoint, laid out from the rendered HTML."""
+    pptx_export.export(out / "index.html", out / pptx_name, title, CHROME)
 
 
 def main():
@@ -537,7 +508,7 @@ def main():
         pptx = "fiji-aa-2025-26-season-lookback.pptx"
         render("lookback.html.j2", out, d=data, pdf=pdf, pptx=pptx)
         to_pdf(out, pdf)
-        to_pptx(out, pdf, pptx)
+        to_pptx(out, pptx, TITLES[out.name])
 
     if args.only in (None, "simex"):
         out = DOCS / "simex"
@@ -549,7 +520,7 @@ def main():
         pptx = "fiji-aa-simulation-exercise.pptx"
         render("simex.html.j2", out, sc=data, pdf=pdf, pptx=pptx)
         to_pdf(out, pdf)
-        to_pptx(out, pdf, pptx)
+        to_pptx(out, pptx, TITLES[out.name])
 
 
 if __name__ == "__main__":
