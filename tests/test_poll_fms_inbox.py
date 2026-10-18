@@ -318,6 +318,20 @@ def test_real_fms_csv_survives_rfc822_round_trip():
 # --- helpers + main --------------------------------------------------------
 
 
+def test_search_criteria_filters_on_server():
+    one = poll.search_criteria("15-Oct-2026", {"a@un.org"})
+    assert one == [
+        "SINCE",
+        "15-Oct-2026",
+        "SUBJECT",
+        '"[fji-relay]"',
+        "FROM",
+        '"a@un.org"',
+    ]
+    two = poll.search_criteria("15-Oct-2026", {"b@un.org", "a@un.org"})
+    assert two[4:] == ["OR", "FROM", '"a@un.org"', "FROM", '"b@un.org"']
+
+
 def test_imap_since_uses_english_months():
     assert poll.imap_since(dt.date(2026, 10, 18), 3) == "15-Oct-2026"
     assert poll.imap_since(dt.date(2026, 1, 2), 3) == "30-Dec-2025"

@@ -205,17 +205,36 @@ def imap_since(today: dt.date, lookback_days: int) -> str:
     return f"{since.day:02d}-{_MONTHS[since.month - 1]}-{since.year}"
 
 
+def search_criteria(since: str, senders: set[str]) -> list[str]:
+    """IMAP SEARCH keys: relay subject, an allowed sender, received since.
+
+    The server does the filtering so that nothing else in the inbox is ever
+    downloaded; `classify` re-checks every message that comes back.
+    """
+    from_keys = [["FROM", f'"{s}"'] for s in sorted(senders)]
+    sender_key = from_keys[0]
+    for key in from_keys[1:]:
+        sender_key = ["OR", *sender_key, *key]
+    subject = RELAY_SUBJECT_PREFIX.strip()
+    return ["SINCE", since, "SUBJECT", f'"{subject}"', *sender_key]
+
+
 def fetch_messages(
-    host: str, user: str, password: str, folder: str, since: str
+    host: str,
+    user: str,
+    password: str,
+    folder: str,
+    since: str,
+    senders: set[str],
 ) -> list[EmailMessage]:
-    """Fetch messages received since `since` without flagging them."""
+    """Fetch candidate relay messages without flagging them."""
     messages = []
     with imaplib.IMAP4_SSL(host, 993) as imap:
         imap.login(user, password)
         status, _ = imap.select(folder, readonly=True)
         if status != "OK":
             raise RuntimeError(f"Could not select IMAP folder {folder!r}")
-        status, data = imap.search(None, "SINCE", since)
+        status, data = imap.search(None, *search_criteria(since, senders))
         if status != "OK":
             raise RuntimeError("IMAP search failed")
         for num in data[0].split():
@@ -339,8 +358,11 @@ def main() -> int:
         password=os.environ["FMS_IMAP_PASSWORD"],
         folder=os.getenv("FMS_IMAP_FOLDER") or "INBOX",
         since=since,
+        senders=senders,
     )
-    logger.info("Fetched %d message(s) since %s", len(messages), since)
+    logger.info(
+        "Fetched %d candidate message(s) since %s", len(messages), since
+    )
 
     repo = os.environ["GITHUB_REPOSITORY"]
     gh_token = os.environ["GITHUB_TOKEN"]
