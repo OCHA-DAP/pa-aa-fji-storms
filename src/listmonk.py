@@ -3,7 +3,10 @@ import os
 
 import requests
 
-BASE_URL = "https://listmonk-demo-afhcg8e2hde0fxca.eastus2-01.azurewebsites.net/api"  # noqa
+BASE_URL = os.getenv(
+    "DSCI_LISTMONK_BASE_URL",
+    "https://listmonk-demo-afhcg8e2hde0fxca.eastus2-01.azurewebsites.net/api",
+).rstrip("/")
 
 DSCI_LISTMONK_API_USERNAME = os.getenv("DSCI_LISTMONK_API_USERNAME")
 DSCI_LISTMONK_API_KEY = os.getenv("DSCI_LISTMONK_API_KEY")

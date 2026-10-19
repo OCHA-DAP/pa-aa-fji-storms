@@ -1,5 +1,8 @@
 import argparse
+import base64
+import hashlib
 import os
+from datetime import datetime, timezone
 from io import BytesIO
 
 import geopandas as gpd
@@ -7,6 +10,7 @@ import ocha_stratus as stratus
 import pandas as pd
 from dotenv import load_dotenv
 
+from src import email_record
 from src.blob import PROJECT_PREFIX
 from src.constants import EXP_THRESHOLD_64_KNOTS, FJI_CRS, LAU2, ROTUMA2
 from src.datasources import codab, worldpop
@@ -19,6 +23,7 @@ from src.datasources.fms import (
     load_historical_stats,
     parse_fms_forecast,
 )
+from src.datasources.fms_db import OFFICIAL_TRACK, load_fms_forecast_from_db
 from src.email.content import render_template
 from src.exposure_calc import (
     calculate_multi_adm_exposure,
@@ -46,6 +51,21 @@ logger = get_logger(__name__)
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("csv", nargs="?", type=str, default="")
+    # Databricks: read the forecast that ds-storms-pipeline wrote to
+    # storms.fms_tracks_geo instead of a base64 CSV.
+    parser.add_argument("--from-db", action="store_true")
+    parser.add_argument("--disturbance-id")
+    parser.add_argument(
+        "--issued-time", help="ISO time, e.g. 2026-04-07T00:00"
+    )
+    parser.add_argument("--track-type", default=OFFICIAL_TRACK)
+    parser.add_argument("--db-stage", choices=["dev", "prod"], default="prod")
+    parser.add_argument(
+        "--content-sha", default="", help="SHA-256 of the forecast's CSV"
+    )
+    # Databricks fallback when the ingest task failed: the CSV the poller
+    # staged in the dev blob.
+    parser.add_argument("--csv-blob", default="")
     return parser.parse_known_args()[0]
 
 
@@ -61,8 +81,41 @@ YASA_TEST_BLOB_NAME = f"{PROJECT_PREFIX}/raw/fms/TC Data/TC Yasa/20201216T000000
 INFO_LIST_IDS = TEST_LIST_IDS if TEST_EMAIL else PROD_INFO_LIST_IDS
 TRIGGER_LIST_IDS = TEST_LIST_IDS if TEST_EMAIL else PROD_TRIGGER_LIST_IDS
 
+# Test and simulated sends are labelled and kept out of the real record.
+IS_TEST_SEND = TEST_EMAIL or SIMULATE_TRIGGER
+SUBJECT_PREFIX = "[TEST] " if IS_TEST_SEND else ""
+
+# Refuse to email the real lists about a forecast older than this (hours);
+# unset = no limit. Stops an old CSV being replayed to partners.
+MAX_FORECAST_AGE_HOURS = os.getenv("MAX_FORECAST_AGE_HOURS", "")
+
 # enable/disable tqdm progress bars for running locally
 DISABLE_TQDM = load_boolean_env("DISABLE_TQDM", True)
+
+
+def send_once(
+    record, email_type: str, forecast_id: str, content_sha12: str, **campaign
+):
+    """Send unless this CSV's email of this type already went out."""
+    if email_record.already_sent(
+        record, forecast_id, content_sha12, email_type
+    ):
+        logger.info(
+            f"{email_type} email for {forecast_id} ({content_sha12}) "
+            "already sent; skipping."
+        )
+        return record
+    campaign_id = create_and_send_campaign(**campaign)
+    logger.info(f"Sent {email_type} email (Listmonk campaign {campaign_id}).")
+    return email_record.add_sent(
+        record,
+        IS_TEST_SEND,
+        forecast_id,
+        content_sha12,
+        email_type,
+        campaign_id,
+    )
+
 
 if __name__ == "__main__":
     # Init
@@ -70,10 +123,39 @@ if __name__ == "__main__":
     logger.info(
         f"Env vars set to: {TEST_EMAIL=}, {SIMULATE_TRIGGER=}, {DRY_RUN=}"
     )
+    if (
+        SIMULATE_TRIGGER
+        and not TEST_EMAIL
+        and not load_boolean_env("ALLOW_REAL_SIMULATION", False)
+    ):
+        raise SystemExit(
+            "SIMULATE_TRIGGER=True with TEST_EMAIL=False would send a "
+            "simulated forecast to the real lists. Set "
+            "ALLOW_REAL_SIMULATION=True if that is really what you want."
+        )
     args = parse_args()
     csv_str = args.csv
-    if csv_str:
+    content_sha = args.content_sha
+    if args.from_db:
+        if not (args.disturbance_id and args.issued_time):
+            raise SystemExit(
+                "--from-db needs --disturbance-id and --issued-time"
+            )
+        logger.info(
+            f"Loading {args.disturbance_id} {args.track_type} "
+            f"{args.issued_time} from the {args.db_stage} database."
+        )
+        decoded_csv = None
+    elif args.csv_blob:
+        logger.info(f"Loading the forecast CSV {args.csv_blob}.")
+        csv_bytes = stratus.load_blob_data(args.csv_blob, stage="dev")
+        content_sha = hashlib.sha256(csv_bytes).hexdigest()
+        decoded_csv = BytesIO(csv_bytes)
+    elif csv_str:
         decoded_csv = decode_b64_string(csv_str)
+        content_sha = hashlib.sha256(
+            base64.b64decode(csv_str.encode("ascii") + b"==")
+        ).hexdigest()
     elif SIMULATE_TRIGGER:
         decoded_csv = BytesIO(stratus.load_blob_data(YASA_TEST_BLOB_NAME))
     elif TEST_FORECAST_BLOB_NAME:
@@ -83,7 +165,15 @@ if __name__ == "__main__":
         exit(0)
 
     # Load forecast
-    gdf_forecast = parse_fms_forecast(decoded_csv)
+    if args.from_db:
+        gdf_forecast = load_fms_forecast_from_db(
+            stratus.get_engine(stage=args.db_stage),
+            args.disturbance_id,
+            args.issued_time,
+            track_type=args.track_type,
+        )
+    else:
+        gdf_forecast = parse_fms_forecast(decoded_csv)
     gdf_forecast = gdf_forecast.rename(columns={"forecast_time": "valid_time"})
 
     row = gdf_forecast.iloc[0]
@@ -98,6 +188,17 @@ if __name__ == "__main__":
     )
 
     logger.info(f"Forecast ID: {forecast_id=}")
+    content_sha12 = content_sha[:12]
+
+    if MAX_FORECAST_AGE_HOURS and not IS_TEST_SEND and not DRY_RUN:
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        age_hours = (now - issued_time).total_seconds() / 3600
+        if age_hours > float(MAX_FORECAST_AGE_HOURS):
+            raise SystemExit(
+                f"Forecast issued {issued_time} is {age_hours:.0f} h old "
+                f"(limit {MAX_FORECAST_AGE_HOURS} h): not emailing the "
+                "real lists about it."
+            )
 
     gdf_readiness = gdf_forecast[gdf_forecast["leadtime"] <= 120].copy()
     gdf_action = gdf_forecast[gdf_forecast["leadtime"] <= 72].copy()
@@ -140,10 +241,16 @@ if __name__ == "__main__":
     email_base_name = email_base_name + forecast_id
 
     # Send trigger emails
+    sent_record = None
+    if not DRY_RUN:
+        sent_record = email_record.load_record(IS_TEST_SEND)
+        # Prove the record is writable before anything is sent, so a
+        # failed write after a send can't lead to a repeat on retry.
+        email_record.save_record(sent_record, IS_TEST_SEND)
     if not DRY_RUN:
         if trigger_readiness:
             logger.info("Readiness trigger condition met; sending email.")
-            subject = f"Anticipatory action Fiji: Cyclone {cyclone_name} readiness trigger ACTIVATED"
+            subject = f"{SUBJECT_PREFIX}Anticipatory action Fiji: Cyclone {cyclone_name} readiness trigger ACTIVATED"
             body = render_template(
                 "readiness.html",
                 {
@@ -151,7 +258,11 @@ if __name__ == "__main__":
                     "forecast_display_str": forecast_display_str,
                 },
             )
-            create_and_send_campaign(
+            sent_record = send_once(
+                sent_record,
+                "readiness",
+                forecast_id,
+                content_sha12,
                 subject=subject,
                 name=f"{email_base_name}_readiness",
                 list_ids=TRIGGER_LIST_IDS,
@@ -163,7 +274,7 @@ if __name__ == "__main__":
             )
         if trigger_action:
             logger.info("Action trigger condition met; sending email.")
-            subject = f"Anticipatory action Fiji: Cyclone {cyclone_name} action trigger ACTIVATED"
+            subject = f"{SUBJECT_PREFIX}Anticipatory action Fiji: Cyclone {cyclone_name} action trigger ACTIVATED"
             body = render_template(
                 "action.html",
                 {
@@ -171,7 +282,11 @@ if __name__ == "__main__":
                     "forecast_display_str": forecast_display_str,
                 },
             )
-            create_and_send_campaign(
+            sent_record = send_once(
+                sent_record,
+                "action",
+                forecast_id,
+                content_sha12,
                 subject=subject,
                 name=f"{email_base_name}_action",
                 list_ids=TRIGGER_LIST_IDS,
@@ -367,7 +482,7 @@ if __name__ == "__main__":
         activation_subject = "(NOT ACTIVATED)"
     if not DRY_RUN:
         logger.info("Sending info email.")
-        subject = f"Anticipatory action Fiji: Cyclone {cyclone_name} forecast information {activation_subject}"
+        subject = f"{SUBJECT_PREFIX}Anticipatory action Fiji: Cyclone {cyclone_name} forecast information {activation_subject}"
         body = render_template(
             "informational.html",
             {
@@ -387,12 +502,16 @@ if __name__ == "__main__":
                 "any_34_knot_exposure": any_34_knot_exposure,
             },
         )
-        create_and_send_campaign(
+        sent_record = send_once(
+            sent_record,
+            "forecast_info",
+            forecast_id,
+            content_sha12,
             subject=subject,
             name=f"{email_base_name}_forecast_info",
             list_ids=INFO_LIST_IDS,
             body=body,
-            media=[adm3_exp_id, bubbles_plot_id],
+            media=[m for m in (adm3_exp_id, bubbles_plot_id) if m],
         )
 
     logger.info("Monitor forecast trigger pipeline completed.")
