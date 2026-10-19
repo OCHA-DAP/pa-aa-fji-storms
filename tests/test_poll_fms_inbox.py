@@ -75,6 +75,14 @@ def empty_state():
     return pd.DataFrame(columns=poll.STATE_COLS)
 
 
+def old_state(rows):
+    """State as written before targets existed (5 columns), as load_state
+    returns it: reindexed, so target is NaN."""
+    return pd.DataFrame(rows, columns=poll.STATE_COLS[:5]).reindex(
+        columns=poll.STATE_COLS
+    )
+
+
 class Recorder:
     """Fake dispatch + save functions that record what they were given."""
 
@@ -237,9 +245,8 @@ def test_dispatches_accepted_and_skips_others():
 
 
 def test_already_processed_csv_is_skipped():
-    state = pd.DataFrame(
-        [[FAKE_SHA, "fms_forecast", "<other@un.org>", "other.csv", "x"]],
-        columns=poll.STATE_COLS,
+    state = old_state(
+        [[FAKE_SHA, "fms_forecast", "<other@un.org>", "other.csv", "x"]]
     )
     (n_ok, n_fail), rec = run([make_msg()], state=state)
     assert (n_ok, n_fail) == (0, 0)
@@ -247,9 +254,8 @@ def test_already_processed_csv_is_skipped():
 
 
 def test_second_csv_in_same_message_still_dispatched():
-    state = pd.DataFrame(
-        [[FAKE_SHA, "fms_forecast", "<abc123@un.org>", "a.csv", "x"]],
-        columns=poll.STATE_COLS,
+    state = old_state(
+        [[FAKE_SHA, "fms_forecast", "<abc123@un.org>", "a.csv", "x"]]
     )
     msg = make_msg(
         attachments=(("a.csv", FAKE_CSV), ("b.csv", FAKE_CSV + b"1,2\n"))
@@ -555,3 +561,344 @@ def test_dmarc_pass_followed_directly_by_comment_is_accepted():
     assert classify(make_msg(auth_results=(ar,))) == poll.EVENT_FORECAST
     ar = "mx.zohomail.com; dmarc=passed header.from=un.org"
     assert classify(make_msg(auth_results=(ar,))) is None
+
+
+# --- Databricks hand-off (FMS_TARGETS) ------------------------------------
+
+
+class Handoff:
+    """Fake Databricks hand-off: records calls, answers from `results`."""
+
+    def __init__(self, results=None):
+        self.results = list(results or [])
+        self.calls = []
+
+    def __call__(self, target, event_type, filename, data, sha):
+        self.calls.append((target, event_type, filename, sha))
+        return self.results.pop(0) if self.results else True
+
+
+def run_targets(messages, targets, state=None, handoff=None, rec=None, **kw):
+    rec = rec or Recorder()
+    handoff = handoff if handoff is not None else Handoff()
+    result = poll.run(
+        messages,
+        empty_state() if state is None else state,
+        dry_run=False,
+        dispatch_fn=rec.dispatch,
+        save_fn=rec.save,
+        classify_fn=lambda msg: classify(msg),
+        now_fn=lambda: NOW,
+        targets=targets,
+        handoff_fn=handoff,
+        **kw,
+    )
+    return result, rec, handoff
+
+
+def state_with(target):
+    return pd.DataFrame(
+        [[FAKE_SHA, "fms_forecast", "<x@un.org>", "x.csv", "t", target]],
+        columns=poll.STATE_COLS,
+    )
+
+
+@pytest.mark.parametrize(
+    "raw, expected",
+    [
+        (None, ("gha",)),
+        ("", ("gha",)),
+        ("gha", ("gha",)),
+        ("gha,dbx-shadow", ("gha", "dbx-shadow")),
+        ("dbx-shadow, gha", ("gha", "dbx-shadow")),
+        ("dbx", ("dbx",)),
+    ],
+)
+def test_parse_targets(raw, expected):
+    assert poll.parse_targets(raw) == expected
+
+
+@pytest.mark.parametrize(
+    "raw",
+    ["dbx-shadow", "gha,dbx", "dbx,dbx-shadow", "gha,lambda", "nothing"],
+)
+def test_parse_targets_needs_exactly_one_live(raw):
+    with pytest.raises(ValueError):
+        poll.parse_targets(raw)
+
+
+def test_shadow_runs_alongside_live_dispatch():
+    (n_ok, n_fail), rec, handoff = run_targets(
+        [make_msg()], ("gha", "dbx-shadow")
+    )
+    assert (n_ok, n_fail) == (2, 0)
+    assert [e for e, _ in rec.dispatched] == ["fms_forecast"]
+    assert handoff.calls == [
+        ("dbx-shadow", "fms_forecast", "forecast.CSV", FAKE_SHA)
+    ]
+    assert list(rec.saved[-1]["target"]) == ["gha", "dbx-shadow"]
+
+
+def test_failed_shadow_is_not_a_failure_and_is_retried():
+    (n_ok, n_fail), rec, _ = run_targets(
+        [make_msg()], ("gha", "dbx-shadow"), handoff=Handoff([False])
+    )
+    assert (n_ok, n_fail) == (1, 0)
+    assert list(rec.saved[-1]["target"]) == ["gha"]
+    # next tick: gha is done, the shadow run is tried again
+    (n_ok, n_fail), _, handoff = run_targets(
+        [make_msg()], ("gha", "dbx-shadow"), state=rec.saved[-1]
+    )
+    assert (n_ok, n_fail) == (1, 0)
+    assert [c[0] for c in handoff.calls] == ["dbx-shadow"]
+
+
+def test_failed_live_dbx_counts_as_failure():
+    (n_ok, n_fail), rec, _ = run_targets(
+        [make_msg()], ("dbx",), handoff=Handoff([False])
+    )
+    assert (n_ok, n_fail) == (0, 1)
+    assert rec.saved == []
+
+
+def test_flip_to_dbx_does_not_resend_what_gha_sent():
+    for state in (
+        state_with("gha"),
+        old_state([[FAKE_SHA, "fms_forecast", "<x@un.org>", "x.csv", "t"]]),
+    ):
+        (n_ok, n_fail), rec, handoff = run_targets(
+            [make_msg()], ("dbx",), state=state
+        )
+        assert (n_ok, n_fail) == (0, 0)
+        assert handoff.calls == [] and rec.dispatched == []
+
+
+def test_rollback_to_gha_does_not_resend_what_dbx_sent():
+    (n_ok, _), rec, _ = run_targets(
+        [make_msg()], ("gha",), state=state_with("dbx")
+    )
+    assert n_ok == 0 and rec.dispatched == []
+
+
+def test_shadow_run_does_not_count_as_live():
+    (n_ok, _), _, handoff = run_targets(
+        [make_msg()], ("dbx",), state=state_with("dbx-shadow")
+    )
+    assert n_ok == 1
+    assert [c[0] for c in handoff.calls] == ["dbx"]
+
+
+def test_seed_records_every_target():
+    (n_ok, _), rec, handoff = run_targets(
+        [make_msg()], ("gha", "dbx-shadow"), seed=True
+    )
+    assert handoff.calls == [] and rec.dispatched == []
+    assert list(rec.saved[-1]["target"]) == ["gha", "dbx-shadow"]
+
+
+@pytest.mark.parametrize(
+    "target, event_type, expected",
+    [
+        ("dbx", "fms_forecast", "False"),
+        ("dbx", "fms_forecast_test", "True"),
+        ("dbx-shadow", "fms_forecast", "True"),
+        ("dbx-shadow", "fms_forecast_test", "True"),
+    ],
+)
+def test_test_email_for(target, event_type, expected):
+    assert poll.test_email_for(target, event_type) == expected
+
+
+def test_idempotency_token_is_stable_and_short():
+    a = poll.idempotency_token(FAKE_SHA, "dbx-shadow", "fms_forecast_test")
+    assert a == poll.idempotency_token(
+        FAKE_SHA, "dbx-shadow", "fms_forecast_test"
+    )
+    assert len(a) <= 64
+    assert a != poll.idempotency_token(FAKE_SHA, "dbx", "fms_forecast_test")
+    assert a != poll.idempotency_token(FAKE_SHA, "dbx-shadow", "fms_forecast")
+
+
+def test_staged_blob_name():
+    name = poll.staged_blob_name(FAKE_SHA, "Rae [ray] 2025/../x...csv")
+    assert name == (
+        poll.INBOX_PREFIX + FAKE_SHA[:12] + "_Rae__ray__2025_._x.csv"
+    )
+    assert ".." not in name
+
+
+class FakeClient:
+    def __init__(self, fail=False):
+        self.fail = fail
+        self.calls = []
+
+    def run_now(self, job_parameters, token):
+        self.calls.append((job_parameters, token))
+        if self.fail:
+            raise poll.DbxError("run-now: HTTP 403")
+        return 123
+
+
+def test_make_handoff_stages_then_runs():
+    staged = []
+    client = FakeClient()
+    handoff = poll.make_handoff(
+        client, stage_fn=lambda data, blob: staged.append((data, blob))
+    )
+    assert handoff("dbx", "fms_forecast", "f.csv", FAKE_CSV, FAKE_SHA)
+    blob = poll.staged_blob_name(FAKE_SHA, "f.csv")
+    assert staged == [(FAKE_CSV, blob)]
+    params, token = client.calls[0]
+    assert params == {
+        "csv_blob": blob,
+        "event": "fms_forecast",
+        "test_email": "False",
+    }
+    assert token == poll.idempotency_token(FAKE_SHA, "dbx", "fms_forecast")
+
+
+def test_make_handoff_failure_returns_false():
+    handoff = poll.make_handoff(
+        FakeClient(fail=True), stage_fn=lambda data, blob: None
+    )
+    assert not handoff("dbx", "fms_forecast", "f.csv", FAKE_CSV, FAKE_SHA)
+
+    def broken_stage(data, blob):
+        raise poll.DbxError("staging the CSV: HttpResponseError")
+
+    handoff = poll.make_handoff(FakeClient(), stage_fn=broken_stage)
+    assert not handoff("dbx", "fms_forecast", "f.csv", FAKE_CSV, FAKE_SHA)
+
+
+class FakeResponse:
+    def __init__(self, body):
+        self.body = body
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+    def read(self):
+        return poll.json.dumps(self.body).encode()
+
+
+def test_dbx_client_requests(monkeypatch):
+    requests = []
+
+    def fake_urlopen(request, timeout):
+        requests.append(request)
+        if request.full_url.endswith("/oidc/v1/token"):
+            return FakeResponse({"access_token": "tok", "expires_in": 3600})
+        return FakeResponse({"run_id": 77})
+
+    monkeypatch.setattr(poll.urllib.request, "urlopen", fake_urlopen)
+    client = poll.DbxClient("adb-1.azuredatabricks.net", "app-id", "s3cret", 9)
+    assert client.run_now({"csv_blob": "b"}, "tok-1") == 77
+    assert client.run_now({"csv_blob": "c"}, "tok-2") == 77
+    token_requests = [r for r in requests if r.full_url.endswith("/token")]
+    assert len(token_requests) == 1  # cached
+    assert poll.urllib.parse.parse_qs(token_requests[0].data.decode()) == {
+        "grant_type": ["client_credentials"],
+        "scope": ["jobs"],
+    }
+    run = requests[-1]
+    assert (
+        run.full_url
+        == "https://adb-1.azuredatabricks.net/api/2.2/jobs/run-now"
+    )
+    assert run.headers["Authorization"] == "Bearer tok"
+    assert poll.json.loads(run.data) == {
+        "job_id": 9,
+        "idempotency_token": "tok-2",
+        "job_parameters": {"csv_blob": "c"},
+    }
+
+
+def test_dbx_client_errors_carry_no_body(monkeypatch):
+    def fake_urlopen(request, timeout):
+        raise urllib.error.HTTPError(
+            request.full_url, 401, "Unauthorized", {}, None
+        )
+
+    monkeypatch.setattr(poll.urllib.request, "urlopen", fake_urlopen)
+    client = poll.DbxClient("https://h", "app-id", "s3cret", 9)
+    with pytest.raises(poll.DbxError) as e:
+        client.run_now({}, "t")
+    assert str(e.value) == "token request: HTTP 401"
+    assert "s3cret" not in str(e.value)
+
+
+def test_main_live_dbx_needs_databricks_env(monkeypatch):
+    _main_env(monkeypatch)
+    monkeypatch.setenv("FMS_TARGETS", "dbx")
+    for var in (
+        "DATABRICKS_HOST",
+        "DATABRICKS_CLIENT_ID",
+        "DATABRICKS_CLIENT_SECRET",
+        "FMS_DBX_JOB_ID",
+    ):
+        monkeypatch.delenv(var, raising=False)
+    with pytest.raises(ValueError):
+        poll.main()
+
+
+def test_main_unconfigured_shadow_leaves_live_path_alone(monkeypatch):
+    _main_env(monkeypatch)
+    monkeypatch.setenv("FMS_TARGETS", "gha,dbx-shadow")
+    for var in (
+        "DATABRICKS_HOST",
+        "DATABRICKS_CLIENT_ID",
+        "DATABRICKS_CLIENT_SECRET",
+        "FMS_DBX_JOB_ID",
+    ):
+        monkeypatch.delenv(var, raising=False)
+    monkeypatch.setattr(poll, "fetch_messages", lambda **kw: [make_msg()])
+    sent = []
+    monkeypatch.setattr(poll, "dispatch", lambda *a: sent.append(a) or 204)
+    assert poll.main() == 0
+    assert len(sent) == 1
+
+
+def test_main_default_targets_unchanged(monkeypatch):
+    _main_env(monkeypatch)
+    monkeypatch.delenv("FMS_TARGETS", raising=False)
+    monkeypatch.setattr(poll, "fetch_messages", lambda **kw: [make_msg()])
+
+    def no_client():
+        raise AssertionError("no Databricks client by default")
+
+    monkeypatch.setattr(poll, "dbx_client_from_env", no_client)
+    sent = []
+    monkeypatch.setattr(poll, "dispatch", lambda *a: sent.append(a) or 204)
+    assert poll.main() == 0
+    assert len(sent) == 1
+
+
+def test_make_handoff_unexpected_error_returns_false():
+    class Broken:
+        def run_now(self, job_parameters, token):
+            raise KeyError("run_id")
+
+    handoff = poll.make_handoff(Broken(), stage_fn=lambda data, blob: None)
+    assert not handoff(
+        "dbx-shadow", "fms_forecast", "f.csv", FAKE_CSV, FAKE_SHA
+    )
+
+
+def test_bad_job_id_drops_shadow_but_not_live(monkeypatch):
+    _main_env(monkeypatch)
+    monkeypatch.setenv("DATABRICKS_HOST", "https://h")
+    monkeypatch.setenv("DATABRICKS_CLIENT_ID", "id")
+    monkeypatch.setenv("DATABRICKS_CLIENT_SECRET", "s")
+    monkeypatch.setenv("FMS_DBX_JOB_ID", "not-a-number")
+    monkeypatch.setenv("FMS_TARGETS", "gha,dbx-shadow")
+    monkeypatch.setattr(poll, "fetch_messages", lambda **kw: [make_msg()])
+    sent = []
+    monkeypatch.setattr(poll, "dispatch", lambda *a: sent.append(a) or 204)
+    assert poll.main() == 0
+    assert len(sent) == 1
+    monkeypatch.setenv("FMS_TARGETS", "dbx")
+    with pytest.raises(ValueError):
+        poll.main()

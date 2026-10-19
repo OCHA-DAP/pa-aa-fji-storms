@@ -68,6 +68,12 @@ jobs:
           DSCI_AZ_BLOB_DEV_SAS: ${{ secrets.DSCI_AZ_BLOB_DEV_SAS }}
           DSCI_AZ_BLOB_DEV_SAS_WRITE: ${{ secrets.DSCI_AZ_BLOB_DEV_SAS_WRITE }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # gha (default) | gha,dbx-shadow | dbx; see README
+          FMS_TARGETS: ${{ vars.FMS_TARGETS || 'gha' }}
+          DATABRICKS_HOST: ${{ vars.DATABRICKS_HOST }}
+          DATABRICKS_CLIENT_ID: ${{ vars.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+          FMS_DBX_JOB_ID: ${{ vars.FMS_DBX_JOB_ID }}
           DRY_RUN: ${{ inputs.dry_run || vars.POLL_DRY_RUN || 'True' }}
           SEED_STATE: ${{ inputs.seed_state || 'False' }}
         run: python pipelines/poll_fms_inbox.py
