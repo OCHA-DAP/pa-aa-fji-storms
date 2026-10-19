@@ -12,7 +12,10 @@
 # Jobs API as the fji-fms-relay service principal.
 #
 #   databricks bundle validate -t prod -p DEFAULT
-#   databricks bundle deploy -t prod -p DEFAULT
+#   databricks bundle deploy -t prod -p DEFAULT \
+#     --var storms_pipeline_ref=feat/fms-ingest
+#   (the --var until ds-storms-pipeline#61 is merged: the FMS ingest isn't on
+#   its main yet; add --var ingest_mode=prod once the prod tables exist)
 #   databricks bundle run fji_monitoring -t prod -p DEFAULT \
 #     --params csv_blob=pa-aa-fji-storms/raw/fms/inbox/<file>,event=fms_forecast_test
 #

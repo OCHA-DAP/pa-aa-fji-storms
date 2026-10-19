@@ -30,8 +30,8 @@ on:
       test_forecast_blob_name:
         description: 'Blob name of test forecast file to use instead of input CSV (optional)'
         type: string
-  # Sent by the fji_trigger_monitoring Power Automate flow (GitHub connector,
-  # "Create a repository dispatch event"), with client_payload.csv = base64 CSV.
+  # Sent by the FMS inbox poller (poll_fms_inbox.yml) for each new CSV the
+  # Power Automate flow relays, with client_payload.csv = base64 CSV.
   # fms_forecast_test (from a "fji_test" email) forces TEST_EMAIL=True.
   repository_dispatch:
     types: [fms_forecast, fms_forecast_test]
