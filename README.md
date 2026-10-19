@@ -28,17 +28,66 @@ The proposed trigger threshold is a TC that forecast to either:
 
 The anticipatory action framework was formally endorsed by the Emergency Relief Coordinator on Nov 13, 2023.
 
+That was the 2023 trigger. The 2025–2027 framework (endorsed 17 December
+2025) replaced it with a population-exposure trigger: at least 5,000 people
+in the area forecast to get winds of 64 knots or more, within 120 hours
+(readiness) or 72 hours (action) of the forecast. Its third trigger, on
+observed IMERG rainfall, is not automated.
+
 ## Monitoring
 
-The trigger is continuously monitored with the process:
+Every FMS forecast email goes through this chain (live since 18 October
+2026). There is no seasonal switch: it runs whenever FMS sends a forecast.
 
-1. FMS produces a new 120-hr forecast of the cyclone track (typically every 6 hours).
-2. FMS emails a CSV of the 120-hr forecast to the Centre for Humanitarian Data.
-3. A Power Automate flow sends the forecast via a POST request to the `check-trigger.yml` GitHub Action on this repo.
-4. The `check-trigger.yml` runs the `src/update_trigger.py` script, which:
-    1. Processes the forecast, checking it against the trigger.
-    2. If either the _readiness_ or _action_ triggers have been met, send an email to activate the framework.
-    3. Produces basic plots of the forecast, and sends them in an informational email (regardless of whether the trigger has been met).
+```text
+RSMC Nadi (FMS) forecaster
+  |  email, forecast CSV attached
+  v
+ocha-datascience@un.org  --forwarded-->  the maintainer's un.org mailbox
+  |  Power Automate flow fji_trigger_monitoring (see below)
+  v
+humdata.org (Zoho) relay inbox, subject "[fji-relay] fms_forecast"
+  |  .github/workflows/poll_fms_inbox.yml, every 10 minutes (IMAP)
+  v
+FMS_TARGETS picks the monitor:
+  gha  "Check Trigger" (.github/workflows/run_monitor_forecast_trigger.yml,
+       repository_dispatch; runs the code on branch initial-2025-trigger)
+  dbx  Databricks job "Fiji Cyclone Monitoring" (databricks.yml; runs main)
+  |  pipelines/monitor_forecast_trigger.py: >= 5,000 people exposed to
+  |  >= 64-knot winds within 120 h (readiness) or 72 h (action)?
+  v
+Listmonk: an information email for every forecast, plus readiness and
+action emails when the trigger is met
+```
+
+Check Trigger checks out `initial-2025-trigger`, so a change to the GitHub
+Actions monitor only takes effect once it is on that branch. Never delete
+it: GitHub Pages is also served from its `docs/` folder.
+
+### The Power Automate flow
+
+`fji_trigger_monitoring` is a personal flow on the maintainer's un.org
+mailbox (default Power Automate environment). It is not in this repo, and
+it stops working if that account or mailbox goes away: whoever takes over
+monitoring needs their own copy. The internal KB has the addresses and the
+flow's details.
+
+- **Starts on:** "When a new email arrives (V3)". It carries on only if the
+  sender's address ends with `met.gov.fj` or the subject is exactly
+  `fji_test`, and the email has a CSV attached.
+- **For each CSV:** saves it to OneDrive `fji_fms_forecasts/` (the archive
+  of every forecast received), replies to the sender to acknowledge it,
+  then sends it as an attachment to the relay inbox with the subject
+  `[fji-relay] fms_forecast` (`[fji-relay] fms_forecast_test` for a
+  `fji_test` email), using the Outlook "Send an email (V2)" action.
+- **Why the relay:** until October 2026 the flow posted the CSV straight to
+  Check Trigger. That needs the HTTP connector, which is premium (the
+  licence lapsed), and the GitHub connector is blocked by the UN data
+  policy. The standard Outlook connector is allowed, so the flow emails the
+  CSV on and the poller below picks it up.
+- **Long-term fix:** read the team mailbox directly (Microsoft Graph
+  `Mail.Read` on it, which needs OCHA IT). The flow and the relay inbox
+  could then go.
 
 ### FMS relay inbox poller
 
@@ -128,6 +177,54 @@ finishes. Failed Databricks runs email the job's failure address; when
 switching back from `dbx` to `gha` after one, re-send that forecast by hand
 (Check Trigger's `workflow_dispatch` with the base64 CSV), because the
 poller counts it as handled.
+
+### Databricks job
+
+"Fiji Cyclone Monitoring" is defined in `databricks.yml` (its header has the
+deploy and run commands). It has no schedule: the poller starts one run per
+new CSV. Two tasks run on one cluster:
+
+1. `ingest` (`databricks/run_ingest.py`) runs ds-storms-pipeline's FMS
+   ingest, which archives the raw CSV and writes the forecast to
+   `storms.fms_forecasts` and `storms.fms_tracks_geo`. The deploy variable
+   `ingest_mode` picks the dev or prod database.
+2. `monitor` (`databricks/run_monitor.py`) runs
+   `pipelines/monitor_forecast_trigger.py --from-db` on that forecast. If
+   the ingest failed, it runs on the staged CSV instead, so the emails
+   still go out (the run is still marked failed).
+
+Each email is sent at most once per forecast CSV:
+`pa-aa-fji-storms/monitoring/email_record.csv` on the dev blob records what
+went out (`test_email_record.csv` for test sends). A forecast more than 48
+hours old (`max_forecast_age_hours`) is not emailed to the real lists.
+
+### Testing end to end
+
+Email the maintainer's un.org mailbox with the subject exactly `fji_test`
+and a real FMS forecast CSV attached. The flow relays it as
+`fms_forecast_test`, and the poller picks it up within 10 minutes (or run
+"Poll FMS inbox" by hand with `dry_run: False`). All emails then go to the
+test list only (Listmonk list 5), with `[TEST]` in the subject. With
+`FMS_TARGETS=gha,dbx-shadow` you get two, one from each monitor. The
+poller sends each CSV once, so use a CSV it hasn't seen yet.
+
+### When something breaks
+
+Follow the chain: the flow's run history in Power Automate (and the CSV in
+OneDrive `fji_fms_forecasts/`), the relay inbox, the "Poll FMS inbox" run
+log (it says why it skipped an email), the Check Trigger run titled
+`FMS <csv short hash> <event>` or the Databricks job run, then the Listmonk
+campaign.
+
+- **Poll runs fail at the IMAP login:** the Zoho app password in
+  `FMS_IMAP_PASSWORD` was revoked or changed.
+- **Databricks runs don't start (`DbxError` in the poll log):**
+  `DATABRICKS_CLIENT_SECRET`, an OAuth secret of the `fji-fms-relay`
+  service principal with the `jobs` scope only, has expired. The current
+  one expires on 18 October 2028; generate a new one before then.
+- **To send a forecast by hand:** run Check Trigger
+  (`workflow_dispatch`) with the base64 of the CSV, or the Databricks job
+  with `databricks bundle run` (see `databricks.yml`).
 
 ## Overview of analysis
 
