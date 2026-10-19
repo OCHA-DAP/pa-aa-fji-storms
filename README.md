@@ -115,7 +115,8 @@ For Databricks the poller stages the CSV in the dev blob
 the `fji-fms-relay` service principal, passing `test_email=False` only for a
 live `fms_forecast` on `dbx`. It needs the repo variables `DATABRICKS_HOST`,
 `DATABRICKS_CLIENT_ID` (the principal's application id) and `FMS_DBX_JOB_ID`,
-and the secret `DATABRICKS_CLIENT_SECRET` (an OAuth secret of the principal).
+and the secret `DATABRICKS_CLIENT_SECRET` (an OAuth secret of the principal,
+generated with the `jobs` scope only; the poller requests that scope).
 The state file records the target of each send; a CSV that either live target
 handled counts as handled for both, so switching never re-sends recent
 forecasts. A failed shadow run only logs a warning. If `dbx-shadow` is set

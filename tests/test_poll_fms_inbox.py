@@ -799,6 +799,10 @@ def test_dbx_client_requests(monkeypatch):
     assert client.run_now({"csv_blob": "c"}, "tok-2") == 77
     token_requests = [r for r in requests if r.full_url.endswith("/token")]
     assert len(token_requests) == 1  # cached
+    assert poll.urllib.parse.parse_qs(token_requests[0].data.decode()) == {
+        "grant_type": ["client_credentials"],
+        "scope": ["jobs"],
+    }
     run = requests[-1]
     assert (
         run.full_url

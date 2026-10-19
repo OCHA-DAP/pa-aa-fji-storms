@@ -100,6 +100,9 @@ TARGET_DBX = "dbx"
 TARGET_DBX_SHADOW = "dbx-shadow"
 LIVE_TARGETS = (TARGET_GHA, TARGET_DBX)
 DBX_TARGETS = (TARGET_DBX, TARGET_DBX_SHADOW)
+# The OAuth secret of fji-fms-relay is generated with only this scope: the
+# token can call the Jobs API and nothing else.
+DBX_OAUTH_SCOPE = "jobs"
 # Must match databricks/run_ingest.py, which refuses anything else
 INBOX_PREFIX = "pa-aa-fji-storms/raw/fms/inbox/"
 
@@ -481,7 +484,7 @@ class DbxClient:
         request = urllib.request.Request(
             f"{self.host}/oidc/v1/token",
             data=urllib.parse.urlencode(
-                {"grant_type": "client_credentials", "scope": "all-apis"}
+                {"grant_type": "client_credentials", "scope": DBX_OAUTH_SCOPE}
             ).encode("ascii"),
             method="POST",
             headers={
