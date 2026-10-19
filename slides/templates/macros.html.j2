@@ -1,0 +1,44 @@
+{% macro gauge(value, thr) -%}
+<div class="gauge"><span style="width:{{ ([value / thr, 2] | min) / 2 * 100 }}%"></span><i title="threshold"></i></div>
+{%- endmacro %}
+
+{% macro pill(state, at=None) -%}
+{% if state == 'new' %}<span class="pill">ACTIVATED</span>
+{% elif state == 'done' %}<span class="pill">✓ Activated · {{ at }}</span>
+{% elif state == 'na' %}<span class="pill na">—</span>
+{% else %}<span class="pill notmet">Not reached</span>{% endif %}
+{%- endmacro %}
+
+{# rows: readiness/action from a forecast-like dict; obs from args #}
+{% macro trig_table(r64, a64, rstate, astate, rat, aat, ostate, oat=None, omm=None) -%}
+<table class="trig">
+  <tr><th>Trigger</th><th>This {{ 'rainfall check' if omm is not none else 'forecast' }}</th><th>Status</th></tr>
+  <tr class="readiness {{ rstate }}">
+    <td class="name">Readiness<small>120-hour forecast</small></td>
+    <td class="val">
+      {% if r64 is not none %}<b>{{ r64 | fmt }}</b> people in 64-kt zone
+      {{ gauge(r64, threshold) }}<small>threshold {{ threshold | fmt }}</small>
+      {% else %}<span style="color:var(--muted)">—</span>{% endif %}
+    </td>
+    <td>{{ pill(rstate, rat) }}</td>
+  </tr>
+  <tr class="action {{ astate }}">
+    <td class="name">Action<small>72-hour forecast</small></td>
+    <td class="val">
+      {% if a64 is not none %}<b>{{ a64 | fmt }}</b> people in 64-kt zone
+      {{ gauge(a64, threshold) }}<small>threshold {{ threshold | fmt }}</small>
+      {% else %}<span style="color:var(--muted)">—</span>{% endif %}
+    </td>
+    <td>{{ pill(astate, aat) }}</td>
+  </tr>
+  <tr class="observational {{ ostate }}">
+    <td class="name">Observational<small>2-day rainfall</small></td>
+    <td class="val">
+      {% if omm is not none %}<b>{{ omm }} mm</b> country average
+      {{ gauge(omm, rain_threshold) }}<small>threshold {{ rain_threshold }} mm</small>
+      {% else %}<span style="color:var(--muted)">IMERG satellite, checked daily</span>{% endif %}
+    </td>
+    <td>{{ pill(ostate, oat) }}</td>
+  </tr>
+</table>
+{%- endmacro %}
