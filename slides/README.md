@@ -1,7 +1,7 @@
 # Slide decks
 
 Two browser slide decks published on the Pages site (`docs/slides/`), each with a
-PDF download:
+PDF and PowerPoint download:
 
 | Deck | URL | What it is |
 |---|---|---|
@@ -25,8 +25,13 @@ Every wind-exposure number on the slides comes from the live trigger code
   (`templates/observational.html`); the live observational check is not in this repo.
 - `figures.py` — forecast and rainfall maps.
 - `build_decks.py` — computes everything and renders `templates/*.j2` to
-  `docs/slides/<deck>/index.html`, then prints each deck to PDF with headless Chrome.
-- `numbers/*.json` — the computed numbers, so the HTML/PDF can be re-rendered
+  `docs/slides/<deck>/index.html`, prints each deck to PDF with headless Chrome,
+  and writes an editable PowerPoint with `pptx_export.py`.
+- `pptx_export.py` — reads the rendered HTML back in Chrome (Arial forced, so
+  lines break as they will in PowerPoint) and rebuilds each slide as native
+  PowerPoint objects: text boxes, tables, shapes with text, pictures. The
+  wording therefore only lives in the templates.
+- `numbers/*.json` — the computed numbers, so the HTML, PDF and PowerPoint can be re-rendered
   without recomputing.
 - `lookback_inputs/` — the two IMERG maps from the observational emails sent
   during Vaianu.
@@ -35,14 +40,14 @@ Every wind-exposure number on the slides comes from the live trigger code
 
 ```bash
 uv venv -p 3.11 .venv
-uv pip install -p .venv/bin/python -r monitoring-requirements.txt jinja2
+uv pip install -p .venv/bin/python -r monitoring-requirements.txt jinja2 python-pptx playwright
 uv pip install -p .venv/bin/python -e . --no-deps
 
 # everything (needs the RSMC Nadi CSVs — saved by the Power Automate flow to
 # OneDrive/fji_fms_forecasts; not committed — and dev blob read access)
 .venv/bin/python slides/build_decks.py --fms-dir <folder with the 2026*.csv files>
 
-# one deck, or just re-render HTML + PDF after editing a template
+# one deck, or just re-render HTML, PDF and PowerPoint after editing a template
 .venv/bin/python slides/build_decks.py --only simex
 .venv/bin/python slides/build_decks.py --render-only
 ```
