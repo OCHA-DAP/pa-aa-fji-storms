@@ -12,10 +12,7 @@
 # Jobs API as the fji-fms-relay service principal.
 #
 #   databricks bundle validate -t prod -p DEFAULT
-#   databricks bundle deploy -t prod -p DEFAULT \
-#     --var storms_pipeline_ref=feat/fms-ingest
-#   (the --var until ds-storms-pipeline#61 is merged: the FMS ingest isn't on
-#   its main yet; add --var ingest_mode=prod once the prod tables exist)
+#   databricks bundle deploy -t prod -p DEFAULT
 #   databricks bundle run fji_monitoring -t prod -p DEFAULT \
 #     --params csv_blob=pa-aa-fji-storms/raw/fms/inbox/<file>,event=fms_forecast_test
 #
@@ -47,14 +44,15 @@ variables:
     default: main
   storms_pipeline_ref:
     description: >-
-      ds-storms-pipeline branch or tag the ingest task runs
-      (src/pipelines/fms.py). main once the FMS ingest PR is merged.
-    default: main
+      ds-storms-pipeline tag the ingest task runs (src/pipelines/fms.py).
+      A tag, not main, so a change there reaches this alert path only when
+      it is bumped here: tag its main (fms-vX.Y.Z), then redeploy.
+    default: fms-v1.0.0
   ingest_mode:
     description: >-
       Database + raw-CSV archive for live forecasts (dev | prod). Test
       events always use dev.
-    default: dev
+    default: prod
   test_email:
     description: Default for runs started without parameters (safe test list)
     default: "True"
@@ -120,7 +118,7 @@ resources:
         output_blob: projects/pa-aa-fji-storms/monitoring
       email_notifications:
         on_failure:
-          - tristan.downing@un.org
+          - ocha-datascience@un.org
         no_alert_for_skipped_runs: true
       parameters:
         - name: csv_blob       # dev-blob name the poller staged
