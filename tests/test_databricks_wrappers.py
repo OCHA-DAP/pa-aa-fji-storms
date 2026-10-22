@@ -97,10 +97,11 @@ def test_monitor_reads_db_after_ingest():
     assert args[-2:] == ["--content-sha", "ab" * 32]
 
 
-def test_monitor_monitors_any_forecast_track_type():
-    values = {**INGESTED, "track_type": "GP Forecast Track"}
-    args = run_monitor.monitor_input(values, BLOB)
-    assert "GP Forecast Track" in args
+@pytest.mark.parametrize("track_type", ["GP Forecast Track", ""])
+def test_monitor_refuses_non_official_track(track_type):
+    values = {**INGESTED, "track_type": track_type}
+    with pytest.raises(ValueError, match="not monitored"):
+        run_monitor.monitor_input(values, BLOB)
 
 
 def test_monitor_quiet_only_for_skipped_file():

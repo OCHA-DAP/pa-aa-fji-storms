@@ -191,22 +191,25 @@ new CSV. Two tasks run on one cluster:
 1. `ingest` (`databricks/run_ingest.py`) runs ds-storms-pipeline's FMS
    ingest, which archives the raw CSV and writes the forecast to
    `storms.fms_forecasts` and `storms.fms_tracks_geo`. The deploy variable
-   `ingest_mode` picks the dev or prod database.
+   `ingest_mode` picks the database: prod, except for test events, which
+   always use dev.
 2. `monitor` (`databricks/run_monitor.py`) runs
    `pipelines/monitor_forecast_trigger.py --from-db` on that forecast. If
    the ingest failed, it runs on the staged CSV instead, so the emails
-   still go out (the run is still marked failed).
+   still go out (the run is still marked failed). Only an Official Forecast
+   Track is monitored: if the ingest wrote any other forecast track type,
+   the run fails without sending.
 
 Each email is sent at most once per forecast CSV:
 `pa-aa-fji-storms/monitoring/email_record.csv` on the dev blob records what
 went out (`test_email_record.csv` for test sends). A forecast more than 48
 hours old (`max_forecast_age_hours`) is not emailed to the real lists.
 
-Deploying: until ds-storms-pipeline PR #61 is merged, its FMS ingest only
-exists on its branch `feat/fms-ingest`, so deploy with
-`--var storms_pipeline_ref=feat/fms-ingest`. A plain deploy uses `main`
-there, and every ingest then fails. Writing to the prod database needs a
-redeploy with `--var ingest_mode=prod` once the prod tables exist.
+Deploying: a plain `databricks bundle deploy -t prod -p DEFAULT`, from a
+clean checkout of `main`. The ingest runs ds-storms-pipeline at a tag
+(`storms_pipeline_ref`, `fms-v*`), not at its `main`, so a change to its FMS
+ingest reaches this job only when that variable's default is bumped here and
+the job is redeployed. Run failures are emailed to the team mailbox.
 
 ### Testing end to end
 

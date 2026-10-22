@@ -9,7 +9,10 @@ back to the staged CSV itself, the way the GitHub Actions monitor works, so
 a failed git clone, parser rejection or DB write never stops the alert. The
 job still ends FAILED (the ingest task failed), so the failure email goes
 out. Only a file the ingest recognised as not a forecast (``skipped``, e.g.
-an Analysis Track) ends this task quietly.
+an Analysis Track) ends this task quietly. A forecast track that isn't the
+Official one (FMS's archive also holds "GP Forecast Track" files) is not
+monitored: the trigger is defined on the Official forecast, so the task
+fails and the failure email reports it.
 
 Positional parameters (databricks.yml):
     1 event                   fms_forecast | fms_forecast_test (test forces
@@ -35,6 +38,8 @@ TEST_EVENT = "fms_forecast_test"
 EVENTS = ("fms_forecast", TEST_EVENT)
 # Must match pipelines/poll_fms_inbox.py and databricks/run_ingest.py
 INBOX_PREFIX = "pa-aa-fji-storms/raw/fms/inbox/"
+# Must match src/datasources/fms_db.py
+OFFICIAL_TRACK = "Official Forecast Track"
 LISTMONK_SECRETS = (
     "DSCI_LISTMONK_BASE_URL",
     "DSCI_LISTMONK_API_USERNAME",
@@ -71,12 +76,17 @@ def monitor_input(values: dict, csv_blob: str) -> list[str] | None:
 
     None means there is nothing to monitor (the ingest skipped a file that
     is not a forecast). Anything else the ingest didn't finish -> the
-    staged CSV.
+    staged CSV. A forecast track other than the Official one raises.
     """
     status = values.get("status", "")
     if status == "skipped":
         return None
     if status == "ingested":
+        if values.get("track_type") != OFFICIAL_TRACK:
+            raise ValueError(
+                f"The ingest wrote a {values.get('track_type')!r}, not an "
+                f"{OFFICIAL_TRACK!r}: not monitored."
+            )
         return [
             "--from-db",
             "--disturbance-id", values["disturbance_id"],
