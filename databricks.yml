@@ -118,7 +118,7 @@ resources:
         output_blob: projects/pa-aa-fji-storms/monitoring
       email_notifications:
         on_failure:
-          - ocha-datascience@un.org
+          - tristan.downing@un.org
         no_alert_for_skipped_runs: true
       parameters:
         - name: csv_blob       # dev-blob name the poller staged
