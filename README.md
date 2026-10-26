@@ -209,7 +209,8 @@ Deploying: a plain `databricks bundle deploy -t prod -p DEFAULT`, from a
 clean checkout of `main`. The ingest runs ds-storms-pipeline at a tag
 (`storms_pipeline_ref`, `fms-v*`), not at its `main`, so a change to its FMS
 ingest reaches this job only when that variable's default is bumped here and
-the job is redeployed. Run failures are emailed to the team mailbox.
+the job is redeployed. Run failures are emailed to the maintainer's un.org
+address (`email_notifications` in `databricks.yml`).
 
 ### Testing end to end
 
