@@ -902,3 +902,208 @@ def test_bad_job_id_drops_shadow_but_not_live(monkeypatch):
     monkeypatch.setenv("FMS_TARGETS", "dbx")
     with pytest.raises(ValueError):
         poll.main()
+
+
+# --- Vanuatu (VUT_MONITORING) ---------------------------------------------
+
+VMHS_SUBJECT = "[vut-relay] vmhs_forecast"
+
+
+def test_vut_relay_subjects_are_accepted():
+    assert classify(make_msg(subject=VMHS_SUBJECT)) == poll.EVENT_VMHS
+    assert (
+        classify(make_msg(subject=" [VUT-RELAY] vmhs_forecast_test "))
+        == poll.EVENT_VMHS_TEST
+    )
+    # each prefix only carries its own events
+    assert classify(make_msg(subject="[vut-relay] fms_forecast")) is None
+    assert classify(make_msg(subject="[fji-relay] vmhs_forecast")) is None
+    # the same sender and DMARC gate applies
+    assert classify(make_msg(subject=VMHS_SUBJECT, auth_results=())) is None
+
+
+def test_vut_off_by_default_sends_nothing_to_vanuatu():
+    (n_ok, n_fail), rec, handoff = run_targets(
+        [make_msg(), make_msg(subject=VMHS_SUBJECT, message_id="<v@un.org>")],
+        ("dbx",),
+    )
+    assert (n_ok, n_fail) == (1, 0)
+    assert handoff.calls == [("dbx", "fms_forecast", "forecast.CSV", FAKE_SHA)]
+    assert list(rec.saved[-1]["target"]) == ["dbx"]
+
+
+def test_vut_fms_goes_to_fiji_first_then_vanuatu():
+    (n_ok, n_fail), rec, handoff = run_targets(
+        [make_msg()], ("dbx",), vut="test"
+    )
+    assert (n_ok, n_fail) == (2, 0)
+    assert [c[0] for c in handoff.calls] == ["dbx", "vut"]
+    assert list(rec.saved[-1]["target"]) == ["dbx", "vut"]
+
+
+def test_vmhs_goes_only_to_vanuatu():
+    (n_ok, n_fail), rec, handoff = run_targets(
+        [make_msg(subject=VMHS_SUBJECT)], ("gha",), vut="live"
+    )
+    assert (n_ok, n_fail) == (1, 0)
+    assert rec.dispatched == []  # never Check Trigger
+    assert handoff.calls == [
+        ("vut", "vmhs_forecast", "forecast.CSV", FAKE_SHA)
+    ]
+
+
+def test_vut_state_is_independent_of_fiji():
+    # handled for Fiji: still sent to Vanuatu once
+    (n_ok, _), _, handoff = run_targets(
+        [make_msg()], ("dbx",), state=state_with("dbx"), vut="test"
+    )
+    assert n_ok == 1 and [c[0] for c in handoff.calls] == ["vut"]
+    # handled for Vanuatu: Fiji still gets it
+    (n_ok, _), _, handoff = run_targets(
+        [make_msg()], ("dbx",), state=state_with("vut"), vut="test"
+    )
+    assert n_ok == 1 and [c[0] for c in handoff.calls] == ["dbx"]
+
+
+def test_vut_test_to_live_does_not_resend():
+    (n_ok, _), _, handoff = run_targets(
+        [make_msg()], ("dbx",), state=state_with("dbx"), vut="test"
+    )
+    state = pd.concat([state_with("dbx"), state_with("vut")])
+    (n_ok, _), _, handoff = run_targets(
+        [make_msg()], ("dbx",), state=state, vut="live"
+    )
+    assert n_ok == 0 and handoff.calls == []
+
+
+def test_failed_vut_is_a_warning_in_test_and_a_failure_in_live():
+    for mode, expected in (("test", (1, 0)), ("live", (1, 1))):
+        (n_ok, n_fail), rec, _ = run_targets(
+            [make_msg()], ("dbx",), handoff=Handoff([True, False]), vut=mode
+        )
+        assert (n_ok, n_fail) == expected
+        assert list(rec.saved[-1]["target"]) == ["dbx"]
+
+
+@pytest.mark.parametrize(
+    "event_type, live, expected",
+    [
+        ("fms_forecast", True, "False"),
+        ("vmhs_forecast", True, "False"),
+        ("fms_forecast_test", True, "True"),
+        ("vmhs_forecast_test", True, "True"),
+        ("fms_forecast", False, "True"),
+        ("vmhs_forecast", False, "True"),
+    ],
+)
+def test_vut_test_email_for(event_type, live, expected):
+    assert poll.vut_test_email_for(event_type, live) == expected
+
+
+def test_vut_idempotency_tokens_differ_from_fiji():
+    vut = poll.idempotency_token(FAKE_SHA, "vut", "fms_forecast")
+    assert vut.startswith("vut-") and len(vut) <= 64
+    assert vut != poll.idempotency_token(FAKE_SHA, "dbx", "fms_forecast")
+    assert vut != poll.idempotency_token(FAKE_SHA, "vut", "vmhs_forecast")
+    # Fiji tokens are unchanged
+    assert poll.idempotency_token(FAKE_SHA, "dbx", "fms_forecast") == (
+        f"fji-{FAKE_SHA[:48]}-lf"
+    )
+
+
+def test_make_vut_handoff_stages_by_source():
+    staged = []
+    client = FakeClient()
+    handoff = poll.make_vut_handoff(
+        client, live=True, stage_fn=lambda data, blob: staged.append(blob)
+    )
+    assert handoff("vut", "vmhs_forecast", "v.csv", FAKE_CSV, FAKE_SHA)
+    assert handoff("vut", "fms_forecast", "f.csv", FAKE_CSV, FAKE_SHA)
+    assert staged == [
+        poll.VUT_INBOX_PREFIX + FAKE_SHA[:12] + "_v.csv",
+        poll.staged_blob_name(FAKE_SHA, "f.csv"),
+    ]
+    params, token = client.calls[0]
+    assert params == {
+        "csv_blob": staged[0],
+        "event": "vmhs_forecast",
+        "test_email": "False",
+    }
+    assert token == poll.idempotency_token(FAKE_SHA, "vut", "vmhs_forecast")
+    assert not poll.make_vut_handoff(
+        FakeClient(fail=True), live=True, stage_fn=lambda d, b: None
+    )("vut", "vmhs_forecast", "v.csv", FAKE_CSV, FAKE_SHA)
+
+
+def _dbx_env(monkeypatch, fiji_job="1", vut_job="2"):
+    monkeypatch.setenv("DATABRICKS_HOST", "https://h")
+    monkeypatch.setenv("DATABRICKS_CLIENT_ID", "id")
+    monkeypatch.setenv("DATABRICKS_CLIENT_SECRET", "s")
+    monkeypatch.setenv("FMS_DBX_JOB_ID", fiji_job)
+    if vut_job is None:
+        monkeypatch.delenv("VUT_DBX_JOB_ID", raising=False)
+    else:
+        monkeypatch.setenv("VUT_DBX_JOB_ID", vut_job)
+
+
+def _fake_clients(monkeypatch):
+    """DbxClient stand-in recording (job_id, params) per run-now."""
+    runs = []
+
+    class Client(FakeClient):
+        def __init__(self, host, client_id, secret, job_id):
+            super().__init__()
+            self.job_id = job_id
+
+        def run_now(self, job_parameters, token):
+            runs.append((self.job_id, job_parameters["event"]))
+            return 1
+
+    monkeypatch.setattr(poll, "DbxClient", Client)
+    monkeypatch.setattr(poll, "stage_csv", lambda data, blob: None)
+    return runs
+
+
+def test_main_vut_live_routes_to_both_jobs(monkeypatch):
+    _main_env(monkeypatch)
+    _dbx_env(monkeypatch)
+    monkeypatch.setenv("FMS_TARGETS", "dbx")
+    monkeypatch.setenv("VUT_MONITORING", "live")
+    runs = _fake_clients(monkeypatch)
+    monkeypatch.setattr(
+        poll,
+        "fetch_messages",
+        lambda **kw: [
+            make_msg(),
+            make_msg(subject=VMHS_SUBJECT, message_id="<v@un.org>"),
+        ],
+    )
+    assert poll.main() == 0
+    assert runs == [
+        (1, "fms_forecast"),
+        (2, "fms_forecast"),
+        (2, "vmhs_forecast"),
+    ]
+
+
+@pytest.mark.parametrize("mode, vut_job", [("live", None), ("bogus", "2")])
+def test_main_vut_misconfig_never_blocks_fiji(monkeypatch, mode, vut_job):
+    _main_env(monkeypatch)
+    _dbx_env(monkeypatch, vut_job=vut_job)
+    monkeypatch.setenv("FMS_TARGETS", "dbx")
+    monkeypatch.setenv("VUT_MONITORING", mode)
+    runs = _fake_clients(monkeypatch)
+    monkeypatch.setattr(poll, "fetch_messages", lambda **kw: [make_msg()])
+    assert poll.main() == 1  # flagged...
+    assert runs == [(1, "fms_forecast")]  # ...but Fiji went out
+
+
+def test_main_vut_off_ignores_vut_job_id(monkeypatch):
+    _main_env(monkeypatch)
+    _dbx_env(monkeypatch, vut_job="not-a-number")
+    monkeypatch.setenv("FMS_TARGETS", "dbx")
+    monkeypatch.delenv("VUT_MONITORING", raising=False)
+    runs = _fake_clients(monkeypatch)
+    monkeypatch.setattr(poll, "fetch_messages", lambda **kw: [make_msg()])
+    assert poll.main() == 0
+    assert runs == [(1, "fms_forecast")]

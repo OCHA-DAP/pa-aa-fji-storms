@@ -3,6 +3,9 @@ name: Poll FMS inbox
 # Reads the humdata.org relay inbox that the fji_trigger_monitoring Power
 # Automate flow sends FMS (RSMC Nadi) forecast CSVs to, and sends each new CSV
 # to Check Trigger as a repository_dispatch. See pipelines/poll_fms_inbox.py.
+# The same inbox carries VMHS (Vanuatu Met) CSVs from the
+# vut_trigger_monitoring flow; with VUT_MONITORING on, FMS and VMHS CSVs also
+# start the Vanuatu Cyclone Monitoring job (ds-aa-vut-cyclones).
 # Scheduled runs stay in DRY_RUN until the repo variable POLL_DRY_RUN is set
 # to 'False'.
 
@@ -74,6 +77,10 @@ jobs:
           DATABRICKS_CLIENT_ID: ${{ vars.DATABRICKS_CLIENT_ID }}
           DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
           FMS_DBX_JOB_ID: ${{ vars.FMS_DBX_JOB_ID }}
+          # Vanuatu (ds-aa-vut-cyclones): off (default) | test | live; FMS
+          # CSVs and "[vut-relay]" VMHS CSVs also start this job. See README
+          VUT_MONITORING: ${{ vars.VUT_MONITORING || 'off' }}
+          VUT_DBX_JOB_ID: ${{ vars.VUT_DBX_JOB_ID }}
           DRY_RUN: ${{ inputs.dry_run || vars.POLL_DRY_RUN || 'True' }}
           SEED_STATE: ${{ inputs.seed_state || 'False' }}
         run: python pipelines/poll_fms_inbox.py
