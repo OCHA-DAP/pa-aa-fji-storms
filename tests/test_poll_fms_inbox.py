@@ -1107,3 +1107,24 @@ def test_main_vut_off_ignores_vut_job_id(monkeypatch):
     monkeypatch.setattr(poll, "fetch_messages", lambda **kw: [make_msg()])
     assert poll.main() == 0
     assert runs == [(1, "fms_forecast")]
+
+
+def test_all_fiji_hand_offs_come_before_any_vanuatu_one():
+    msgs = [
+        make_msg(),
+        make_msg(
+            subject=VMHS_SUBJECT,
+            attachments=(("v.csv", b"vmhs"),),
+            message_id="<v@un.org>",
+        ),
+        make_msg(attachments=(("b.csv", b"second"),), message_id="<b@un.org>"),
+    ]
+    (n_ok, n_fail), _, handoff = run_targets(msgs, ("dbx",), vut="live")
+    assert (n_ok, n_fail) == (5, 0)
+    assert [(c[0], c[2]) for c in handoff.calls] == [
+        ("dbx", "forecast.CSV"),
+        ("dbx", "b.csv"),
+        ("vut", "forecast.CSV"),
+        ("vut", "v.csv"),
+        ("vut", "b.csv"),
+    ]

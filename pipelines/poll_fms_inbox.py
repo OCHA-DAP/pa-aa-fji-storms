@@ -763,11 +763,6 @@ def run(
     n_dispatched = n_failed = 0
     vut_targets = () if vut == VUT_OFF else (TARGET_VUT,)
 
-    def targets_for(event_type: str) -> tuple[str, ...]:
-        if event_type in VUT_EVENTS:
-            return vut_targets
-        return targets + vut_targets
-
     def record(
         sha: str, event_type: str, key: str, filename: str, target: str
     ) -> None:
@@ -784,6 +779,57 @@ def run(
         done[role_of(target)].add((sha, event_type))
         save_fn(state)
 
+    def send(
+        target: str, event_type: str, key: str, filename: str, data: bytes
+    ) -> None:
+        nonlocal n_dispatched, n_failed
+        sha = hashlib.sha256(data).hexdigest()
+        if (sha, event_type) in done[role_of(target)]:
+            return
+        label = f"{filename} ({event_type}, csv {sha[:12]})"
+        if target != TARGET_GHA:
+            label = f"{label} to {target}"
+        if dry_run:
+            action = "seed" if seed else "dispatch"
+            logger.info("DRY RUN: would %s %s", action, label)
+            return
+        if seed:
+            logger.info("Seeding %s as handled", label)
+            record(sha, event_type, key, filename, target)
+            return
+        if target == TARGET_GHA:
+            if run_title(sha, event_type) in run_titles:
+                logger.info("Already dispatched (run found): %s", label)
+                record(sha, event_type, key, filename, target)
+                return
+            payload = {
+                "csv": base64.b64encode(data).decode("ascii"),
+                "filename": filename,
+                "content_sha": sha[:12],
+            }
+            status = dispatch_fn(event_type, payload)
+            if status != 204:
+                logger.error("Dispatch of %s failed: HTTP %s", label, status)
+                n_failed += 1
+                return
+        else:
+            ok = handoff_fn is not None and handoff_fn(
+                target, event_type, filename, data, sha
+            )
+            if not ok:
+                if target == TARGET_DBX_SHADOW:
+                    logger.warning("Shadow run of %s not started", label)
+                elif target == TARGET_VUT and vut != VUT_LIVE:
+                    logger.warning("Vanuatu test run of %s not started", label)
+                else:
+                    logger.error("Hand-off of %s failed", label)
+                    n_failed += 1
+                return
+        logger.info("Dispatched %s", label)
+        n_dispatched += 1
+        record(sha, event_type, key, filename, target)
+
+    accepted = []
     for msg in messages:
         event_type = classify_fn(msg)
         if event_type is None:
@@ -799,61 +845,19 @@ def run(
                 event_type,
             )
             continue
-        for filename, data in attachments:
-            sha = hashlib.sha256(data).hexdigest()
-            for target in targets_for(event_type):
-                if (sha, event_type) in done[role_of(target)]:
-                    continue
-                label = f"{filename} ({event_type}, csv {sha[:12]})"
-                if target != TARGET_GHA:
-                    label = f"{label} to {target}"
-                if dry_run:
-                    action = "seed" if seed else "dispatch"
-                    logger.info("DRY RUN: would %s %s", action, label)
-                    continue
-                if seed:
-                    logger.info("Seeding %s as handled", label)
-                    record(sha, event_type, key, filename, target)
-                    continue
-                if target == TARGET_GHA:
-                    if run_title(sha, event_type) in run_titles:
-                        logger.info(
-                            "Already dispatched (run found): %s", label
-                        )
-                        record(sha, event_type, key, filename, target)
-                        continue
-                    payload = {
-                        "csv": base64.b64encode(data).decode("ascii"),
-                        "filename": filename,
-                        "content_sha": sha[:12],
-                    }
-                    status = dispatch_fn(event_type, payload)
-                    if status != 204:
-                        logger.error(
-                            "Dispatch of %s failed: HTTP %s", label, status
-                        )
-                        n_failed += 1
-                        continue
-                else:
-                    ok = handoff_fn is not None and handoff_fn(
-                        target, event_type, filename, data, sha
-                    )
-                    if not ok:
-                        if target == TARGET_DBX_SHADOW:
-                            logger.warning(
-                                "Shadow run of %s not started", label
-                            )
-                        elif target == TARGET_VUT and vut != VUT_LIVE:
-                            logger.warning(
-                                "Vanuatu test run of %s not started", label
-                            )
-                        else:
-                            logger.error("Hand-off of %s failed", label)
-                            n_failed += 1
-                        continue
-                logger.info("Dispatched %s", label)
-                n_dispatched += 1
-                record(sha, event_type, key, filename, target)
+        accepted.append((event_type, key, attachments))
+
+    # Every Fiji target for every CSV first, then the Vanuatu job: a slow
+    # or failing Vanuatu hand-off can never hold up a Fiji one.
+    for fiji_pass in (True, False):
+        for event_type, key, attachments in accepted:
+            if fiji_pass:
+                pass_targets = () if event_type in VUT_EVENTS else targets
+            else:
+                pass_targets = vut_targets
+            for filename, data in attachments:
+                for target in pass_targets:
+                    send(target, event_type, key, filename, data)
     return n_dispatched, n_failed
 
 
