@@ -182,6 +182,37 @@ switching back from `dbx` to `gha` after one, re-send that forecast by hand
 (Check Trigger's `workflow_dispatch` with the base64 CSV), because the
 poller counts it as handled.
 
+### Vanuatu: `VUT_MONITORING`
+
+The same poller also feeds the Vanuatu framework's monitoring
+(OCHA-DAP/ds-aa-vut-cyclones, Databricks job "Vanuatu Cyclone
+Monitoring"). Its readiness trigger is on the RSMC Nadi forecast, and its
+action trigger on forecasts from VMHS (Vanuatu Met), which reach the relay
+inbox through a second flow, `vut_trigger_monitoring` (a copy of
+`fji_trigger_monitoring`: sender ends with `vanuatu.gov.vu` or
+`meteo.gov.vu`, or the subject is exactly `vut_test`; CSVs saved to
+OneDrive `vut_vmhs_forecasts/`; relay subject `[vut-relay] vmhs_forecast`
+or `[vut-relay] vmhs_forecast_test`).
+
+The repo variable `VUT_MONITORING` switches it:
+
+| `VUT_MONITORING` | FMS CSVs | VMHS CSVs |
+|---|---|---|
+| `off` (default, or unset) | Fiji only | not sent anywhere (logged) |
+| `test` | Fiji, then the Vanuatu job on list 5 | the Vanuatu job on list 5 |
+| `live` | Fiji, then the Vanuatu job, real lists | the Vanuatu job, real lists |
+
+It needs the repo variable `VUT_DBX_JOB_ID`; the poller starts the job with
+the same service principal and secret as the Fiji job (the job grants it
+`CAN_MANAGE_RUN`). VMHS CSVs are staged under
+`ds-aa-vut-cyclones/raw/vmhs/inbox/` on the dev blob. The Vanuatu target
+keeps its own rows in the state file (target `vut`), so a CSV handled for
+Fiji still goes to Vanuatu once, and switching `test` to `live` does not
+re-send. Nothing on the Vanuatu side can stop or delay the Fiji path: the
+Fiji targets are always handled first, a bad `VUT_MONITORING` value or a
+missing job id only fails the poll run afterwards, and a failed Vanuatu
+hand-off is a warning in `test` and a failure only in `live`.
+
 ### Databricks job
 
 "Fiji Cyclone Monitoring" is defined in `databricks.yml` (its header has the
