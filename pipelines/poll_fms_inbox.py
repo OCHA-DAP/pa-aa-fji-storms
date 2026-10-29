@@ -62,6 +62,12 @@ CSV handled for Fiji is still sent to Vanuatu once, and the reverse. A
 Vanuatu problem never stops or delays the Fiji path: a misconfiguration is
 logged and fails the run only after the Fiji targets were handled, and a
 failed hand-off counts as a failure only in ``live``.
+
+The Vanuatu job sends one information email per forecast time with both
+providers' forecasts, so it holds one back until its partner arrives (its
+src/monitoring/info_bundle.py). After the Fiji pass, this poller reads that
+queue and, if an email is past its deadline, starts the job once with the
+event ``info_flush`` (``info_flush_test`` in test mode) to send it alone.
 """
 
 import base64
@@ -133,6 +139,10 @@ DBX_OAUTH_SCOPE = "jobs"
 INBOX_PREFIX = "pa-aa-fji-storms/raw/fms/inbox/"
 # Must match ds-aa-vut-cyclones databricks/run_monitor.py
 VUT_INBOX_PREFIX = "ds-aa-vut-cyclones/raw/vmhs/inbox/"
+# Must match ds-aa-vut-cyclones src/monitoring/info_bundle.py (index_blob)
+VUT_INFO_INDEX = "ds-aa-vut-cyclones/monitoring/{}info_pending.csv"
+EVENT_VUT_FLUSH = "info_flush"
+EVENT_VUT_FLUSH_TEST = "info_flush_test"
 
 _QUOTED_WITH_SEMICOLON = re.compile(r'"(?:[^"\\]|\\.)*;(?:[^"\\]|\\.)*"')
 _DMARC_PASS = re.compile(r"dmarc=pass\b", re.IGNORECASE)
@@ -652,6 +662,81 @@ def make_vut_handoff(
     return handoff
 
 
+def load_vut_info_index(blob: str) -> pd.DataFrame:
+    try:
+        return stratus.load_csv_from_blob(blob, stage="dev", dtype=str)
+    except ResourceNotFoundError:
+        return pd.DataFrame(columns=["key", "status", "deadline"])
+    except Exception as e:
+        # the SDK's message can carry the request URL (and its SAS)
+        raise DbxError(f"reading the info queue: {type(e).__name__}") from None
+
+
+def vut_info_due(
+    live: bool,
+    now: dt.datetime,
+    load_fn: Callable[[str], pd.DataFrame] | None = None,
+) -> list[str]:
+    """Keys of the Vanuatu information emails past their deadline."""
+    load_fn = load_fn or load_vut_info_index
+    df = load_fn(VUT_INFO_INDEX.format("" if live else "test_"))
+    if df.empty:
+        return []
+    pending = df[df["status"] == "pending"]
+    deadline = pd.to_datetime(pending["deadline"], utc=True, errors="coerce")
+    return sorted(pending.loc[deadline <= pd.Timestamp(now), "key"])
+
+
+def flush_vut_info(
+    client: "DbxClient",
+    live: bool,
+    now: dt.datetime,
+    dry_run: bool,
+    load_fn: Callable[[str], pd.DataFrame] | None = None,
+) -> bool:
+    """Start the Vanuatu job's info_flush run for each queue with an
+    information email past its deadline: the test queue, and in live mode
+    the live one too (``*_test`` emails still come through then). True
+    unless one failed. The token is the overdue emails and the hour: a
+    poll while that run is queued or running doesn't start another, and a
+    run that failed is tried again the next hour."""
+    queues = [(False, EVENT_VUT_FLUSH_TEST, "True")]
+    if live:
+        queues.append((True, EVENT_VUT_FLUSH, "False"))
+    ok = True
+    for queue_live, event, test_email in queues:
+        try:
+            due = vut_info_due(queue_live, now, load_fn)
+            if not due:
+                continue
+            logger.info(
+                "%d Vanuatu information email(s) past due (%s)",
+                len(due),
+                event,
+            )
+            if dry_run:
+                logger.info("DRY RUN: not starting the Vanuatu info flush")
+                continue
+            hour = now.strftime("%Y%m%d%H")
+            digest = hashlib.sha256("|".join([hour, *due]).encode())
+            run_id = client.run_now(
+                {"csv_blob": "", "event": event, "test_email": test_email},
+                "vut-flush-" + digest.hexdigest()[:48],
+            )
+        except DbxError as e:
+            logger.error("Vanuatu info flush (%s) failed: %s", event, e)
+            ok = False
+            continue
+        except Exception as e:  # noqa: BLE001 — e.g. an unexpected reply
+            logger.error(
+                "Vanuatu info flush (%s) failed: %s", event, type(e).__name__
+            )
+            ok = False
+            continue
+        logger.info("Vanuatu info flush run %s started (%s)", run_id, event)
+    return ok
+
+
 def dbx_client_from_env(
     job_id_var: str = "FMS_DBX_JOB_ID",
 ) -> DbxClient | None:
@@ -886,7 +971,7 @@ def main() -> int:
     # Vanuatu: a problem here is logged and fails the run at the end, after
     # the Fiji targets were handled; it never raises.
     vut, vut_misconfigured = vut_mode_from_env()
-    vut_handoff = None
+    vut_handoff = vut_client = None
     if vut != VUT_OFF:
         vut_client = dbx_client_from_env("VUT_DBX_JOB_ID")
         if vut_client is None:
@@ -961,7 +1046,17 @@ def main() -> int:
         vut=vut,
     )
     logger.info("Dispatched %d, failed %d", n_dispatched, n_failed)
-    return 1 if n_failed or vut_misconfigured else 0
+    # after the Fiji pass, like every Vanuatu step
+    vut_flush_failed = False
+    if vut_client is not None:
+        ok = flush_vut_info(
+            vut_client, vut == VUT_LIVE, dt.datetime.now(dt.UTC), dry_run
+        )
+        if not ok and vut == VUT_LIVE:
+            vut_flush_failed = True
+        elif not ok:
+            logger.warning("Vanuatu is in test mode: not failing the run")
+    return 1 if n_failed or vut_misconfigured or vut_flush_failed else 0
 
 
 if __name__ == "__main__":

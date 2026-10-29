@@ -1061,6 +1061,9 @@ def _fake_clients(monkeypatch):
 
     monkeypatch.setattr(poll, "DbxClient", Client)
     monkeypatch.setattr(poll, "stage_csv", lambda data, blob: None)
+    monkeypatch.setattr(  # no Vanuatu information email waiting
+        poll, "load_vut_info_index", lambda blob: pd.DataFrame()
+    )
     return runs
 
 
@@ -1128,3 +1131,109 @@ def test_all_fiji_hand_offs_come_before_any_vanuatu_one():
         ("vut", "v.csv"),
         ("vut", "b.csv"),
     ]
+
+
+FLUSH_NOW = dt.datetime(2026, 2, 3, 3, 0, tzinfo=dt.UTC)
+
+
+def info_index(rows):
+    return pd.DataFrame(rows, columns=["key", "status", "deadline"])
+
+
+def test_vut_info_due_reads_the_test_or_live_queue():
+    seen = []
+    rows = [
+        ("old", "pending", "2026-02-03T02:00:00Z"),
+        ("new", "pending", "2026-02-03T04:00:00Z"),
+        ("done", "sent", "2026-02-03T01:00:00Z"),
+    ]
+
+    def load(blob):
+        seen.append(blob)
+        return info_index(rows)
+
+    assert poll.vut_info_due(False, FLUSH_NOW, load) == ["old"]
+    assert poll.vut_info_due(True, FLUSH_NOW, load) == ["old"]
+    assert seen == [
+        "ds-aa-vut-cyclones/monitoring/test_info_pending.csv",
+        "ds-aa-vut-cyclones/monitoring/info_pending.csv",
+    ]
+
+
+def test_flush_starts_one_run_per_queue_and_hour():
+    client = FakeClient()
+    rows = [("a", "pending", "2026-02-03T02:00:00Z")]
+    load = lambda blob: info_index(rows)  # noqa: E731
+    # test mode: the test queue only
+    assert poll.flush_vut_info(client, False, FLUSH_NOW, False, load)
+    assert poll.flush_vut_info(client, False, FLUSH_NOW, False, load)
+    (params, token), (_, token2) = client.calls
+    assert params == {
+        "csv_blob": "",
+        "event": "info_flush_test",
+        "test_email": "True",
+    }
+    assert token == token2 and len(token) <= 64  # Databricks' limit
+    # an hour later, the same overdue email gets a new token (a retry)
+    later = FLUSH_NOW + dt.timedelta(hours=1)
+    assert poll.flush_vut_info(client, False, later, False, load)
+    assert client.calls[-1][1] != token
+
+
+def test_live_mode_flushes_the_live_and_the_test_queue():
+    client = FakeClient()
+    queues = {
+        "ds-aa-vut-cyclones/monitoring/test_info_pending.csv": info_index(
+            [("t", "pending", "2026-02-03T02:00:00Z")]
+        ),
+        "ds-aa-vut-cyclones/monitoring/info_pending.csv": info_index(
+            [("l", "pending", "2026-02-03T02:00:00Z")]
+        ),
+    }
+    assert poll.flush_vut_info(client, True, FLUSH_NOW, False, queues.get)
+    assert [(p["event"], p["test_email"]) for p, _ in client.calls] == [
+        ("info_flush_test", "True"),
+        ("info_flush", "False"),
+    ]
+
+
+def test_flush_does_nothing_when_nothing_is_due_or_dry_run():
+    client = FakeClient()
+    late = info_index([("a", "pending", "2026-02-03T05:00:00Z")])
+    assert poll.flush_vut_info(client, True, FLUSH_NOW, False, lambda b: late)
+    due = info_index([("a", "pending", "2026-02-03T01:00:00Z")])
+    assert poll.flush_vut_info(client, True, FLUSH_NOW, True, lambda b: due)
+    assert poll.flush_vut_info(
+        client, True, FLUSH_NOW, False, lambda b: info_index([])
+    )
+    assert client.calls == []
+
+
+def test_flush_failure_is_reported_not_raised():
+    due = info_index([("a", "pending", "2026-02-03T01:00:00Z")])
+    assert not poll.flush_vut_info(
+        FakeClient(fail=True), True, FLUSH_NOW, False, lambda b: due
+    )
+
+    def broken(blob):
+        raise poll.DbxError("reading the info queue: HttpResponseError")
+
+    assert not poll.flush_vut_info(
+        FakeClient(), True, FLUSH_NOW, False, broken
+    )
+
+
+def test_main_flush_failure_fails_only_live(monkeypatch):
+    for mode, code in (("test", 0), ("live", 1)):
+        _main_env(monkeypatch)
+        _dbx_env(monkeypatch)
+        monkeypatch.setenv("FMS_TARGETS", "dbx")
+        monkeypatch.setenv("VUT_MONITORING", mode)
+        _fake_clients(monkeypatch)
+        monkeypatch.setattr(poll, "fetch_messages", lambda **kw: [])
+
+        def broken(blob):
+            raise poll.DbxError("reading the info queue: HttpResponseError")
+
+        monkeypatch.setattr(poll, "load_vut_info_index", broken)
+        assert poll.main() == code
