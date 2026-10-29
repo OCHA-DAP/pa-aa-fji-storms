@@ -694,38 +694,47 @@ def flush_vut_info(
     dry_run: bool,
     load_fn: Callable[[str], pd.DataFrame] | None = None,
 ) -> bool:
-    """Start the Vanuatu job's info_flush run if an information email is
-    past its deadline; True unless that failed. The same overdue emails
-    give the same idempotency token, so a poll while that run is queued or
-    running doesn't start another."""
-    try:
-        due = vut_info_due(live, now, load_fn)
-        if not due:
-            return True
-        logger.info("%d Vanuatu information email(s) past due", len(due))
-        if dry_run:
-            logger.info("DRY RUN: not starting the Vanuatu info flush")
-            return True
-        token = (
-            "vut-flush-"
-            + hashlib.sha256("|".join(due).encode()).hexdigest()[:48]
-        )
-        run_id = client.run_now(
-            {
-                "csv_blob": "",
-                "event": EVENT_VUT_FLUSH if live else EVENT_VUT_FLUSH_TEST,
-                "test_email": "False" if live else "True",
-            },
-            token,
-        )
-    except DbxError as e:
-        logger.error("Vanuatu info flush failed: %s", e)
-        return False
-    except Exception as e:  # noqa: BLE001 — e.g. an unexpected reply
-        logger.error("Vanuatu info flush failed: %s", type(e).__name__)
-        return False
-    logger.info("Vanuatu info flush run %s started", run_id)
-    return True
+    """Start the Vanuatu job's info_flush run for each queue with an
+    information email past its deadline: the test queue, and in live mode
+    the live one too (``*_test`` emails still come through then). True
+    unless one failed. The token is the overdue emails and the hour: a
+    poll while that run is queued or running doesn't start another, and a
+    run that failed is tried again the next hour."""
+    queues = [(False, EVENT_VUT_FLUSH_TEST, "True")]
+    if live:
+        queues.append((True, EVENT_VUT_FLUSH, "False"))
+    ok = True
+    for queue_live, event, test_email in queues:
+        try:
+            due = vut_info_due(queue_live, now, load_fn)
+            if not due:
+                continue
+            logger.info(
+                "%d Vanuatu information email(s) past due (%s)",
+                len(due),
+                event,
+            )
+            if dry_run:
+                logger.info("DRY RUN: not starting the Vanuatu info flush")
+                continue
+            hour = now.strftime("%Y%m%d%H")
+            digest = hashlib.sha256("|".join([hour, *due]).encode())
+            run_id = client.run_now(
+                {"csv_blob": "", "event": event, "test_email": test_email},
+                "vut-flush-" + digest.hexdigest()[:48],
+            )
+        except DbxError as e:
+            logger.error("Vanuatu info flush (%s) failed: %s", event, e)
+            ok = False
+            continue
+        except Exception as e:  # noqa: BLE001 — e.g. an unexpected reply
+            logger.error(
+                "Vanuatu info flush (%s) failed: %s", event, type(e).__name__
+            )
+            ok = False
+            continue
+        logger.info("Vanuatu info flush run %s started (%s)", run_id, event)
+    return ok
 
 
 def dbx_client_from_env(

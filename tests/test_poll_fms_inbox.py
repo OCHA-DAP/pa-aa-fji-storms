@@ -1160,20 +1160,41 @@ def test_vut_info_due_reads_the_test_or_live_queue():
     ]
 
 
-@pytest.mark.parametrize("live", [False, True])
-def test_flush_starts_one_run_per_set_of_overdue_emails(live):
+def test_flush_starts_one_run_per_queue_and_hour():
     client = FakeClient()
     rows = [("a", "pending", "2026-02-03T02:00:00Z")]
     load = lambda blob: info_index(rows)  # noqa: E731
-    assert poll.flush_vut_info(client, live, FLUSH_NOW, False, load)
-    assert poll.flush_vut_info(client, live, FLUSH_NOW, False, load)
+    # test mode: the test queue only
+    assert poll.flush_vut_info(client, False, FLUSH_NOW, False, load)
+    assert poll.flush_vut_info(client, False, FLUSH_NOW, False, load)
     (params, token), (_, token2) = client.calls
     assert params == {
         "csv_blob": "",
-        "event": "info_flush" if live else "info_flush_test",
-        "test_email": "False" if live else "True",
+        "event": "info_flush_test",
+        "test_email": "True",
     }
     assert token == token2 and len(token) <= 64  # Databricks' limit
+    # an hour later, the same overdue email gets a new token (a retry)
+    later = FLUSH_NOW + dt.timedelta(hours=1)
+    assert poll.flush_vut_info(client, False, later, False, load)
+    assert client.calls[-1][1] != token
+
+
+def test_live_mode_flushes_the_live_and_the_test_queue():
+    client = FakeClient()
+    queues = {
+        "ds-aa-vut-cyclones/monitoring/test_info_pending.csv": info_index(
+            [("t", "pending", "2026-02-03T02:00:00Z")]
+        ),
+        "ds-aa-vut-cyclones/monitoring/info_pending.csv": info_index(
+            [("l", "pending", "2026-02-03T02:00:00Z")]
+        ),
+    }
+    assert poll.flush_vut_info(client, True, FLUSH_NOW, False, queues.get)
+    assert [(p["event"], p["test_email"]) for p, _ in client.calls] == [
+        ("info_flush_test", "True"),
+        ("info_flush", "False"),
+    ]
 
 
 def test_flush_does_nothing_when_nothing_is_due_or_dry_run():
