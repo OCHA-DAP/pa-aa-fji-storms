@@ -1061,6 +1061,9 @@ def _fake_clients(monkeypatch):
 
     monkeypatch.setattr(poll, "DbxClient", Client)
     monkeypatch.setattr(poll, "stage_csv", lambda data, blob: None)
+    monkeypatch.setattr(  # no Vanuatu information email waiting
+        poll, "load_vut_info_index", lambda blob: pd.DataFrame()
+    )
     return runs
 
 
@@ -1128,3 +1131,88 @@ def test_all_fiji_hand_offs_come_before_any_vanuatu_one():
         ("vut", "v.csv"),
         ("vut", "b.csv"),
     ]
+
+
+FLUSH_NOW = dt.datetime(2026, 2, 3, 3, 0, tzinfo=dt.UTC)
+
+
+def info_index(rows):
+    return pd.DataFrame(rows, columns=["key", "status", "deadline"])
+
+
+def test_vut_info_due_reads_the_test_or_live_queue():
+    seen = []
+    rows = [
+        ("old", "pending", "2026-02-03T02:00:00Z"),
+        ("new", "pending", "2026-02-03T04:00:00Z"),
+        ("done", "sent", "2026-02-03T01:00:00Z"),
+    ]
+
+    def load(blob):
+        seen.append(blob)
+        return info_index(rows)
+
+    assert poll.vut_info_due(False, FLUSH_NOW, load) == ["old"]
+    assert poll.vut_info_due(True, FLUSH_NOW, load) == ["old"]
+    assert seen == [
+        "ds-aa-vut-cyclones/monitoring/test_info_pending.csv",
+        "ds-aa-vut-cyclones/monitoring/info_pending.csv",
+    ]
+
+
+@pytest.mark.parametrize("live", [False, True])
+def test_flush_starts_one_run_per_set_of_overdue_emails(live):
+    client = FakeClient()
+    rows = [("a", "pending", "2026-02-03T02:00:00Z")]
+    load = lambda blob: info_index(rows)  # noqa: E731
+    assert poll.flush_vut_info(client, live, FLUSH_NOW, False, load)
+    assert poll.flush_vut_info(client, live, FLUSH_NOW, False, load)
+    (params, token), (_, token2) = client.calls
+    assert params == {
+        "csv_blob": "",
+        "event": "info_flush" if live else "info_flush_test",
+        "test_email": "False" if live else "True",
+    }
+    assert token == token2 and len(token) <= 64  # Databricks' limit
+
+
+def test_flush_does_nothing_when_nothing_is_due_or_dry_run():
+    client = FakeClient()
+    late = info_index([("a", "pending", "2026-02-03T05:00:00Z")])
+    assert poll.flush_vut_info(client, True, FLUSH_NOW, False, lambda b: late)
+    due = info_index([("a", "pending", "2026-02-03T01:00:00Z")])
+    assert poll.flush_vut_info(client, True, FLUSH_NOW, True, lambda b: due)
+    assert poll.flush_vut_info(
+        client, True, FLUSH_NOW, False, lambda b: info_index([])
+    )
+    assert client.calls == []
+
+
+def test_flush_failure_is_reported_not_raised():
+    due = info_index([("a", "pending", "2026-02-03T01:00:00Z")])
+    assert not poll.flush_vut_info(
+        FakeClient(fail=True), True, FLUSH_NOW, False, lambda b: due
+    )
+
+    def broken(blob):
+        raise poll.DbxError("reading the info queue: HttpResponseError")
+
+    assert not poll.flush_vut_info(
+        FakeClient(), True, FLUSH_NOW, False, broken
+    )
+
+
+def test_main_flush_failure_fails_only_live(monkeypatch):
+    for mode, code in (("test", 0), ("live", 1)):
+        _main_env(monkeypatch)
+        _dbx_env(monkeypatch)
+        monkeypatch.setenv("FMS_TARGETS", "dbx")
+        monkeypatch.setenv("VUT_MONITORING", mode)
+        _fake_clients(monkeypatch)
+        monkeypatch.setattr(poll, "fetch_messages", lambda **kw: [])
+
+        def broken(blob):
+            raise poll.DbxError("reading the info queue: HttpResponseError")
+
+        monkeypatch.setattr(poll, "load_vut_info_index", broken)
+        assert poll.main() == code
