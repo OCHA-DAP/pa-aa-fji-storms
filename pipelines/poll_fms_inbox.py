@@ -47,6 +47,21 @@ idempotency token so a lost response can't start a second run. State is
 kept per target; a CSV either live target handled counts as handled for
 both, so switching never re-sends recent forecasts. A failed shadow run
 only logs a warning.
+
+Vanuatu (ds-aa-vut-cyclones) rides on the same relay. VUT_MONITORING (a repo
+variable: off, the default | test | live) adds the Databricks job "Vanuatu
+Cyclone Monitoring" (VUT_DBX_JOB_ID) as one more target, ``vut``:
+- every FMS CSV also goes to it (the Vanuatu readiness trigger is on the
+  RSMC Nadi forecast), after the Fiji targets;
+- relay emails with the subject "[vut-relay] vmhs_forecast" (or
+  "[vut-relay] vmhs_forecast_test"), which a second Power Automate flow sends
+  for VMHS (Vanuatu Met) forecast CSVs, go to it and nowhere else.
+``test`` sends every Vanuatu run to the test list; ``live`` sends real
+forecasts to the real lists. The ``vut`` target keeps its own state rows: a
+CSV handled for Fiji is still sent to Vanuatu once, and the reverse. A
+Vanuatu problem never stops or delays the Fiji path: a misconfiguration is
+logged and fails the run only after the Fiji targets were handled, and a
+failed hand-off counts as a failure only in ``live``.
 """
 
 import base64
@@ -94,17 +109,30 @@ RELAY_SUBJECT_PREFIX = "[fji-relay] "
 EVENT_FORECAST = "fms_forecast"
 EVENT_TEST = "fms_forecast_test"
 EVENTS = (EVENT_FORECAST, EVENT_TEST)
+VUT_RELAY_SUBJECT_PREFIX = "[vut-relay] "
+EVENT_VMHS = "vmhs_forecast"
+EVENT_VMHS_TEST = "vmhs_forecast_test"
+VUT_EVENTS = (EVENT_VMHS, EVENT_VMHS_TEST)
+RELAY_EVENTS = {
+    RELAY_SUBJECT_PREFIX: EVENTS,
+    VUT_RELAY_SUBJECT_PREFIX: VUT_EVENTS,
+}
 
 TARGET_GHA = "gha"
 TARGET_DBX = "dbx"
 TARGET_DBX_SHADOW = "dbx-shadow"
 LIVE_TARGETS = (TARGET_GHA, TARGET_DBX)
 DBX_TARGETS = (TARGET_DBX, TARGET_DBX_SHADOW)
+TARGET_VUT = "vut"
+VUT_OFF, VUT_TEST, VUT_LIVE = "off", "test", "live"
+VUT_MODES = (VUT_OFF, VUT_TEST, VUT_LIVE)
 # The OAuth secret of fji-fms-relay is generated with only this scope: the
 # token can call the Jobs API and nothing else.
 DBX_OAUTH_SCOPE = "jobs"
 # Must match databricks/run_ingest.py, which refuses anything else
 INBOX_PREFIX = "pa-aa-fji-storms/raw/fms/inbox/"
+# Must match ds-aa-vut-cyclones databricks/run_monitor.py
+VUT_INBOX_PREFIX = "ds-aa-vut-cyclones/raw/vmhs/inbox/"
 
 _QUOTED_WITH_SEMICOLON = re.compile(r'"(?:[^"\\]|\\.)*;(?:[^"\\]|\\.)*"')
 _DMARC_PASS = re.compile(r"dmarc=pass\b", re.IGNORECASE)
@@ -266,10 +294,13 @@ def classify(
     if address is None or address not in senders:
         return None
     subject = str(msg.get("Subject") or "").strip().lower()
-    if not subject.startswith(RELAY_SUBJECT_PREFIX):
+    for prefix, events in RELAY_EVENTS.items():
+        if subject.startswith(prefix):
+            event_type = subject[len(prefix) :].strip()
+            break
+    else:
         return None
-    event_type = subject[len(RELAY_SUBJECT_PREFIX) :].strip()
-    if event_type not in EVENTS:
+    if event_type not in events:
         return None
     if require_dmarc:
         seen = topmost_authserv_id(msg)
@@ -427,12 +458,14 @@ def recent_run_titles(repo: str, token: str, since: dt.date) -> set[str]:
     return {r.get("display_title") or "" for r in runs}
 
 
-def staged_blob_name(content_sha256: str, filename: str) -> str:
+def staged_blob_name(
+    content_sha256: str, filename: str, prefix: str = INBOX_PREFIX
+) -> str:
     """Dev-blob name for a staged CSV: no '/' and no '..' (the job's ingest
     task refuses names with either outside the inbox prefix)."""
     safe = re.sub(r"[^A-Za-z0-9._-]", "_", filename)
     safe = re.sub(r"\.{2,}", ".", safe)[-120:]
-    return f"{INBOX_PREFIX}{content_sha256[:12]}_{safe}"
+    return f"{prefix}{content_sha256[:12]}_{safe}"
 
 
 def test_email_for(target: str, event_type: str) -> str:
@@ -442,11 +475,21 @@ def test_email_for(target: str, event_type: str) -> str:
     return "False" if live else "True"
 
 
+def vut_test_email_for(event_type: str, live: bool) -> str:
+    """The Vanuatu job's test_email: real lists only for a real forecast
+    (FMS or VMHS) once VUT_MONITORING is live."""
+    real = event_type in (EVENT_FORECAST, EVENT_VMHS)
+    return "False" if live and real else "True"
+
+
 _TOKEN_CODES = {
     TARGET_DBX: "l",
     TARGET_DBX_SHADOW: "s",
+    TARGET_VUT: "v",
     EVENT_FORECAST: "f",
     EVENT_TEST: "t",
+    EVENT_VMHS: "m",
+    EVENT_VMHS_TEST: "n",
 }
 
 
@@ -455,7 +498,8 @@ def idempotency_token(
 ) -> str:
     """Same CSV + target + event -> same token; Databricks allows 64 chars."""
     codes = _TOKEN_CODES[target] + _TOKEN_CODES[event_type]
-    return f"fji-{content_sha256[:48]}-{codes}"
+    job = "vut" if target == TARGET_VUT else "fji"
+    return f"{job}-{content_sha256[:48]}-{codes}"
 
 
 class DbxError(RuntimeError):
@@ -573,13 +617,50 @@ def make_handoff(
     return handoff
 
 
-def dbx_client_from_env() -> DbxClient | None:
-    """A client from the DATABRICKS_* / FMS_DBX_JOB_ID env, or None."""
+def make_vut_handoff(
+    client: DbxClient,
+    live: bool,
+    stage_fn: Callable[[bytes, str], None] = stage_csv,
+) -> Callable[[str, str, str, bytes, str], bool]:
+    """Like make_handoff, for the Vanuatu job. FMS CSVs are staged where
+    the Fiji job stages them; VMHS CSVs under the Vanuatu inbox."""
+
+    def handoff(
+        target: str, event_type: str, filename: str, data: bytes, sha: str
+    ) -> bool:
+        prefix = VUT_INBOX_PREFIX if event_type in VUT_EVENTS else INBOX_PREFIX
+        blob = staged_blob_name(sha, filename, prefix)
+        try:
+            stage_fn(data, blob)
+            run_id = client.run_now(
+                {
+                    "csv_blob": blob,
+                    "event": event_type,
+                    "test_email": vut_test_email_for(event_type, live),
+                },
+                idempotency_token(sha, target, event_type),
+            )
+        except DbxError as e:
+            logger.error("Vanuatu hand-off failed: %s", e)
+            return False
+        except Exception as e:  # noqa: BLE001 — e.g. an unexpected reply
+            logger.error("Vanuatu hand-off failed: %s", type(e).__name__)
+            return False
+        logger.info("Vanuatu Databricks run %s started", run_id)
+        return True
+
+    return handoff
+
+
+def dbx_client_from_env(
+    job_id_var: str = "FMS_DBX_JOB_ID",
+) -> DbxClient | None:
+    """A client from the DATABRICKS_* / job id env, or None."""
     names = (
         "DATABRICKS_HOST",
         "DATABRICKS_CLIENT_ID",
         "DATABRICKS_CLIENT_SECRET",
-        "FMS_DBX_JOB_ID",
+        job_id_var,
     )
     values = {n: os.getenv(n) or "" for n in names}
     missing = [n for n, v in values.items() if not v]
@@ -587,10 +668,10 @@ def dbx_client_from_env() -> DbxClient | None:
         logger.warning("Databricks hand-off not configured: %s unset", missing)
         return None
     try:
-        job_id = int(values["FMS_DBX_JOB_ID"])
+        job_id = int(values[job_id_var])
     except ValueError:
         logger.warning(
-            "Databricks hand-off not configured: bad FMS_DBX_JOB_ID"
+            "Databricks hand-off not configured: bad %s", job_id_var
         )
         return None
     return DbxClient(
@@ -599,6 +680,19 @@ def dbx_client_from_env() -> DbxClient | None:
         values["DATABRICKS_CLIENT_SECRET"],
         job_id,
     )
+
+
+def vut_mode_from_env() -> tuple[str, bool]:
+    """(VUT_MONITORING, misconfigured). A bad value means off + an error:
+    it must never raise, or the Fiji path would stop with it."""
+    mode = (os.getenv("VUT_MONITORING") or VUT_OFF).strip().lower()
+    if mode not in VUT_MODES:
+        logger.error(
+            "VUT_MONITORING must be one of %s; Vanuatu is off this run",
+            VUT_MODES,
+        )
+        return VUT_OFF, True
+    return mode, False
 
 
 def load_state() -> pd.DataFrame:
@@ -636,30 +730,38 @@ def run(
     now_fn: Callable[[], dt.datetime] = lambda: dt.datetime.now(dt.UTC),
     targets: tuple[str, ...] = (TARGET_GHA,),
     handoff_fn: Callable[[str, str, str, bytes, str], bool] | None = None,
+    vut: str = VUT_OFF,
 ) -> tuple[int, int]:
     """Send every unhandled CSV to each target. Returns (n_sent, n_failed).
 
-    n_failed counts live targets only: a failed shadow run is a warning.
-    State is saved after each successful send. If saving fails we stop
-    straight away: carrying on would risk the next tick re-dispatching (and
-    re-emailing) everything sent since the last good save.
+    n_failed counts live targets only: a failed shadow run is a warning,
+    and so is a failed Vanuatu run unless ``vut`` is live. FMS CSVs go to
+    ``targets`` and then, unless ``vut`` is off, to the Vanuatu job; VMHS
+    CSVs only ever go to the Vanuatu job. State is saved after each
+    successful send. If saving fails we stop straight away: carrying on
+    would risk the next tick re-dispatching (and re-emailing) everything
+    sent since the last good save.
     """
     # Rows from before targets existed were all Check Trigger dispatches.
     row_targets = state["target"].fillna(TARGET_GHA).replace("", TARGET_GHA)
     done = {
         "live": set(),
         "shadow": set(),
+        "vut": set(),
     }
+
+    def role_of(target: str) -> str:
+        if target == TARGET_VUT:
+            return "vut"
+        return "shadow" if target == TARGET_DBX_SHADOW else "live"
+
     for sha, event_type, target in zip(
         state["content_sha256"], state["event_type"], row_targets
     ):
-        role = "shadow" if target == TARGET_DBX_SHADOW else "live"
-        done[role].add((sha, event_type))
+        done[role_of(target)].add((sha, event_type))
     run_titles = run_titles or set()
     n_dispatched = n_failed = 0
-
-    def role_of(target: str) -> str:
-        return "shadow" if target == TARGET_DBX_SHADOW else "live"
+    vut_targets = () if vut == VUT_OFF else (TARGET_VUT,)
 
     def record(
         sha: str, event_type: str, key: str, filename: str, target: str
@@ -677,6 +779,57 @@ def run(
         done[role_of(target)].add((sha, event_type))
         save_fn(state)
 
+    def send(
+        target: str, event_type: str, key: str, filename: str, data: bytes
+    ) -> None:
+        nonlocal n_dispatched, n_failed
+        sha = hashlib.sha256(data).hexdigest()
+        if (sha, event_type) in done[role_of(target)]:
+            return
+        label = f"{filename} ({event_type}, csv {sha[:12]})"
+        if target != TARGET_GHA:
+            label = f"{label} to {target}"
+        if dry_run:
+            action = "seed" if seed else "dispatch"
+            logger.info("DRY RUN: would %s %s", action, label)
+            return
+        if seed:
+            logger.info("Seeding %s as handled", label)
+            record(sha, event_type, key, filename, target)
+            return
+        if target == TARGET_GHA:
+            if run_title(sha, event_type) in run_titles:
+                logger.info("Already dispatched (run found): %s", label)
+                record(sha, event_type, key, filename, target)
+                return
+            payload = {
+                "csv": base64.b64encode(data).decode("ascii"),
+                "filename": filename,
+                "content_sha": sha[:12],
+            }
+            status = dispatch_fn(event_type, payload)
+            if status != 204:
+                logger.error("Dispatch of %s failed: HTTP %s", label, status)
+                n_failed += 1
+                return
+        else:
+            ok = handoff_fn is not None and handoff_fn(
+                target, event_type, filename, data, sha
+            )
+            if not ok:
+                if target == TARGET_DBX_SHADOW:
+                    logger.warning("Shadow run of %s not started", label)
+                elif target == TARGET_VUT and vut != VUT_LIVE:
+                    logger.warning("Vanuatu test run of %s not started", label)
+                else:
+                    logger.error("Hand-off of %s failed", label)
+                    n_failed += 1
+                return
+        logger.info("Dispatched %s", label)
+        n_dispatched += 1
+        record(sha, event_type, key, filename, target)
+
+    accepted = []
     for msg in messages:
         event_type = classify_fn(msg)
         if event_type is None:
@@ -685,57 +838,26 @@ def run(
         attachments = csv_attachments(msg)
         if not attachments:
             logger.info("Message %s has no CSV attachment", short_hash(key))
-        for filename, data in attachments:
-            sha = hashlib.sha256(data).hexdigest()
-            for target in targets:
-                if (sha, event_type) in done[role_of(target)]:
-                    continue
-                label = f"{filename} ({event_type}, csv {sha[:12]})"
-                if target != TARGET_GHA:
-                    label = f"{label} to {target}"
-                if dry_run:
-                    action = "seed" if seed else "dispatch"
-                    logger.info("DRY RUN: would %s %s", action, label)
-                    continue
-                if seed:
-                    logger.info("Seeding %s as handled", label)
-                    record(sha, event_type, key, filename, target)
-                    continue
-                if target == TARGET_GHA:
-                    if run_title(sha, event_type) in run_titles:
-                        logger.info(
-                            "Already dispatched (run found): %s", label
-                        )
-                        record(sha, event_type, key, filename, target)
-                        continue
-                    payload = {
-                        "csv": base64.b64encode(data).decode("ascii"),
-                        "filename": filename,
-                        "content_sha": sha[:12],
-                    }
-                    status = dispatch_fn(event_type, payload)
-                    if status != 204:
-                        logger.error(
-                            "Dispatch of %s failed: HTTP %s", label, status
-                        )
-                        n_failed += 1
-                        continue
-                else:
-                    ok = handoff_fn is not None and handoff_fn(
-                        target, event_type, filename, data, sha
-                    )
-                    if not ok:
-                        if target == TARGET_DBX_SHADOW:
-                            logger.warning(
-                                "Shadow run of %s not started", label
-                            )
-                        else:
-                            logger.error("Hand-off of %s failed", label)
-                            n_failed += 1
-                        continue
-                logger.info("Dispatched %s", label)
-                n_dispatched += 1
-                record(sha, event_type, key, filename, target)
+        if event_type in VUT_EVENTS and not vut_targets:
+            logger.warning(
+                "Message %s is a %s but VUT_MONITORING is off; not sent",
+                short_hash(key),
+                event_type,
+            )
+            continue
+        accepted.append((event_type, key, attachments))
+
+    # Every Fiji target for every CSV first, then the Vanuatu job: a slow
+    # or failing Vanuatu hand-off can never hold up a Fiji one.
+    for fiji_pass in (True, False):
+        for event_type, key, attachments in accepted:
+            if fiji_pass:
+                pass_targets = () if event_type in VUT_EVENTS else targets
+            else:
+                pass_targets = vut_targets
+            for filename, data in attachments:
+                for target in pass_targets:
+                    send(target, event_type, key, filename, data)
     return n_dispatched, n_failed
 
 
@@ -761,6 +883,30 @@ def main() -> int:
         else:
             # never let a shadow misconfiguration touch the live path
             targets = tuple(t for t in targets if t != TARGET_DBX_SHADOW)
+    # Vanuatu: a problem here is logged and fails the run at the end, after
+    # the Fiji targets were handled; it never raises.
+    vut, vut_misconfigured = vut_mode_from_env()
+    vut_handoff = None
+    if vut != VUT_OFF:
+        vut_client = dbx_client_from_env("VUT_DBX_JOB_ID")
+        if vut_client is None:
+            logger.error(
+                "VUT_MONITORING=%s but the Vanuatu job is not configured; "
+                "Vanuatu is off this run",
+                vut,
+            )
+            vut, vut_misconfigured = VUT_OFF, True
+        else:
+            vut_handoff = make_vut_handoff(vut_client, live=vut == VUT_LIVE)
+    if vut_handoff is not None:
+        fji_handoff = handoff_fn
+
+        def handoff_fn(target, event_type, filename, data, sha):
+            fn = vut_handoff if target == TARGET_VUT else fji_handoff
+            return fn is not None and fn(
+                target, event_type, filename, data, sha
+            )
+
     senders = relay_senders()
     authserv_id = os.getenv("FMS_AUTHSERV_ID") or DEFAULT_AUTHSERV_ID
     relay_token = os.getenv("FMS_RELAY_TOKEN") or ""
@@ -769,7 +915,7 @@ def main() -> int:
     logger.info(
         f"Polling FMS relay inbox: {dry_run=}, {seed=}, {require_dmarc=}, "
         f"{lookback_days=}, n_senders={len(senders)}, {authserv_id=}, "
-        f"relay_token_set={bool(relay_token)}, {targets=}"
+        f"relay_token_set={bool(relay_token)}, {targets=}, {vut=}"
     )
 
     messages = fetch_messages(
@@ -812,9 +958,10 @@ def main() -> int:
         seed=seed,
         targets=targets,
         handoff_fn=handoff_fn,
+        vut=vut,
     )
     logger.info("Dispatched %d, failed %d", n_dispatched, n_failed)
-    return 1 if n_failed else 0
+    return 1 if n_failed or vut_misconfigured else 0
 
 
 if __name__ == "__main__":
