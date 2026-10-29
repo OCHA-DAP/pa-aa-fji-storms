@@ -6,6 +6,9 @@
 #            (databricks/run_ingest.py)
 #   monitor  pipelines/monitor_forecast_trigger.py --from-db: the trigger
 #            check and the Listmonk emails (databricks/run_monitor.py)
+#   trigger_sp_pipeline
+#            starts ds-storms-pipeline's South Pacific FMS Pipeline after a
+#            live ingest (fire-and-forget; databricks/trigger_sp_pipeline.py)
 #
 # No schedule. The FMS inbox poller (pipelines/poll_fms_inbox.py, GitHub
 # Actions) stages each new CSV in the dev blob and starts a run through the
@@ -60,6 +63,11 @@ variables:
     default: "False"
   simulate_trigger:
     default: "False"
+  sp_pipeline_job_id:
+    description: >-
+      Job id of ds-storms-pipeline's "South Pacific FMS Pipeline", started
+      after each live ingest. Empty => the trigger task does nothing.
+    default: ""
   max_forecast_age_hours:
     description: >-
       The monitor refuses to email the real lists about a forecast older
@@ -158,6 +166,17 @@ resources:
           # unpinned pyarrow broke the info email in Oct 2026).
           libraries:
             - requirements: ${workspace.file_path}/requirements-dbx.txt
+        - task_key: trigger_sp_pipeline
+          depends_on:
+            - task_key: ingest
+          job_cluster_key: fji_cluster
+          timeout_seconds: 600
+          spark_python_task:
+            python_file: databricks/trigger_sp_pipeline.py
+            source: GIT
+            parameters:
+              - "${var.sp_pipeline_job_id}"
+              - "{{job.parameters.event}}"
         - task_key: monitor
           depends_on:
             - task_key: ingest
